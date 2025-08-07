@@ -1,0 +1,23 @@
+{
+  "name": "@altitrace/monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "clean": "turbo run clean"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "bun@1.2.7",
+  "dependencies": {},
+  "devDependencies": {
+    "turbo": "^2.5.5"
+  }
+}

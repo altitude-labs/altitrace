@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { ApiResponse } from '@/types/api';
+import { isAddress } from 'viem';
 
 /**
  * Generate a unique request ID
@@ -55,10 +56,10 @@ export function hexToBigInt(value: string): bigint {
 }
 
 /**
- * Validate Ethereum address
+ * Validate EVM address
  */
 export function isValidAddress(address: string): boolean {
-  return /^0x[a-fA-F0-9]{40}$/.test(address);
+  return isAddress(address);
 }
 
 /**

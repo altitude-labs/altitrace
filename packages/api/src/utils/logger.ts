@@ -15,7 +15,7 @@ const transportConfig = env.NODE_ENV === 'development' && env.LOG_PRETTY ? {
   target: 'pino-pretty',
   options: {
     colorize: true,
-    translateTime: 'yyyy-mm-dd HH:MM:ss',
+    translateTime: 'yyyy-mm-dd HH:MM:ss:l',
     ignore: 'pid,hostname',
   },
 } : undefined;

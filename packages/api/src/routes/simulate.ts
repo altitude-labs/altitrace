@@ -15,6 +15,7 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/simulate', {
     schema: {
       description: 'Simulate a single transaction',
+      summary: 'Simulate transaction execution on HyperEVM',
       tags: ['Simulation'],
       body: {
         type: 'object',
@@ -94,6 +95,7 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/simulate/batch', {
     schema: {
       description: 'Simulate multiple transactions in batch',
+      summary: 'Batch simulate multiple transactions',
       tags: ['Simulation'],
       body: {
         type: 'object',
@@ -166,6 +168,7 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/gas/estimate', {
     schema: {
       description: 'Estimate gas for a transaction',
+      summary: 'Estimate gas cost for transaction execution',
       tags: ['Gas'],
       body: {
         type: 'object',
