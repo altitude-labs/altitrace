@@ -59,7 +59,7 @@ async function buildServer() {
       },
     });
 
-    // API Documentation
+    // API Documentation - auto-generated from route schemas
     await fastify.register(swagger, {
       openapi: {
         openapi: '3.0.0',
@@ -67,11 +67,22 @@ async function buildServer() {
           title: 'AltiTrace API',
           description: 'HyperEVM Transaction Simulation Platform API',
           version: '0.1.0',
+          contact: {
+            name: 'AltiTrace Team',
+            url: 'https://altitrace.dev',
+          },
+          license: {
+            name: 'MIT',
+          },
         },
         servers: [
           {
             url: `http://localhost:${env.PORT}`,
             description: 'Development server',
+          },
+          {
+            url: 'https://api.altitrace.dev',
+            description: 'Production server',
           },
         ],
         components: {
@@ -80,9 +91,24 @@ async function buildServer() {
               type: 'apiKey',
               name: env.API_KEY_HEADER,
               in: 'header',
+              description: 'API key for authentication',
             },
           },
         },
+        tags: [
+          {
+            name: 'Health',
+            description: 'Health check and readiness endpoints',
+          },
+          {
+            name: 'Simulation',
+            description: 'Transaction simulation endpoints',
+          },
+          {
+            name: 'Gas',
+            description: 'Gas estimation endpoints',
+          },
+        ],
       },
     });
 

@@ -5,6 +5,7 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/', {
     schema: {
       description: 'Health check endpoint',
+      summary: 'Get service health status',
       tags: ['Health'],
       response: {
         200: {
@@ -40,6 +41,7 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/ready', {
     schema: {
       description: 'Readiness probe',
+      summary: 'Check if service is ready to accept traffic',
       tags: ['Health'],
       response: {
         200: {

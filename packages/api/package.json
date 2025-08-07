@@ -11,20 +11,21 @@
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "lint": "eslint src --ext .ts",
-    "typecheck": "bun tsc --noEmit"
+    "type-check": "bun tsc --noEmit",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
-    "fastify": "^4.29.1",
     "@fastify/cors": "^8.5.0",
     "@fastify/helmet": "^11.1.1",
     "@fastify/rate-limit": "^8.1.1",
-    "@fastify/swagger": "^8.15.0",
+    "@fastify/swagger": "^9.5.1",
     "@fastify/swagger-ui": "^2.1.0",
-    "viem": "^1.21.4",
-    "zod": "^3.25.76",
+    "dotenv": "^16.6.1",
+    "fastify": "^4.29.1",
     "pino": "^8.21.0",
     "pino-pretty": "^10.3.1",
-    "dotenv": "^16.6.1"
+    "viem": "^1.21.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20.19.9",
