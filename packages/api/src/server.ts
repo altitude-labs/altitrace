@@ -6,7 +6,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 
 import { env } from '@/config/env';
-import { logger } from '@/utils/logger';
+import { logger, loggerConfig } from '@/utils/logger';
 import { generateRequestId, createSuccessResponse } from '@/utils/helpers';
 import { sendErrorResponse } from '@/utils/errors';
 
@@ -14,8 +14,26 @@ import { sendErrorResponse } from '@/utils/errors';
 import healthRoutes from '@/routes/health';
 import simulateRoutes from '@/routes/simulate';
 
+// Create Fastify with our custom Pino logger configuration
 const fastify = Fastify({
-  logger: true,
+  logger: {
+    ...loggerConfig,
+    serializers: {
+      ...loggerConfig.formatters,
+      req: (request: any) => ({
+        method: request.method,
+        url: request.url,
+        hostname: request.hostname,
+        remoteAddress: request.ip,
+        remotePort: request.socket?.remotePort,
+        userAgent: request.headers?.['user-agent'],
+      }),
+      res: (response: any) => ({
+        statusCode: response.statusCode,
+        responseTime: response.elapsedTime,
+      }),
+    },
+  },
   genReqId: generateRequestId,
   requestIdHeader: 'x-request-id',
   requestIdLogLabel: 'requestId',
@@ -68,7 +86,7 @@ async function buildServer() {
           description: 'HyperEVM Transaction Simulation Platform API',
           version: '0.1.0',
           contact: {
-            name: 'AltiTrace Team',
+            name: 'Altitude Labs',
             url: 'https://altitrace.dev',
           },
           license: {
@@ -120,19 +138,31 @@ async function buildServer() {
       },
     });
 
-    // Global hooks
+    // Global hooks with structured logging
     fastify.addHook('onRequest', async (request) => {
-      request.log.info({ method: request.method, url: request.url }, 'Request started');
+      const requestLogger = logger.child({ 
+        requestId: request.id,
+        component: 'http-request',
+        method: request.method,
+        url: request.url,
+        userAgent: request.headers['user-agent'],
+        remoteAddress: request.ip,
+      });
+      
+      requestLogger.debug('Request started');
+      
+      // Attach logger to request for use in routes
+      (request as any).contextLogger = requestLogger;
     });
 
     fastify.addHook('onResponse', async (request, reply) => {
-      request.log.info(
-        { 
-          method: request.method, 
-          url: request.url, 
+      const requestLogger = (request as any).contextLogger || logger;
+      
+      requestLogger.info(
+        {
           statusCode: reply.statusCode,
-          responseTime: reply.getResponseTime(),
-        }, 
+          responseTime: reply.elapsedTime,
+        },
         'Request completed'
       );
     });
@@ -169,19 +199,19 @@ async function buildServer() {
 async function start() {
   try {
     const server = await buildServer();
-    
+
     await server.listen({
       host: env.HOST,
       port: env.PORT,
     });
 
-    server.log.info(
-      { 
-        port: env.PORT, 
-        host: env.HOST, 
+    logger.info(
+      {
+        port: env.PORT,
+        host: env.HOST,
         environment: env.NODE_ENV,
         docs: `http://${env.HOST}:${env.PORT}/docs`,
-      }, 
+      },
       '🚀 AltiTrace API server started'
     );
 
@@ -189,7 +219,7 @@ async function start() {
     const signals = ['SIGINT', 'SIGTERM'];
     signals.forEach(signal => {
       process.on(signal, async () => {
-        server.log.info(`Received ${signal}, shutting down gracefully...`);
+        logger.info({ component: 'server', signal }, `Received ${signal}, shutting down gracefully...`);
         await server.close();
         process.exit(0);
       });
@@ -201,7 +231,7 @@ async function start() {
   }
 }
 
-// Start server if this file is run directly  
+// Start server if this file is run directly
 if (require.main === module) {
   start();
 }

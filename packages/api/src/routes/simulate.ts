@@ -3,11 +3,13 @@ import {
   SimulateRequestSchema, 
   BatchSimulateRequestSchema,
   type SimulateRequest,
-  type SimulationResult 
+  type SimulationResult,
+  type Call 
 } from '@/types/api';
 import { createSuccessResponse } from '@/utils/helpers';
 import { SimulationError } from '@/utils/errors';
 import { hyperevmClient } from '@/services/hyperevm';
+import { validateGas, validateAddress, validateValue, validateHex, bigintToHex, ValidationError } from '@/utils/validation';
 
 const simulateRoutes: FastifyPluginAsync = async (fastify) => {
   
@@ -23,22 +25,31 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
           params: {
             type: 'object',
             properties: {
-              to: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-              from: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-              data: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
-              value: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
-              gas: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
-              gasPrice: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
-              maxFeePerGas: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
-              maxPriorityFeePerGas: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
+              calls: {
+                type: 'array',
+                minItems: 1,
+                items: {
+                  type: 'object',
+                  properties: {
+                    to: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
+                    from: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
+                    data: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
+                    value: { type: 'string', pattern: '^0x[a-fA-F0-9]*$', default: '0x0' },
+                    gas: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
+                  },
+                  required: ['to'],
+                },
+              },
               blockNumber: { 
                 anyOf: [
                   { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
                   { type: 'string', enum: ['latest', 'earliest', 'pending'] }
-                ]
+                ],
+                default: 'latest'
               },
+              validation: { type: 'boolean', default: true },
             },
-            required: ['to'],
+            required: ['calls'],
           },
           options: {
             type: 'object',
@@ -59,15 +70,31 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
             data: {
               type: 'object',
               properties: {
-                success: { type: 'boolean' },
-                gasUsed: { type: 'string' },
-                gasLimit: { type: 'string' },
-                returnData: { type: 'string' },
-                revertReason: { type: 'string' },
-                logs: { type: 'array' },
-                stateChanges: { type: 'array' },
-                accessList: { type: 'array' },
-                trace: { type: 'object' },
+                blockNumber: { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
+                calls: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      returnData: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
+                      gasUsed: { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
+                      logs: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            address: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
+                            topics: { type: 'array', items: { type: 'string' } },
+                            data: { type: 'string' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                gasUsed: { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
+                blockGasUsed: { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
               },
             },
             timestamp: { type: 'string' },
@@ -81,10 +108,30 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
       // Validate request body
       const validatedBody = SimulateRequestSchema.parse(request.body);
       
-      // Perform simulation
-      const result = await simulateTransaction(validatedBody);
+      // Perform simulation using simulateCalls directly
+      const result = await hyperevmClient.simulateCalls({
+        calls: validatedBody.params.calls,
+        blockNumber: validatedBody.params.blockNumber || 'latest',
+        stateOverrides: validatedBody.options?.stateOverrides,
+        blockOverrides: validatedBody.options?.blockOverrides,
+        validation: validatedBody.params.validation !== false,
+      });
       
-      reply.send(createSuccessResponse(result, request.id));
+      // Convert bigint values to hex strings for JSON response
+      const formattedResult = {
+        blockNumber: `0x${result.blockNumber.toString(16)}`,
+        calls: result.calls.map(call => ({
+          status: call.status,
+          returnData: call.returnData,
+          gasUsed: `0x${call.gasUsed.toString(16)}`,
+          logs: call.logs || [],
+          ...(call.error && { error: call.error }),
+        })),
+        gasUsed: `0x${result.gasUsed.toString(16)}`,
+        blockGasUsed: `0x${result.blockGasUsed.toString(16)}`,
+      };
+      
+      reply.send(createSuccessResponse(formattedResult, request.id));
     } catch (error) {
       fastify.log.error({ error, requestId: request.id }, 'Simulation failed');
       throw error;
@@ -94,8 +141,8 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
   // Batch transaction simulation
   fastify.post('/simulate/batch', {
     schema: {
-      description: 'Simulate multiple transactions in batch',
-      summary: 'Batch simulate multiple transactions',
+      description: 'Simulate multiple transaction batches',
+      summary: 'Batch simulate multiple sets of transactions',
       tags: ['Simulation'],
       body: {
         type: 'object',
@@ -103,19 +150,38 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
           simulations: {
             type: 'array',
             minItems: 1,
-            maxItems: 100,
+            maxItems: 10, // Reduced max for simulateCalls approach
             items: {
               type: 'object',
               properties: {
                 params: {
                   type: 'object',
                   properties: {
-                    to: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-                    from: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-                    data: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
-                    value: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
+                    calls: {
+                      type: 'array',
+                      minItems: 1,
+                      items: {
+                        type: 'object',
+                        properties: {
+                          to: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
+                          from: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
+                          data: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
+                          value: { type: 'string', pattern: '^0x[a-fA-F0-9]*$', default: '0x0' },
+                          gas: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
+                        },
+                        required: ['to'],
+                      },
+                    },
+                    blockNumber: { 
+                      anyOf: [
+                        { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
+                        { type: 'string', enum: ['latest', 'earliest', 'pending'] }
+                      ],
+                      default: 'latest'
+                    },
+                    validation: { type: 'boolean', default: true },
                   },
-                  required: ['to'],
+                  required: ['calls'],
                 },
                 options: { type: 'object' },
               },
@@ -135,9 +201,20 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
               items: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean' },
-                  gasUsed: { type: 'string' },
-                  returnData: { type: 'string' },
+                  blockNumber: { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
+                  calls: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        success: { type: 'boolean' },
+                        returnData: { type: 'string', pattern: '^0x[a-fA-F0-9]*$' },
+                        gasUsed: { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
+                      },
+                    },
+                  },
+                  gasUsed: { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
+                  blockGasUsed: { type: 'string', pattern: '^0x[a-fA-F0-9]+$' },
                 },
               },
             },
@@ -152,9 +229,31 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
       // Validate request body
       const validatedBody = BatchSimulateRequestSchema.parse(request.body);
       
-      // Perform batch simulation
+      // Perform batch simulation - each simulation runs independently
       const results = await Promise.all(
-        validatedBody.simulations.map(simulation => simulateTransaction(simulation))
+        validatedBody.simulations.map(async (simulation) => {
+          const result = await hyperevmClient.simulateCalls({
+            calls: simulation.params.calls,
+            blockNumber: simulation.params.blockNumber || 'latest',
+            stateOverrides: simulation.options?.stateOverrides,
+            blockOverrides: simulation.options?.blockOverrides,
+            validation: simulation.params.validation !== false,
+          });
+          
+          // Format result for JSON response
+          return {
+            blockNumber: `0x${result.blockNumber.toString(16)}`,
+            calls: result.calls.map(call => ({
+              status: call.status,
+              returnData: call.returnData,
+              gasUsed: `0x${call.gasUsed.toString(16)}`,
+              logs: call.logs || [],
+              ...(call.error && { error: call.error }),
+            })),
+            gasUsed: `0x${result.gasUsed.toString(16)}`,
+            blockGasUsed: `0x${result.blockGasUsed.toString(16)}`,
+          };
+        })
       );
       
       reply.send(createSuccessResponse(results, request.id));
@@ -202,77 +301,43 @@ const simulateRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const { to, from, data, value } = request.body as any;
       
+      // Validate parameters
+      const cleanedParams = {
+        to: validateAddress(to, 'to'),
+        ...(from && { from: validateAddress(from, 'from') }),
+        ...(data && { data: validateHex(data, 'data') }),
+        ...(value && { value: validateValue(value, 'value') }),
+      };
+      
       const [gasEstimate, gasPrice] = await Promise.all([
-        hyperevmClient.estimateGas({ to, from, data, value }),
+        hyperevmClient.estimateGas(cleanedParams),
         hyperevmClient.getGasPrice(),
       ]);
       
       const result = {
-        gasEstimate: `0x${gasEstimate.toString(16)}`,
-        gasPrice: `0x${gasPrice.toString(16)}`,
+        gasEstimate: bigintToHex(gasEstimate),
+        gasPrice: bigintToHex(gasPrice),
       };
       
       reply.send(createSuccessResponse(result, request.id));
-    } catch (error) {
+    } catch (error: any) {
+      // Handle validation errors with detailed information
+      if (error instanceof ValidationError) {
+        const validationError = new SimulationError(`Invalid parameter '${error.field}': ${error.message}`, { 
+          field: error.field,
+          value: error.value,
+          validationCode: error.code,
+          code: 'INVALID_PARAMS'
+        });
+        fastify.log.error({ error: validationError, requestId: request.id }, 'Parameter validation failed');
+        throw validationError;
+      }
+      
       fastify.log.error({ error, requestId: request.id }, 'Gas estimation failed');
       throw error;
     }
   });
 };
 
-/**
- * Simulate a single transaction
- */
-async function simulateTransaction(request: SimulateRequest): Promise<SimulationResult> {
-  const { params } = request;
-  
-  try {
-    // Basic simulation using eth_call
-    const returnData = await hyperevmClient.call({
-      to: params.to,
-      ...(params.from && { from: params.from }),
-      ...(params.data && { data: params.data }),
-      ...(params.value && { value: params.value }),
-      ...(params.gas && { gas: params.gas }),
-      ...(params.gasPrice && { gasPrice: params.gasPrice }),
-      ...(params.maxFeePerGas && { maxFeePerGas: params.maxFeePerGas }),
-      ...(params.maxPriorityFeePerGas && { maxPriorityFeePerGas: params.maxPriorityFeePerGas }),
-    }, params.blockNumber);
-
-    // Estimate gas usage
-    const gasEstimate = await hyperevmClient.estimateGas({
-      to: params.to,
-      ...(params.from && { from: params.from }),
-      ...(params.data && { data: params.data }),
-      ...(params.value && { value: params.value }),
-    });
-
-    // TODO: Implement state overrides, tracing, and advanced features
-    
-    return {
-      success: true,
-      gasUsed: `0x${gasEstimate.toString(16)}`,
-      gasLimit: params.gas || `0x${(gasEstimate * 120n / 100n).toString(16)}`, // 120% of estimate
-      returnData,
-      logs: [], // TODO: Extract logs from simulation
-      stateChanges: [], // TODO: Generate state changes
-      accessList: [], // TODO: Generate access list
-    };
-    
-  } catch (error: any) {
-    // Handle revert cases
-    if (error.message?.includes('revert')) {
-      return {
-        success: false,
-        gasUsed: '0x0',
-        gasLimit: params.gas || '0x0',
-        returnData: '0x',
-        revertReason: error.message,
-      };
-    }
-    
-    throw new SimulationError('Simulation failed', { originalError: error });
-  }
-}
 
 export default simulateRoutes;

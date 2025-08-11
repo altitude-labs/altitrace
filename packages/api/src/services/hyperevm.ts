@@ -256,6 +256,99 @@ export class HyperEVMClient {
   }
 
   /**
+   * Simulate multiple calls sequentially (viem v1 compatible)
+   */
+  async simulateCalls(params: {
+    calls: Array<{
+      to: Address;
+      from?: Address;
+      data?: Hex;
+      value?: Hex;
+      gas?: Hex;
+    }>;
+    blockNumber?: BlockNumber;
+    stateOverrides?: Record<Address, {
+      balance?: Hex;
+      nonce?: Hex;
+      code?: Hex;
+      storage?: Record<Hex, Hex>;
+    }>;
+    blockOverrides?: {
+      number?: Hex;
+      timestamp?: Hex;
+      gasLimit?: Hex;
+      baseFee?: Hex;
+      prevRandao?: Hex;
+    };
+    validation?: boolean;
+  }) {
+    try {
+      const { calls, blockNumber = 'latest', validation = true } = params;
+      
+      // Since viem v1 doesn't have simulateCalls, we'll simulate each call individually
+      // and aggregate the results
+      const callResults = [];
+      let totalGasUsed = 0n;
+      
+      for (const call of calls) {
+        try {
+          // Execute the call
+          const returnData = await this.call({
+            to: call.to,
+            from: call.from,
+            data: call.data,
+            value: call.value,
+            gas: call.gas,
+          }, blockNumber);
+          
+          // Estimate gas for this call
+          const gasUsed = await this.estimateGas({
+            to: call.to,
+            from: call.from,
+            data: call.data,
+            value: call.value,
+          });
+          
+          totalGasUsed += gasUsed;
+          
+          callResults.push({
+            status: 'success',
+            returnData,
+            gasUsed,
+            logs: [], // TODO: Extract logs from simulation
+          });
+        } catch (error) {
+          if (!validation) {
+            // If validation is disabled, include failed calls in results
+            callResults.push({
+              status: 'reverted',
+              returnData: '0x',
+              gasUsed: 0n,
+              logs: [],
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          } else {
+            throw error;
+          }
+        }
+      }
+      
+      // Get current block number for response
+      const currentBlock = await this.getBlockNumber();
+      
+      return {
+        blockNumber: currentBlock,
+        calls: callResults,
+        gasUsed: totalGasUsed,
+        blockGasUsed: totalGasUsed, // Same as gasUsed for our simulation
+      };
+    } catch (error) {
+      logger.error({ error, params }, 'simulateCalls failed');
+      throw new RpcError('simulateCalls failed', { params, originalError: error });
+    }
+  }
+
+  /**
    * Check connection health
    */
   async healthCheck(): Promise<boolean> {
