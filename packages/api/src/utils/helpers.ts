@@ -1,6 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import type { ApiResponse } from '@/types/api';
-import { isAddress } from 'viem';
+import { isAddress, maxUint256 } from 'viem';
+
+export const MAX_UINT_256 = maxUint256;
 
 /**
  * Generate a unique request ID

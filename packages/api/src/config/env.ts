@@ -19,7 +19,14 @@ const EnvSchema = z.object({
   
   // Logging
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
-  LOG_PRETTY: z.string().transform(val => val === 'true').default('true'),
+  LOG_LEVEL_STDOUT: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).optional(),
+  LOG_LEVEL_FILE: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).optional(),
+  LOG_FORMAT_STDOUT: z.enum(['logfmt', 'json', 'pretty']).default('logfmt'),
+  LOG_FORMAT_FILE: z.enum(['logfmt', 'json']).default('json'),
+  LOG_DIR: z.string().default('~/.local/share/altitrace'),
+  LOG_FILENAME: z.string().default('altitrace.log'),
+  LOG_ENABLE_FILE: z.string().transform(val => val === 'true').default('true'),
+  LOG_PRETTY: z.string().transform(val => val === 'true').default('true'), // Legacy support
   
   // API Security
   API_KEY_HEADER: z.string().default('x-api-key'),

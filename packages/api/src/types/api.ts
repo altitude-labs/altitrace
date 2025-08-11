@@ -34,17 +34,20 @@ export const TraceConfigSchema = z.object({
   tracer: z.enum(['callTracer', 'prestateTracer', 'structLogger']).default('callTracer'),
 });
 
-// Simulation request schemas
-export const SimulationParamsSchema = z.object({
+// Call schema for simulateCalls
+export const CallSchema = z.object({
   to: AddressSchema,
   from: AddressSchema.optional(),
   data: HexSchema.optional(),
   value: HexSchema.optional().default('0x0'),
   gas: HexSchema.optional(),
-  gasPrice: HexSchema.optional(),
-  maxFeePerGas: HexSchema.optional(),
-  maxPriorityFeePerGas: HexSchema.optional(),
+});
+
+// Simulation request schemas
+export const SimulationParamsSchema = z.object({
+  calls: z.array(CallSchema).min(1),
   blockNumber: BlockNumberSchema.optional().default('latest'),
+  validation: z.boolean().optional().default(true),
 });
 
 export const SimulationOptionsSchema = z.object({
@@ -62,7 +65,6 @@ export const BatchSimulateRequestSchema = z.object({
   simulations: z.array(SimulateRequestSchema).min(1).max(100),
 });
 
-// Response schemas
 export const LogEntrySchema = z.object({
   address: AddressSchema,
   topics: z.array(HexSchema),
@@ -96,22 +98,29 @@ export const StateChangeSchema = z.object({
   }),
 });
 
-export const SimulationResultSchema = z.object({
-  success: z.boolean(),
-  gasUsed: HexSchema,
-  gasLimit: HexSchema,
+// Call result schema for simulateCalls response
+export const CallResultSchema = z.object({
+  status: z.enum(['success', 'reverted']),
   returnData: HexSchema,
-  revertReason: z.string().optional(),
+  gasUsed: HexSchema,
   logs: z.array(LogEntrySchema).optional(),
-  stateChanges: z.array(StateChangeSchema).optional(),
-  accessList: z.array(AccessListEntrySchema).optional(),
-  trace: z.any().optional(), // Will be typed more strictly later
+  error: z.string().optional(),
+});
+
+// Updated simulation result for simulateCalls
+export const SimulationResultSchema = z.object({
+  blockNumber: HexSchema,
+  calls: z.array(CallResultSchema),
+  gasUsed: HexSchema,
+  blockGasUsed: HexSchema,
 });
 
 // Type exports
 export type Address = z.infer<typeof AddressSchema>;
 export type Hex = z.infer<typeof HexSchema>;
 export type BlockNumber = z.infer<typeof BlockNumberSchema>;
+export type Call = z.infer<typeof CallSchema>;
+export type CallResult = z.infer<typeof CallResultSchema>;
 export type StateOverride = z.infer<typeof StateOverrideSchema>;
 export type BlockOverride = z.infer<typeof BlockOverrideSchema>;
 export type TraceConfig = z.infer<typeof TraceConfigSchema>;

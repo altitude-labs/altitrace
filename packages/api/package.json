@@ -21,10 +21,11 @@
     "@fastify/swagger": "^9.5.1",
     "@fastify/swagger-ui": "^2.1.0",
     "dotenv": "^16.6.1",
-    "fastify": "^4.29.1",
-    "pino": "^8.21.0",
+    "fastify": "^5.5",
+    "pino": "^9.8.0",
+    "pino-logfmt": "^1.0.1",
     "pino-pretty": "^10.3.1",
-    "viem": "^1.21.4",
+    "viem": "^2.33.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
