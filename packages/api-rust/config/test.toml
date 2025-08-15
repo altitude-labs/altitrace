@@ -1,0 +1,13 @@
+environment = "test"
+
+[redis]
+url = "redis://localhost"
+
+[server]
+host = "127.0.0.1"
+port = 8080
+
+[api]
+rate_limit_requests = 100
+rate_limit_duration = 60
+auth_token = ""

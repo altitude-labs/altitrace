@@ -1,0 +1,145 @@
+stages:
+  - lint
+  - build
+  - test
+  - success
+
+variables:
+  RUST_IMAGE: rustlang/rust:nightly
+  NODE_VERSION: "20"
+  CARGO_TERM_COLOR: always
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+  CARGO_TARGET_DIR: $CI_PROJECT_DIR/target
+  BUILD_DEPENDENCIES: "build-essential cmake perl make pkg-config clang libclang-dev"
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 1
+  GIT_CLEAN_FLAGS: none
+
+# Cache configuration with expiration
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - telegram/node_modules/.cache
+    - telegram/node_modules/.bun
+    - target/debug/.fingerprint
+    - target/debug/build
+    - target/debug/deps
+    - target/debug/examples
+    - target/debug/incremental
+    - .cargo/registry/index
+    - .cargo/registry/cache
+  policy: pull-push
+  when: on_success
+  untracked: true
+
+# Default rules for jobs
+.default-rules:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+      when: always
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: always
+  interruptible: true
+  timeout: 30m
+
+# Cleanup job
+cleanup:
+  stage: .post
+  script:
+    - |
+      echo "Cleaning up workspace..."
+      rm -rf node_modules
+      rm -rf target
+      rm -rf .cargo
+      rm -rf dist
+  when: always
+  allow_failure: true
+
+# rust jobs
+clippy:
+  stage: lint
+  image: $RUST_IMAGE
+  extends:
+    - .default-rules
+  script:
+    - rustup component add clippy rustfmt
+    - rustup default nightly
+    - RUSTFLAGS="-D warnings" cargo clippy --workspace --all-targets --all-features
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-rust
+    paths:
+      - target/
+      - .cargo/
+    policy: pull-push
+    when: on_success
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - crates/**
+        - Cargo.toml
+        - Cargo.lock
+        - .gitlab-ci.yml
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - crates/**
+        - Cargo.toml
+        - Cargo.lock
+        - .gitlab-ci.yml
+
+fmt:
+  stage: lint
+  image: $RUST_IMAGE
+  script:
+    - rustup component add rustfmt
+    - rustup default nightly
+    - cargo fmt --all --check
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-rust
+    paths:
+      - target/
+      - .cargo/
+    policy: pull
+    when: on_success
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - crates/**
+        - Cargo.toml
+        - Cargo.lock
+        - .gitlab-ci.yml
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - crates/**
+        - Cargo.toml
+        - Cargo.lock
+        - .gitlab-ci.yml
+
+test:
+  stage: test
+  image: $RUST_IMAGE
+  script:
+    - apt-get update && apt-get install -y curl
+    - curl -L https://foundry.paradigm.xyz | bash
+    - export PATH="$HOME/.foundry/bin:$PATH"
+    - foundryup
+    - cargo test --workspace --all-features
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-rust
+    paths:
+      - target/
+      - .cargo/
+    policy: pull
+    when: on_success
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - crates/**/*
+        - Cargo.toml
+        - Cargo.lock
+        - .gitlab-ci.yml
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - crates/**/*
+        - Cargo.toml
+        - Cargo.lock
+        - .gitlab-ci.yml
