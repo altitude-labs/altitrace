@@ -1,3 +1,9 @@
+# Rust
+target/
+
+# Gitlab
+.gitlab-ci-local
+
 # Logs
 logs
 *.log
