@@ -170,3 +170,54 @@ export function hexToBigint(hex: string): bigint {
   const validated = validateHex(hex);
   return BigInt(validated);
 }
+
+/**
+ * Recursively converts BigInt values to hex strings in an object
+ * This is needed for JSON serialization since JSON.stringify can't handle BigInt
+ */
+export function convertBigIntsToHex(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (typeof obj === 'bigint') {
+    return bigintToHex(obj);
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntsToHex);
+  }
+  
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = convertBigIntsToHex(value);
+    }
+    return result;
+  }
+  
+  return obj;
+}
+
+/**
+ * Converts Viem's assetChanges format to API format
+ * Handles the specific structure: { token: {...}, value: { pre: bigint, post: bigint, diff: bigint } }
+ */
+export function formatAssetChanges(assetChanges: readonly any[] | any[]): any[] {
+  if (!assetChanges || !Array.isArray(assetChanges)) {
+    return [];
+  }
+  
+  return assetChanges.map(change => ({
+    token: {
+      address: change.token.address,
+      ...(change.token.decimals !== undefined && { decimals: change.token.decimals }),
+      ...(change.token.symbol !== undefined && { symbol: change.token.symbol }),
+    },
+    value: {
+      pre: bigintToHex(change.value.pre),
+      post: bigintToHex(change.value.post),
+      diff: bigintToHex(change.value.diff),
+    },
+  }));
+}

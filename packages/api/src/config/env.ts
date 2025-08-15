@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const EnvSchema = z.object({
   // Server
-  PORT: z.string().transform(Number).default('3001'),
+  PORT: z.string().default('3001').transform(Number),
   HOST: z.string().default('0.0.0.0'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
@@ -10,12 +10,12 @@ const EnvSchema = z.object({
   RPC_URL: z.string().url(),
   
   // Rate Limiting
-  RATE_LIMIT_MAX: z.string().transform(Number).default('1000'),
-  RATE_LIMIT_WINDOW: z.string().transform(Number).default('60000'),
+  RATE_LIMIT_MAX: z.string().default('1000').transform(Number),
+  RATE_LIMIT_WINDOW: z.string().default('60000').transform(Number),
   
   // Caching
   REDIS_URL: z.string().url().optional(),
-  CACHE_TTL: z.string().transform(Number).default('300'),
+  CACHE_TTL: z.string().default('300').transform(Number),
   
   // Logging
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
@@ -25,12 +25,12 @@ const EnvSchema = z.object({
   LOG_FORMAT_FILE: z.enum(['logfmt', 'json']).default('json'),
   LOG_DIR: z.string().default('~/.local/share/altitrace'),
   LOG_FILENAME: z.string().default('altitrace.log'),
-  LOG_ENABLE_FILE: z.string().transform(val => val === 'true').default('true'),
-  LOG_PRETTY: z.string().transform(val => val === 'true').default('true'), // Legacy support
+  LOG_ENABLE_FILE: z.string().default('true').transform(val => val === 'true'),
+  LOG_PRETTY: z.string().default('true').transform(val => val === 'true'), // Legacy support
   
   // API Security
   API_KEY_HEADER: z.string().default('x-api-key'),
-  REQUIRE_API_KEY: z.string().transform(val => val === 'true').default('false'),
+  REQUIRE_API_KEY: z.string().default('false').transform(val => val === 'true'),
 });
 
 function validateEnv() {
@@ -47,7 +47,7 @@ function validateEnv() {
   } catch (error) {
     console.error('❌ Invalid environment configuration:');
     if (error instanceof z.ZodError) {
-      error.errors.forEach(err => {
+      error.issues.forEach((err: z.ZodIssue) => {
         console.error(`  ${err.path.join('.')}: ${err.message}`);
       });
     }
