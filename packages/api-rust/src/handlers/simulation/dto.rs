@@ -13,7 +13,7 @@ use crate::handlers::validation::{
 /// This structure encapsulates all parameters needed to simulate a transaction
 /// on the `HyperEVM` network, including the transaction details, block context,
 /// simulation options, and any state or block overrides.
-#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SimulationRequest {
     /// The transaction parameters to simulate.
@@ -25,8 +25,140 @@ pub struct SimulationRequest {
     pub options: Option<SimulationOptions>,
 }
 
-/// Core simulation parameters including transaction calls and context.
+impl SimulationRequest {
+    /// Total number of transaction calls in the simulation.
+    pub const fn call_count(&self) -> usize {
+        self.params.calls.len()
+    }
+}
+
+/// Batch simulation request for multiple independent transactions.
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchSimulationRequest {
+    /// Array of independent simulation requests.
+    #[validate(length(min = 1, max = 10, message = "Batch must contain 1-10 simulations"))]
+    #[validate(nested)]
+    pub simulations: Vec<SimulationRequest>,
+
+    /// Common options applied to all simulations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub common_options: Option<SimulationOptions>,
+}
+
+/// Bundle simulation request for interdependent transactions.
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleSimulationRequest {
+    /// Array of transactions to execute sequentially.
+    #[validate(length(min = 1, max = 10, message = "Bundle must contain 1-10 transactions"))]
+    #[validate(nested)]
+    pub bundle: Vec<BundleTransaction>,
+
+    /// Block number to simulate against (hex encoded).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom(function = "validate_block_number_or_tag"))]
+    pub block_number: Option<String>,
+
+    /// Block tag to use for simulation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_tag: Option<BlockTag>,
+
+    /// State overrides applied to the entire bundle.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(nested)]
+    pub state_overrides: Option<Vec<StateOverride>>,
+
+    /// Block parameter overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(nested)]
+    pub block_overrides: Option<BlockOverrides>,
+
+    /// Enable asset change tracking.
+    #[serde(default)]
+    pub trace_asset_changes: bool,
+
+    /// Enable transfer tracing.
+    #[serde(default)]
+    pub trace_transfers: bool,
+
+    /// Enable detailed performance profiling.
+    #[serde(default)]
+    pub enable_profiling: bool,
+}
+
+/// Individual transaction within a bundle.
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleTransaction {
+    /// Transaction calls for this bundle entry.
+    #[validate(length(min = 1, message = "At least one call is required"))]
+    #[validate(nested)]
+    pub calls: Vec<TransactionCall>,
+
+    /// Account to execute from.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom(function = "validate_address"))]
+    pub account: Option<String>,
+
+    /// Gas limit override for this transaction.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom(function = "validate_uint256"))]
+    pub gas_limit: Option<String>,
+
+    /// Whether this transaction can fail without stopping the bundle.
+    #[serde(default)]
+    pub allow_failure: bool,
+}
+
+/// Gas estimation request.
 #[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GasEstimationRequest {
+    /// The recipient address of the transaction.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom(function = "validate_address"))]
+    pub to: Option<String>,
+
+    /// The sender address of the transaction.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom(function = "validate_address"))]
+    pub from: Option<String>,
+
+    /// The transaction data (calldata).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom(function = "validate_hex_string"))]
+    pub data: Option<String>,
+
+    /// The value to send with the transaction in wei (hex encoded).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom(function = "validate_uint256"))]
+    pub value: Option<String>,
+
+    /// Optimization level for gas estimation.
+    #[serde(default)]
+    pub optimization_level: OptimizationLevel,
+
+    /// Include alternative implementation suggestions.
+    #[serde(default)]
+    pub include_alternatives: bool,
+}
+
+/// Gas optimization levels.
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum OptimizationLevel {
+    /// No optimization suggestions.
+    None,
+    /// Standard optimization suggestions.
+    #[default]
+    Standard,
+    /// Aggressive optimization suggestions.
+    Aggressive,
+}
+
+/// Core simulation parameters including transaction calls and context.
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SimulationParams {
     /// Array of transaction calls to simulate.
@@ -82,16 +214,6 @@ pub struct SimulationParams {
 #[derive(Debug, Clone, Deserialize, Serialize, Validate, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TransactionCall {
-    /// The recipient address of the transaction.
-    /// For contract creation, this should be None/null.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_address"))]
-    #[schema(
-        example = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        pattern = "^0x[a-fA-F0-9]{40}$"
-    )]
-    pub to: Option<String>,
-
     /// The sender address of the transaction.
     /// If not specified, the zero address will be used.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -101,6 +223,16 @@ pub struct TransactionCall {
         pattern = "^0x[a-fA-F0-9]{40}$"
     )]
     pub from: Option<String>,
+
+    /// The recipient address of the transaction.
+    /// For contract creation, this should be None/null.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom(function = "validate_address"))]
+    #[schema(
+        example = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        pattern = "^0x[a-fA-F0-9]{40}$"
+    )]
+    pub to: Option<String>,
 
     /// The transaction data (calldata).
     /// For simple ETH transfers, this can be empty or "0x".
@@ -330,8 +462,6 @@ pub enum BlockTag {
     Latest,
     /// The earliest/genesis block.
     Earliest,
-    /// The pending block (includes pending transactions).
-    Pending,
     /// The latest safe block (for chains with finality).
     Safe,
     /// The latest finalized block.
