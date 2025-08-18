@@ -6,7 +6,7 @@ use actix_web::{
 };
 use futures_util::future::{ready, LocalBoxFuture, Ready};
 use std::sync::Arc;
-use tracing::{debug, trace, warn};
+use tracing::{trace, warn};
 
 #[derive(Clone)]
 pub(crate) struct AuthMiddlewareFactory {
@@ -60,10 +60,6 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let sanitized_headers = sanitize_headers_for_logging(req.headers());
         trace!(target: "altitrace::middlewares::auth", headers=?sanitized_headers, "Authenticating request");
-        if is_local_request(&req) {
-            debug!(target: "altitrace::middlewares::auth", "Local request, skipping authentication");
-            return Box::pin(self.service.call(req));
-        }
 
         if self.api_token.as_str().is_empty() {
             return Box::pin(self.service.call(req));
@@ -89,18 +85,6 @@ where
 
         Box::pin(self.service.call(req))
     }
-}
-
-fn is_local_request(req: &ServiceRequest) -> bool {
-    if let Some(real_ip) = req.headers().get("X-Real-IP") {
-        let real_ip_str = real_ip.to_str().unwrap_or("");
-
-        if real_ip_str == "127.0.0.1" || real_ip_str == "::1" {
-            return true;
-        }
-    }
-
-    false
 }
 
 fn sanitize_headers_for_logging(headers: &HeaderMap) -> std::collections::HashMap<String, String> {

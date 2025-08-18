@@ -1,3 +1,4 @@
+use alloy_rpc_types_eth::BlockNumberOrTag;
 use redis::RedisError;
 use serde_json::Error;
 
@@ -48,4 +49,14 @@ impl From<Error> for CacheError {
             Self::Serialization(err)
         }
     }
+}
+
+#[derive(Debug, Clone, thiserror::Error, serde::Deserialize)]
+pub enum ProviderError {
+    #[error("Stream error: {0}")]
+    StreamError(String),
+    #[error("Fetch error for block {block}: {error}")]
+    FetchError { block: BlockNumberOrTag, error: String },
+    #[error("Provider is exhausted or block {0} not found")]
+    BlockNotFound(BlockNumberOrTag),
 }

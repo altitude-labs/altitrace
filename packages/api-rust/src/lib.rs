@@ -1,12 +1,18 @@
 pub mod config;
 pub mod errors;
+pub mod routes;
 pub mod services;
+pub mod utils;
 #[allow(dead_code)]
 pub mod version;
+use alloy_transport_http::reqwest::Url;
+use chrono::{DateTime, Utc};
 pub use services::*;
 use std::{sync::LazyLock, time::SystemTime};
 pub mod handlers;
 pub mod macros;
+pub use routes::*;
+pub use utils::*;
 
 use handlers::{Handler, HealthHandler, OpenApiHandler};
 mod middlewares;
@@ -68,8 +74,15 @@ where
     let redis_cache = Data::new(RedisCache::init_cache(&app_config.redis).await?);
     info!(target: "altitrace::api", "Starting server on {bind_address}");
     let start_time = *START_TIME;
-    info!(target: "altitrace::api", "Application started at {start_time:?}");
+    info!(target: "altitrace::api", "Application started at {}", DateTime::<Utc>::from(start_time));
     let api_config = Data::new(app_config.clone());
+
+    let rpc_url =
+        std::env::var("RPC_URL").map_err(|_| eyre!("RPC_URL environment variable is not set"))?;
+    let rpc_provider =
+        RpcProvider::new(Url::parse(rpc_url.as_str()).map_err(|_| eyre!("Invalid URL"))?).await?;
+
+    let hyperevm_service = Data::new(HyperEvmService::new(rpc_provider));
 
     let auth_middleware = api_config
         .api
@@ -111,10 +124,14 @@ where
                             }),
                     )
                     .service(
-                        web::scope("").wrap(
-                            auth_middleware_clone
-                                .unwrap_or_else(|| AuthMiddlewareFactory::new(String::new())),
-                        ),
+                        web::scope("")
+                            .wrap(
+                                auth_middleware_clone
+                                    .unwrap_or_else(|| AuthMiddlewareFactory::new(String::new())),
+                            )
+                            .configure(|cfg| {
+                                init_routes(cfg, redis_cache.clone(), hyperevm_service.clone())
+                            }),
                     ),
             )
     })

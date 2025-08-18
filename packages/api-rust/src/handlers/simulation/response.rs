@@ -361,3 +361,139 @@ pub struct AccessListEntry {
     /// Storage slots that will be accessed at this address.
     pub storage_keys: Vec<String>,
 }
+
+/// Bundle simulation result containing all transaction results.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleSimulationResult {
+    /// Unique identifier for this bundle simulation.
+    pub bundle_id: String,
+
+    /// The final block number after bundle simulation.
+    #[schema(example = "0x123abd", pattern = "^0x[a-fA-F0-9]+$")]
+    pub block_number: String,
+
+    /// Results for each transaction in the bundle.
+    pub transactions: Vec<BundleTransactionResult>,
+
+    /// Total gas consumed by all transactions in the bundle.
+    #[schema(example = "0x15f90", pattern = "^0x[a-fA-F0-9]+$")]
+    pub total_gas_used: String,
+
+    /// Total gas used in the simulated block.
+    #[schema(example = "0x15f90", pattern = "^0x[a-fA-F0-9]+$")]
+    pub block_gas_used: String,
+
+    /// Aggregated asset changes across all transactions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub asset_changes: Option<Vec<AssetChange>>,
+
+    /// Performance metrics for the entire bundle.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub performance: Option<PerformanceMetrics>,
+
+    /// Generated access list for the bundle.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_list: Option<Vec<AccessListEntry>>,
+}
+
+/// Result of a single transaction within a bundle.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleTransactionResult {
+    /// Index of this transaction within the bundle.
+    pub transaction_index: u32,
+
+    /// Execution status of this transaction.
+    #[schema(example = "success")]
+    pub status: BundleTransactionStatus,
+
+    /// Call results within this transaction.
+    pub calls: Vec<CallResult>,
+
+    /// Gas used by this transaction.
+    #[schema(example = "0x5208", pattern = "^0x[a-fA-F0-9]+$")]
+    pub gas_used: String,
+
+    /// Reason why this transaction was skipped (if applicable).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skip_reason: Option<String>,
+}
+
+/// Execution status for bundle transactions.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum BundleTransactionStatus {
+    /// Transaction executed successfully.
+    Success,
+    /// Transaction reverted but bundle continued.
+    Reverted,
+    /// Transaction was skipped due to failure.
+    Skipped,
+}
+
+/// Gas estimation result with optimization suggestions.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GasEstimationResult {
+    /// Estimated gas limit for the transaction.
+    #[schema(example = "0x5208", pattern = "^0x[a-fA-F0-9]+$")]
+    pub gas_estimate: String,
+
+    /// Current gas price on the network.
+    #[schema(example = "0x3b9aca00", pattern = "^0x[a-fA-F0-9]+$")]
+    pub gas_price: String,
+
+    /// Estimated cost breakdown (if available).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub estimated_cost: Option<EstimatedCost>,
+
+    /// Gas optimization suggestions.
+    pub optimizations: Vec<GasOptimization>,
+
+    /// Detailed gas usage breakdown.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub breakdown: Option<GasBreakdown>,
+}
+
+/// Estimated transaction cost in various units.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct EstimatedCost {
+    /// Cost in wei (hex encoded).
+    #[schema(example = "0x9184e72a000", pattern = "^0x[a-fA-F0-9]+$")]
+    pub wei: String,
+
+    /// Cost in gwei (decimal string).
+    #[schema(example = "10.0")]
+    pub gwei: String,
+
+    /// Cost in ETH (decimal string).
+    #[schema(example = "0.00001")]
+    pub eth: String,
+
+    /// Cost in USD (if available).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(example = "0.025")]
+    pub usd: Option<String>,
+}
+
+/// Gas optimization suggestion.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GasOptimization {
+    /// Type of optimization.
+    #[schema(example = "access-list")]
+    pub optimization_type: String,
+
+    /// Human-readable description of the optimization.
+    #[schema(example = "Add access list to save ~2100 gas")]
+    pub description: String,
+
+    /// Estimated gas savings from this optimization.
+    #[schema(example = "2100")]
+    pub gas_savings: String,
+
+    /// Implementation details for the optimization.
+    pub implementation: serde_json::Value,
+}

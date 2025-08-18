@@ -141,8 +141,8 @@ fn build_common_env_filter(default_directive: Directive) -> EnvFilter {
         .with_default_directive(default_directive)
         .from_env_lossy()
         .add_directive("actix_server=off".parse().unwrap())
+        .add_directive("actix_http=off".parse().unwrap())
         .add_directive("hyper::proto::h1=off".parse().unwrap())
-        .add_directive("sqlx=off".parse().unwrap())
         .add_directive("alloy=off".parse().unwrap())
         .add_directive("hyper_util=off".parse().unwrap())
 }

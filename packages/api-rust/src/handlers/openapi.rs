@@ -8,7 +8,7 @@ use utoipa::{
 };
 use utoipa_swagger_ui::SwaggerUi;
 
-use super::{health::HealthApiDoc, Handler};
+use super::{health::HealthApiDoc, simulation::SimulationApiDoc, Handler};
 use crate::ApiResult;
 
 #[derive(Default)]
@@ -35,7 +35,7 @@ impl OpenApiHandler {
                     .build(),
             )
             .servers(Some(vec![utoipa::openapi::ServerBuilder::new()
-                .url("/v1")
+                .url("http://localhost:8080/v1")
                 .description(Some("API v1"))
                 .build()]));
 
@@ -53,6 +53,7 @@ impl OpenApiHandler {
         let mut openapi = openapi_builder.build();
 
         openapi.merge(HealthApiDoc::openapi());
+        openapi.merge(SimulationApiDoc::openapi());
         openapi
     }
 }
