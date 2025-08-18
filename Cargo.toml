@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "packages/api-rust",
+    "packages/api",
 ]
 resolver = "2"
 
