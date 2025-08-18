@@ -120,7 +120,25 @@ impl<T> ApiResponse<T> {
 
 impl<T: Serialize> From<ApiResponse<T>> for HttpResponse {
     fn from(value: ApiResponse<T>) -> Self {
-        let status = if value.success { StatusCode::OK } else { StatusCode::INTERNAL_SERVER_ERROR };
+        // For simulation endpoints, we return 200 even for failed simulations
+        // The error details are in the response body
+        let status = if value.success {
+            StatusCode::OK
+        } else if let Some(ref error) = value.error {
+            // Map error codes to appropriate HTTP status codes
+            match error.code.as_str() {
+                "SIMULATION_FAILED" => StatusCode::OK, // Simulation failures return 200
+                "INVALID_REQUEST" | "INVALID_PARAMETERS" | "VALIDATION_ERROR" => {
+                    StatusCode::BAD_REQUEST
+                }
+                "UNAUTHORIZED" | "INVALID_API_KEY" => StatusCode::UNAUTHORIZED,
+                "NOT_FOUND" => StatusCode::NOT_FOUND,
+                "RATE_LIMITED" => StatusCode::TOO_MANY_REQUESTS,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            }
+        } else {
+            StatusCode::INTERNAL_SERVER_ERROR
+        };
 
         Self::build(status).json(value)
     }
