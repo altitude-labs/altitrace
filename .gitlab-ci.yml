@@ -75,15 +75,17 @@ clippy:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - crates/**
+        - packages/api/**/*
         - Cargo.toml
         - Cargo.lock
+        - rustfmt.toml
         - .gitlab-ci.yml
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - crates/**
+        - packages/api/**/*
         - Cargo.toml
         - Cargo.lock
+        - rustfmt.toml
         - .gitlab-ci.yml
 
 fmt:
@@ -103,15 +105,17 @@ fmt:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - crates/**
+        - packages/api/**/*
         - Cargo.toml
         - Cargo.lock
+        - rustfmt.toml
         - .gitlab-ci.yml
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - crates/**
+        - packages/api/**/*
         - Cargo.toml
         - Cargo.lock
+        - rustfmt.toml
         - .gitlab-ci.yml
 
 test:
@@ -133,13 +137,15 @@ test:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - crates/**/*
+        - packages/api/**/*
         - Cargo.toml
         - Cargo.lock
+        - rustfmt.toml
         - .gitlab-ci.yml
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - crates/**/*
+        - packages/api/**/*
         - Cargo.toml
         - Cargo.lock
+        - rustfmt.toml
         - .gitlab-ci.yml
