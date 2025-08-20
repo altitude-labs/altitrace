@@ -29,7 +29,7 @@ macro_rules! define_routes {
                                 info!(
                                     target: "altitrace::api",
                                     handler = stringify!($handler),
-                                    endpoint = $route,
+                                    endpoint = concat!($scope, $route),
                                 );
 
                                 let start = std::time::Instant::now();
@@ -46,7 +46,7 @@ macro_rules! define_routes {
                                 info!(
                                     target: "altitrace::api",
                                     handler = stringify!($handler),
-                                    endpoint = $route,
+                                    endpoint = concat!($scope, $route),
                                     ?duration,
                                     "Query completed"
                                 );

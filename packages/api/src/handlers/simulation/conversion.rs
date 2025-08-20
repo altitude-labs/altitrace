@@ -4,6 +4,7 @@
 //! types and the corresponding Alloy RPC types used for `HyperEVM` communication.
 
 use super::{dto::*, response::*};
+use crate::types::{shared::StateOverride, BlockOverrides};
 use alloy_primitives::{map::B256HashMap, Address, Bytes, TxKind, B256, U256};
 use alloy_rpc_types_eth::{
     simulate::{SimBlock, SimCallResult, SimulatePayload},
@@ -106,8 +107,10 @@ fn convert_state_overrides(overrides: Vec<StateOverride>) -> Result<AlloyStateOv
     let mut alloy_overrides = AlloyStateOverride::default();
 
     for override_entry in overrides {
-        let address = Address::from_str(&override_entry.address)
-            .map_err(|e| anyhow!("Invalid address '{}': {}", override_entry.address, e))?;
+        let address = Address::from_str(&override_entry.clone().address.unwrap_or_default())
+            .map_err(|e| {
+                anyhow!("Invalid address '{}': {}", override_entry.address.unwrap_or_default(), e)
+            })?;
 
         let mut alloy_override = alloy_rpc_types_eth::state::AccountOverride::default();
 
@@ -146,11 +149,11 @@ fn convert_state_overrides(overrides: Vec<StateOverride>) -> Result<AlloyStateOv
         } else if let Some(state_diff_slots) = override_entry.state_diff {
             let state_diff_map = state_diff_slots
                 .into_iter()
-                .map(|slot| {
-                    let slot_key = B256::from_str(&slot.slot)
-                        .map_err(|e| anyhow!("Invalid slot key '{}': {}", slot.slot, e))?;
-                    let slot_value = B256::from_str(&slot.value)
-                        .map_err(|e| anyhow!("Invalid slot value '{}': {}", slot.value, e))?;
+                .map(|(slot_key, slot_value)| {
+                    let slot_key = B256::from_str(&slot_key)
+                        .map_err(|e| anyhow!("Invalid slot key '{}': {}", slot_key, e))?;
+                    let slot_value = B256::from_str(&slot_value)
+                        .map_err(|e| anyhow!("Invalid slot value '{}': {}", slot_value, e))?;
                     Ok((slot_key, slot_value))
                 })
                 .collect::<Result<B256HashMap<B256>>>()?;
@@ -164,7 +167,7 @@ fn convert_state_overrides(overrides: Vec<StateOverride>) -> Result<AlloyStateOv
 }
 
 /// Converts our API [`BlockOverrides`] to Alloy's [`BlockOverrides`]
-fn convert_block_overrides(overrides: BlockOverrides) -> Result<AlloyBlockOverrides> {
+pub fn convert_block_overrides(overrides: BlockOverrides) -> Result<AlloyBlockOverrides> {
     let mut alloy_overrides = AlloyBlockOverrides::default();
 
     // Convert block number
@@ -308,7 +311,6 @@ impl TryFrom<BundleSimulationRequest> for Vec<SimulatePayload<AlloyTransactionRe
                 options: Some(SimulationOptions {
                     state_overrides: Some(cumulative_state_overrides.clone()),
                     block_overrides: base_block_overrides.clone(),
-                    trace_config: None,
                 }),
             };
 
@@ -327,6 +329,10 @@ impl TryFrom<BundleSimulationRequest> for Vec<SimulatePayload<AlloyTransactionRe
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
+    use crate::types::StorageSlot;
+
     use super::*;
 
     #[test]
@@ -381,7 +387,7 @@ mod tests {
     #[test]
     fn test_state_override_conversion() {
         let api_overrides = vec![StateOverride {
-            address: "0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c".to_string(),
+            address: Some("0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c".to_string()),
             balance: Some("0x1000000000000000000".to_string()),
             nonce: Some(5),
             code: Some("0x6080604052".to_string()),
@@ -391,6 +397,7 @@ mod tests {
                 value: "0x0000000000000000000000000000000000000000000000000000000000000064"
                     .to_string(),
             }]),
+            storage: Some(HashMap::new()),
             state_diff: None,
             move_precompile_to_address: None,
         }];
@@ -447,7 +454,10 @@ mod tests {
 
         let state_overrides = options.state_overrides.as_ref().unwrap();
         assert_eq!(state_overrides.len(), 1);
-        assert_eq!(state_overrides[0].address, "0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c");
+        assert_eq!(
+            state_overrides[0].address,
+            Some("0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c".to_string())
+        );
         assert_eq!(state_overrides[0].balance, Some("0x10000000000000".to_string()));
 
         // Now test the full conversion to Alloy format

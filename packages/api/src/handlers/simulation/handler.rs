@@ -4,7 +4,7 @@ use crate::{
         common::{ApiError, ApiResponse, Handler},
         simulation::{dto::*, response::*},
     },
-    services::hyperevm::HyperEvmService,
+    services::hyperevm::service::HyperEvmService,
     ApiResult,
 };
 use actix_web::{web, HttpResponse};
@@ -178,13 +178,13 @@ async fn simulate_batch_transaction(
 
 define_routes!(
     SimulationHandler,
-    "",
-    "/simulate" => {
+    "/simulate",
+    "" => {
         method: post,
         handler: simulate_transaction,
         params: { request: web::Json<SimulationRequest> }
     },
-    "/simulate/batch" => {
+    "/batch" => {
         method: post,
         handler: simulate_batch_transaction,
         params: { request: web::Json<Vec<SimulationRequest>> }

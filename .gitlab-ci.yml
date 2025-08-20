@@ -5,12 +5,12 @@ stages:
   - success
 
 variables:
-  RUST_IMAGE: rustlang/rust:nightly
+  RUST_IMAGE: rust:1.88-slim
   NODE_VERSION: "20"
   CARGO_TERM_COLOR: always
   CARGO_HOME: $CI_PROJECT_DIR/.cargo
   CARGO_TARGET_DIR: $CI_PROJECT_DIR/target
-  BUILD_DEPENDENCIES: "build-essential cmake perl make pkg-config clang libclang-dev"
+  BUILD_DEPENDENCIES: "build-essential cmake perl make pkg-config clang libclang-dev pkg-config libssl-dev curl git"
   GIT_STRATEGY: clone
   GIT_DEPTH: 1
   GIT_CLEAN_FLAGS: none
@@ -48,10 +48,7 @@ cleanup:
   script:
     - |
       echo "Cleaning up workspace..."
-      rm -rf node_modules
-      rm -rf target
-      rm -rf .cargo
-      rm -rf dist
+      rm -rf node_modules target .cargo dist
   when: always
   allow_failure: true
 
@@ -59,93 +56,63 @@ cleanup:
 clippy:
   stage: lint
   image: $RUST_IMAGE
-  extends:
-    - .default-rules
-  script:
+  extends: [.default-rules]
+  before_script:
+    - apt-get update && apt-get install -y $BUILD_DEPENDENCIES
+    - rustup update
     - rustup component add clippy rustfmt
-    - rustup default nightly
+  script:
     - RUSTFLAGS="-D warnings" cargo clippy --workspace --all-targets --all-features
   cache:
     key: ${CI_COMMIT_REF_SLUG}-rust
-    paths:
-      - target/
-      - .cargo/
+    paths: [target/, .cargo/]
     policy: pull-push
     when: on_success
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        - packages/api/**/*
-        - Cargo.toml
-        - Cargo.lock
-        - rustfmt.toml
-        - .gitlab-ci.yml
+      changes: [packages/api/**/*, Cargo.toml, Cargo.lock, rustfmt.toml, .gitlab-ci.yml]
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - packages/api/**/*
-        - Cargo.toml
-        - Cargo.lock
-        - rustfmt.toml
-        - .gitlab-ci.yml
+      changes: [packages/api/**/*, Cargo.toml, Cargo.lock, rustfmt.toml, .gitlab-ci.yml]
 
 fmt:
   stage: lint
   image: $RUST_IMAGE
-  script:
+  before_script:
+    - apt-get update && apt-get install -y $BUILD_DEPENDENCIES
+    - rustup update
     - rustup component add rustfmt
-    - rustup default nightly
+  script:
     - cargo fmt --all --check
   cache:
     key: ${CI_COMMIT_REF_SLUG}-rust
-    paths:
-      - target/
-      - .cargo/
+    paths: [target/, .cargo/]
     policy: pull
     when: on_success
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        - packages/api/**/*
-        - Cargo.toml
-        - Cargo.lock
-        - rustfmt.toml
-        - .gitlab-ci.yml
+      changes: [packages/api/**/*, Cargo.toml, Cargo.lock, rustfmt.toml, .gitlab-ci.yml]
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - packages/api/**/*
-        - Cargo.toml
-        - Cargo.lock
-        - rustfmt.toml
-        - .gitlab-ci.yml
+      changes: [packages/api/**/*, Cargo.toml, Cargo.lock, rustfmt.toml, .gitlab-ci.yml]
 
 test:
   stage: test
   image: $RUST_IMAGE
-  script:
-    - apt-get update && apt-get install -y curl
+  before_script:
+    - apt-get update && apt-get install -y $BUILD_DEPENDENCIES
     - curl -L https://foundry.paradigm.xyz | bash
     - export PATH="$HOME/.foundry/bin:$PATH"
     - foundryup
+    - rustup update
+    - rustup component add clippy rustfmt
+  script:
     - cargo test --workspace --all-features
   cache:
     key: ${CI_COMMIT_REF_SLUG}-rust
-    paths:
-      - target/
-      - .cargo/
+    paths: [target/, .cargo/]
     policy: pull
     when: on_success
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        - packages/api/**/*
-        - Cargo.toml
-        - Cargo.lock
-        - rustfmt.toml
-        - .gitlab-ci.yml
+      changes: [packages/api/**/*, Cargo.toml, Cargo.lock, rustfmt.toml, .gitlab-ci.yml]
     - if: $CI_COMMIT_BRANCH == "main"
-      changes:
-        - packages/api/**/*
-        - Cargo.toml
-        - Cargo.lock
-        - rustfmt.toml
-        - .gitlab-ci.yml
+      changes: [packages/api/**/*, Cargo.toml, Cargo.lock, rustfmt.toml, .gitlab-ci.yml]
