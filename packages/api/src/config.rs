@@ -18,6 +18,16 @@ pub(crate) struct ServerConfig {
 #[derive(Clone, Debug, Deserialize)]
 pub(crate) struct ApiConfig {
     pub auth_token: Option<String>,
+    pub cors: CorsConfig,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct CorsConfig {
+    pub allowed_origins: Vec<String>,
+    pub allowed_methods: Option<Vec<String>>,
+    pub allowed_headers: Option<Vec<String>>,
+    pub allow_credentials: Option<bool>,
+    pub max_age: Option<u32>,
 }
 
 #[allow(unused)]
