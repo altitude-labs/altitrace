@@ -5,10 +5,38 @@
 //! the raw RPC provider with business logic, validation, and response processing.
 
 use crate::{
-    handlers::simulation::{dto::*, response::*},
-    parse_block_number,
+    handlers::{
+        simulation::{dto::*, response::*},
+        trace::*,
+    },
     services::hyperevm::RpcProvider,
+    types::{TraceResponse, TransactionReceiptInfo},
+    utils::{generate_batch_id, generate_trace_id, validation::parse_block_number},
 };
+
+use alloy_primitives::B256;
+use alloy_provider::{ext::DebugApi, Provider};
+use alloy_rpc_types::BlockId;
+use alloy_rpc_types_eth::{
+    simulate::{SimulatePayload, SimulatedBlock},
+    TransactionRequest as AlloyTransactionRequest,
+};
+use anyhow::{anyhow, Result};
+use std::{str::FromStr, time::Instant};
+use tracing::{debug, error, trace};
+use uuid::Uuid;
+
+/// Trait for types that can provide block context information.
+///
+/// This trait allows different parameter types to provide the necessary
+/// information for determining block context (`block_number`, `block_tag`).
+trait BlockContextProvider {
+    /// Returns the optional block number (hex-encoded).
+    fn block_number(&self) -> Option<u64>;
+
+    /// Returns the optional block tag.
+    fn block_tag(&self) -> Option<&BlockTag>;
+}
 
 /// Represents different block context options for simulation.
 #[derive(Debug, Clone)]
@@ -17,18 +45,24 @@ enum BlockContext {
     Number(u64),
     /// Use a block tag (latest, earliest, etc.)
     Tag(BlockTag),
-    /// Use default (latest) block
-    Default,
 }
-use alloy_provider::Provider;
-use alloy_rpc_types_eth::{
-    simulate::{SimulatePayload, SimulatedBlock},
-    TransactionRequest as AlloyTransactionRequest,
-};
-use anyhow::{anyhow, Result};
-use std::time::Instant;
-use tracing::{debug, error, trace};
-use uuid::Uuid;
+
+impl std::default::Default for BlockContext {
+    fn default() -> Self {
+        Self::Tag(BlockTag::Latest)
+    }
+}
+
+/// Implementation of `BlockContextProvider` for `SimulationParams`.
+impl BlockContextProvider for SimulationParams {
+    fn block_number(&self) -> Option<u64> {
+        parse_block_number(self.block_number.as_ref().unwrap()).ok()
+    }
+
+    fn block_tag(&self) -> Option<&BlockTag> {
+        self.block_tag.as_ref()
+    }
+}
 
 #[derive(Clone)]
 pub struct HyperEvmService {
@@ -40,50 +74,49 @@ impl HyperEvmService {
         Self { provider }
     }
 
-    /// Determines the appropriate block context for simulation.
+    /// Determines the appropriate block context for any type that implements
+    /// `BlockContextProvider`.
     ///
     /// This method validates and parses block selection parameters:
     /// - Specific block numbers (hex encoded)
     /// - Block tags (latest, earliest, safe, finalized)
     /// - Default fallback to latest block
-    fn determine_block_context(
+    fn determine_block_context<T: BlockContextProvider>(
         &self,
-        params: &SimulationParams,
-        simulation_id: &str,
+        params: &T,
+        context_id: &str,
     ) -> Result<BlockContext> {
-        match (&params.block_number, &params.block_tag) {
+        match (params.block_number(), params.block_tag()) {
             (Some(block_number), None) => {
                 trace!(
                     target: "altitrace::simulation",
-                    simulation_id = %simulation_id,
+                    context_id = %context_id,
                     block_number = %block_number,
-                    "Using specific block number for simulation"
+                    "Using specific block number for context"
                 );
-                let block_num = parse_block_number(block_number).map_err(|e| {
-                    error!(
-                        target: "altitrace::simulation",
-                        simulation_id = %simulation_id,
-                        error = ?e,
-                        "Failed to parse block number"
-                    );
-                    anyhow!("Invalid block number format: {}", e)
-                })?;
-                Ok(BlockContext::Number(block_num))
+                Ok(BlockContext::Number(block_number))
             }
             (None, Some(block_tag)) => {
                 trace!(
                     target: "altitrace::simulation",
-                    simulation_id = %simulation_id,
+                    context_id = %context_id,
                     block_tag = ?block_tag,
-                    "Using block tag for simulation"
+                    "Using block tag for context"
                 );
                 Ok(BlockContext::Tag(*block_tag))
             }
-            (None, None) => Ok(BlockContext::Default),
+            (None, None) => {
+                trace!(
+                    target: "altitrace::simulation",
+                    context_id = %context_id,
+                    "No block context specified, defaulting to latest"
+                );
+                Ok(BlockContext::default())
+            }
             (Some(_), Some(_)) => {
                 error!(
                     target: "altitrace::simulation",
-                    simulation_id = %simulation_id,
+                    context_id = %context_id,
                     "Both block_number and block_tag specified - this should be caught by validation"
                 );
                 Err(anyhow!("Cannot specify both block_number and block_tag"))
@@ -145,14 +178,6 @@ impl HyperEvmService {
                 BlockTag::Finalized => self.provider.inner.simulate(&simulate_payload).finalized(),
                 BlockTag::Safe => self.provider.inner.simulate(&simulate_payload).safe(),
             },
-            BlockContext::Default => {
-                trace!(
-                    target: "altitrace::simulation",
-                    simulation_id = %simulation_id,
-                    "No block context specified, defaulting to latest"
-                );
-                self.provider.inner.simulate(&simulate_payload).latest()
-            }
         };
 
         // Execute simulation via eth_simulateV1
@@ -271,7 +296,7 @@ impl HyperEvmService {
         &self,
         requests: Vec<SimulationRequest>,
     ) -> Result<Vec<SimulationResult>> {
-        let batch_id = Uuid::new_v4().to_string();
+        let batch_id = generate_batch_id();
 
         debug!(
             target: "altitrace::simulation",
@@ -354,5 +379,99 @@ impl HyperEvmService {
         );
 
         Ok(results)
+    }
+
+    pub async fn trace_transaction(
+        &self,
+        request: &TraceTransactionRequest,
+    ) -> Result<TraceResponse> {
+        let trace_id = generate_trace_id();
+        let tx_hash = B256::from_str(&request.transaction_hash)
+            .map_err(|e| anyhow!("Invalid transaction hash: {}", e))?;
+
+        let start_time = Instant::now();
+
+        debug!(
+            target: "altitrace::trace",
+            %trace_id,
+            "Starting trace"
+        );
+
+        // Create tracing strategy based on configuration
+        let strategy = TracingStrategy::from_config(&request.tracer_config);
+
+        debug!(
+            target: "altitrace::trace",
+            %trace_id,
+            %strategy,
+            "Tracing strategy"
+        );
+
+        let (trace_result, receipt_result) = tokio::join!(
+            strategy.execute(tx_hash, |hash, options| {
+                let provider = &self.provider.inner;
+                async move { provider.debug_trace_transaction(hash, options).await }
+            }),
+            self.provider.inner.get_transaction_receipt(tx_hash)
+        );
+
+        let trace_result = trace_result?;
+        let receipt = receipt_result?.ok_or_else(|| anyhow!("No receipt found for transaction"))?;
+        let receipt = TransactionReceiptInfo::from(receipt);
+
+        let elapsed_time = start_time.elapsed();
+
+        debug!(
+            target: "altitrace::trace",
+            %trace_id,
+            %trace_result,
+            ?elapsed_time,
+            "Tracing completed"
+        );
+
+        let trace_response = TraceResponse::new(trace_result).with_receipt(receipt);
+
+        Ok(trace_response)
+    }
+
+    pub async fn trace_call(&self, request: &TraceCallRequest) -> Result<TraceResponse> {
+        let block_id = BlockId::from_str(&request.block)?;
+
+        let start_time = Instant::now();
+        let trace_id = generate_trace_id();
+
+        debug!(
+            target: "altitrace::trace",
+            %trace_id,
+            %block_id,
+            "Starting call trace"
+        );
+
+        let tracing_strategy = TracingStrategy::from_config(&request.tracer_config);
+
+        let trace_result = tracing_strategy
+            .execute_call(request.clone(), |tx_request, block_id, options| {
+                let provider = &self.provider.inner;
+                async move {
+                    provider
+                        .debug_trace_call(tx_request, block_id, options)
+                        .await
+                }
+            })
+            .await?;
+
+        let elapsed_time = start_time.elapsed();
+
+        debug!(
+            target: "altitrace::trace",
+            %trace_id,
+            %trace_result,
+            ?elapsed_time,
+            "Tracing completed"
+        );
+
+        let trace_response = TraceResponse::new(trace_result);
+
+        Ok(trace_response)
     }
 }

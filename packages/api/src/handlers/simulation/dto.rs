@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use utoipa::ToSchema;
 use validator::Validate;
 
-use crate::handlers::validation::{
-    validate_address, validate_block_number_or_tag, validate_bytes32, validate_hex_string,
-    validate_uint256,
+use crate::{
+    handlers::validation::{
+        validate_address, validate_block_number_or_tag, validate_hex_string, validate_uint256,
+    },
+    types::{shared::StateOverride, BlockOverrides},
+    utils::default_true,
 };
 
 /// Represents a complete simulation request for transaction execution.
@@ -270,187 +272,6 @@ pub struct SimulationOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(nested)]
     pub block_overrides: Option<BlockOverrides>,
-
-    /// Trace configuration for detailed execution analysis.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub trace_config: Option<TraceConfig>,
-}
-
-/// State override for a specific account address.
-///
-/// This allows modifying the state of an account before simulation,
-/// including balance, nonce, code, and storage slots.
-#[derive(Debug, Clone, Deserialize, Serialize, Validate, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct StateOverride {
-    /// The account address to override.
-    #[validate(custom(function = "validate_address"))]
-    #[schema(
-        example = "0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c",
-        pattern = "^0x[a-fA-F0-9]{40}$"
-    )]
-    pub address: String,
-
-    /// Override the account's balance (hex encoded wei).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_uint256"))]
-    #[schema(example = "0xffffffffffffffff", pattern = "^0x[a-fA-F0-9]*$")]
-    pub balance: Option<String>,
-
-    /// Override the account's nonce.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schema(example = 10)]
-    pub nonce: Option<u64>,
-
-    /// Override the account's code (hex encoded bytecode).
-    /// For EOAs, use "0x" to set empty code.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_hex_string"))]
-    #[schema(example = "0x6080604052...", pattern = "^0x[a-fA-F0-9]*$")]
-    pub code: Option<String>,
-
-    /// Completely replace the account's storage.
-    /// All existing storage will be cleared and replaced with these values.
-    /// Cannot be used together with `state_diff`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(nested)]
-    pub state: Option<Vec<StorageSlot>>,
-
-    /// Partially modify the account's storage.
-    /// Only specified slots will be changed, others remain unchanged.
-    /// Cannot be used together with `state`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(nested)]
-    pub state_diff: Option<Vec<StorageSlot>>,
-
-    /// Move a precompiled contract to this address.
-    /// This is an advanced feature for testing precompile behavior.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "movePrecompileToAddress")]
-    #[validate(custom(function = "validate_address"))]
-    #[schema(
-        example = "0x0000000000000000000000000000000000000001",
-        pattern = "^0x[a-fA-F0-9]{40}$"
-    )]
-    pub move_precompile_to_address: Option<String>,
-}
-
-/// Represents a storage slot override.
-#[derive(Debug, Clone, Deserialize, Serialize, Validate, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct StorageSlot {
-    /// The storage slot key (32 bytes, hex encoded).
-    #[validate(custom(function = "validate_bytes32"))]
-    #[schema(
-        example = "0x0000000000000000000000000000000000000000000000000000000000000001",
-        pattern = "^0x[a-fA-F0-9]{64}$"
-    )]
-    pub slot: String,
-
-    /// The storage slot value (32 bytes, hex encoded).
-    #[validate(custom(function = "validate_bytes32"))]
-    #[schema(
-        example = "0x0000000000000000000000000000000000000000000000000000000000000064",
-        pattern = "^0x[a-fA-F0-9]{64}$"
-    )]
-    pub value: String,
-}
-
-/// Block environment overrides for simulation.
-///
-/// These overrides allow modifying the block context in which the simulation runs,
-/// including block number, timestamp, gas parameters, and more.
-#[derive(Debug, Clone, Default, Deserialize, Serialize, Validate, ToSchema)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct BlockOverrides {
-    /// Override the block number.
-    /// For `eth_simulateV1`, this will be the first simulated block number.
-    /// Note: Different clients use different field names (geth: "number", erigon: "blockNumber").
-    #[serde(skip_serializing_if = "Option::is_none", alias = "blockNumber")]
-    #[validate(custom(function = "validate_uint256"))]
-    #[schema(example = "0x1234567", pattern = "^0x[a-fA-F0-9]*$")]
-    pub number: Option<String>,
-
-    /// Override the block difficulty (pre-merge chains).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_uint256"))]
-    #[schema(example = "0x0", pattern = "^0x[a-fA-F0-9]*$")]
-    pub difficulty: Option<String>,
-
-    /// Override the block timestamp (Unix timestamp in seconds).
-    /// Note: Different clients use different field names (geth: "time", erigon: "timestamp").
-    #[serde(skip_serializing_if = "Option::is_none", alias = "timestamp")]
-    #[schema(example = 1700000000)]
-    pub time: Option<u64>,
-
-    /// Override the block gas limit.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schema(example = 30000000)]
-    pub gas_limit: Option<u64>,
-
-    /// Override the block coinbase (miner/fee recipient).
-    #[serde(skip_serializing_if = "Option::is_none", alias = "feeRecipient")]
-    #[validate(custom(function = "validate_address"))]
-    #[schema(
-        example = "0x0000000000000000000000000000000000000000",
-        pattern = "^0x[a-fA-F0-9]{40}$"
-    )]
-    pub coinbase: Option<String>,
-
-    /// Override the prevRandao value (post-merge).
-    /// This replaces the difficulty field in post-merge chains.
-    #[serde(skip_serializing_if = "Option::is_none", alias = "prevRandao")]
-    #[validate(custom(function = "validate_bytes32"))]
-    #[schema(
-        example = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-        pattern = "^0x[a-fA-F0-9]{64}$"
-    )]
-    pub random: Option<String>,
-
-    /// Override the base fee per gas (EIP-1559).
-    #[serde(skip_serializing_if = "Option::is_none", alias = "baseFeePerGas")]
-    #[validate(custom(function = "validate_uint256"))]
-    #[schema(example = "0x3b9aca00", pattern = "^0x[a-fA-F0-9]*$")]
-    pub base_fee: Option<String>,
-
-    /// Custom block hash mappings for the BLOCKHASH opcode.
-    /// Maps block numbers to their corresponding block hashes.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub block_hash: Option<HashMap<String, String>>,
-}
-
-/// Configuration for execution tracing.
-#[derive(Debug, Clone, Default, Deserialize, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct TraceConfig {
-    /// Enable memory capture in traces.
-    #[serde(default)]
-    pub enable_memory: bool,
-
-    /// Enable return data capture in traces.
-    #[serde(default = "default_true")]
-    pub enable_return_data: bool,
-
-    /// Enable storage capture in traces.
-    #[serde(default)]
-    pub enable_storage: bool,
-
-    /// Type of tracer to use.
-    #[serde(default)]
-    #[schema(example = "callTracer")]
-    pub tracer: Option<TracerType>,
-}
-
-/// Available tracer types for execution analysis.
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-#[schema(example = "callTracer")]
-pub enum TracerType {
-    /// Traces all call frames including internal calls.
-    CallTracer,
-    /// Traces the state before execution.
-    PrestateTracer,
-    /// Provides step-by-step execution trace.
-    StructLogger,
 }
 
 /// Block tag options for specifying block context.
@@ -466,24 +287,6 @@ pub enum BlockTag {
     Safe,
     /// The latest finalized block.
     Finalized,
-}
-
-/// Helper function to provide default true value.
-const fn default_true() -> bool {
-    true
-}
-
-// Validation implementations would be in a separate validation module
-// but for demonstration, here's the structure:
-
-impl StateOverride {
-    /// Validates that `state` and `state_diff` are mutually exclusive.
-    pub const fn validate_state_exclusivity(&self) -> Result<(), &'static str> {
-        if self.state.is_some() && self.state_diff.is_some() {
-            return Err("Cannot specify both 'state' and 'state_diff' - they are mutually exclusive");
-        }
-        Ok(())
-    }
 }
 
 impl SimulationParams {
@@ -511,16 +314,18 @@ impl SimulationParams {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_state_override_validation() {
         let mut override_state = StateOverride {
-            address: "0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c".to_string(),
+            address: Some("0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c".to_string()),
             balance: None,
             nonce: None,
             code: None,
+            storage: Some(HashMap::new()),
             state: Some(vec![]),
-            state_diff: Some(vec![]),
+            state_diff: Some(HashMap::new()),
             move_precompile_to_address: None,
         };
 
