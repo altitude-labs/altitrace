@@ -69,6 +69,23 @@ pub fn validate_hex_string(hex_str: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+/// Validates that a string is a valid hash string.
+///
+/// A valid hash string must be a 32-byte hex string (64 hex characters)
+/// preceded by "0x" (total length: 66 characters).
+pub fn validate_hash(hash_str: &str) -> Result<(), ValidationError> {
+    if hash_str.is_empty() {
+        return Err(ValidationError::new("Hash string cannot be empty"));
+    }
+
+    if !BYTES32_REGEX.is_match(hash_str) {
+        return Err(ValidationError::new(
+            "Invalid hash format. Must be exactly 64 hexadecimal characters with 0x prefix",
+        ));
+    }
+    Ok(())
+}
+
 /// Validates that a string is a valid 32-byte hex string.
 ///
 /// A valid bytes32 string must be exactly 64 hexadecimal characters

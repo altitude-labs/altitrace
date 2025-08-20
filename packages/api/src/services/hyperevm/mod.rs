@@ -3,9 +3,8 @@
 //! This module integrates with `HyperEVM` through Alloy RPC types and provides
 //! high-level simulation services for the API layer.
 
-mod simulation;
+pub mod service;
 
 use super::RpcProvider;
 
-/// Re-export the main service
-pub use simulation::HyperEvmService;
+pub use service::HyperEvmService;

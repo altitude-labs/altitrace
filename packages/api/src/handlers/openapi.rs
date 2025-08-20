@@ -8,7 +8,8 @@ use utoipa::{
 };
 use utoipa_swagger_ui::SwaggerUi;
 
-use super::{health::HealthApiDoc, simulation::SimulationApiDoc, Handler};
+use super::{health::HealthApiDoc, simulation::SimulationApiDoc, trace::TraceApiDoc, Handler};
+//use super::trace::TraceApiDoc;
 use crate::ApiResult;
 
 #[derive(Default)]
@@ -54,6 +55,7 @@ impl OpenApiHandler {
 
         openapi.merge(HealthApiDoc::openapi());
         openapi.merge(SimulationApiDoc::openapi());
+        openapi.merge(TraceApiDoc::openapi());
         openapi
     }
 }

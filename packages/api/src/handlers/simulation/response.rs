@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::types::GasBreakdown;
+
 /// Complete simulation result containing all execution details.
 ///
 /// This is the main response structure for transaction simulation,
@@ -286,49 +288,6 @@ pub struct PerformanceMetrics {
     /// Peak memory usage during execution (bytes).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub peak_memory_usage: Option<u64>,
-}
-
-/// Granular breakdown of gas usage by operation type.
-///
-/// This provides detailed insights into where gas is being consumed,
-/// enabling developers to optimize their contracts and transactions.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct GasBreakdown {
-    /// Intrinsic transaction cost (21,000 gas base cost).
-    #[schema(example = "21000")]
-    pub intrinsic: String,
-
-    /// Gas used for computation (opcodes execution).
-    #[schema(example = "15000")]
-    pub computation: String,
-
-    /// Gas used for storage operations.
-    pub storage: StorageGasBreakdown,
-
-    /// Gas used for memory expansion.
-    #[schema(example = "3000")]
-    pub memory: String,
-
-    /// Gas used for emitting event logs.
-    #[schema(example = "1500")]
-    pub logs: String,
-
-    /// Gas used for external contract calls.
-    #[schema(example = "5000")]
-    pub calls: String,
-
-    /// Gas used for contract creation.
-    #[schema(example = "0")]
-    pub creates: String,
-
-    /// Gas refunded due to storage cleanup or other refunds.
-    #[schema(example = "0")]
-    pub refund: String,
-
-    /// Gas cost for access list (EIP-2930).
-    #[schema(example = "1000")]
-    pub access_list: String,
 }
 
 /// Storage operation gas usage breakdown.
