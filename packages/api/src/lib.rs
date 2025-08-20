@@ -2,17 +2,19 @@ pub mod config;
 pub mod errors;
 pub mod routes;
 pub mod services;
+pub mod types;
 pub mod utils;
+pub mod validation;
 #[allow(dead_code)]
 pub mod version;
 use alloy_transport_http::reqwest::Url;
-use chrono::{DateTime, Utc};
-pub use services::*;
+pub use services::{service::HyperEvmService, CacheError, RedisCache, RpcProvider};
 use std::{sync::LazyLock, time::SystemTime};
 pub mod handlers;
 pub mod macros;
 pub use routes::*;
-pub use utils::*;
+
+pub use utils::validation::*;
 
 use handlers::{Handler, HealthHandler, OpenApiHandler};
 mod middlewares;
@@ -24,12 +26,12 @@ use actix_web::{
 };
 pub use config::*;
 
+use ::tracing::info;
 use clap::{command, Parser};
 use errors::ApiError;
 use eyre::eyre;
 use futures::Future;
 use middlewares::{auth::AuthMiddlewareFactory, cors::CorsMiddlewareFactory};
-use tracing::info;
 use tracing_log::{init_tracing, LogFileConfig, LogFormat, LogsArgs};
 
 pub type ApiResult<T> = Result<T, ApiError>;
@@ -74,7 +76,7 @@ where
     let redis_cache = Data::new(RedisCache::init_cache(&app_config.redis).await?);
     info!(target: "altitrace::api", "Starting server on {bind_address}");
     let start_time = *START_TIME;
-    info!(target: "altitrace::api", "Application started at {}", DateTime::<Utc>::from(start_time));
+    info!(target: "altitrace::api", "Application started at {:?}", start_time);
     let api_config = Data::new(app_config.clone());
 
     let rpc_url =

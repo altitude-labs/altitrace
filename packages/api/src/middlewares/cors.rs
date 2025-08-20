@@ -13,12 +13,6 @@ impl CorsMiddlewareFactory {
 
         match environment {
             "development" | "dev" | "test" => {
-                info!(
-                    target: "altitrace::cors",
-                    "Configuring CORS for {} environment - allowing all origins",
-                    environment
-                );
-
                 cors = cors
                     .allow_any_origin()
                     .allow_any_method()
@@ -26,11 +20,6 @@ impl CorsMiddlewareFactory {
                     .supports_credentials();
             }
             "production" | "prod" => {
-                info!(
-                    target: "altitrace::cors",
-                    "Configuring CORS for production environment - restricted origins"
-                );
-
                 // In production, use the origins specified in the configuration
                 if cors_config.allowed_origins.is_empty() {
                     warn!(
