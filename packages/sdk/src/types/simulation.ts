@@ -19,8 +19,6 @@ export type BlockTag = components['schemas']['BlockTag'];
 export type EnhancedLog = components['schemas']['EnhancedLog'];
 export type DecodedEvent = components['schemas']['DecodedEvent'];
 export type AssetChange = components['schemas']['AssetChange'];
-export type PerformanceMetrics = components['schemas']['PerformanceMetrics'];
-export type AccessListEntry = components['schemas']['AccessListEntry'];
 export type CallError = components['schemas']['CallError'];
 
 // Re-export client types
@@ -37,13 +35,9 @@ export type {
  * Extended simulation result with helper methods.
  */
 export interface ExtendedSimulationResult
-  extends Omit<SimulationResult, 'accessList' | 'assetChanges' | 'performance'> {
-  /** Access list (can be null or undefined) */
-  accessList: AccessListEntry[] | null | undefined;
+  extends Omit<SimulationResult, 'assetChanges'> {
   /** Asset changes (can be null or undefined) */
   assetChanges: AssetChange[] | null | undefined;
-  /** Performance metrics (can be null or undefined) */
-  performance: PerformanceMetrics | null | undefined;
   /** Check if simulation was successful */
   isSuccess(): boolean;
   /** Check if simulation failed */

@@ -64,22 +64,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trace/call": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a transaction trace from a call request
+         * @description Get a transaction trace from a call request.
+         */
+        get: operations["trace_call"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trace/tx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Traces a single transaction execution
+         * @description Traces a single transaction execution.
+         */
+        get: operations["trace_transaction"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Access list entry for gas optimization.
-         *
-         *     Access lists (EIP-2930) pre-declare storage slots and addresses
-         *     that will be accessed, reducing gas costs for those operations. */
-        AccessListEntry: {
+        /** @description Represents the state of an account. */
+        AccountState: {
             /**
-             * @description Contract address that will be accessed.
-             * @example 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+             * @description Account balance in wei (hex-encoded)
+             * @example 0x1bc16d674ec80000
              */
-            address: string;
-            /** @description Storage slots that will be accessed at this address. */
-            storageKeys: string[];
+            balance?: string | null;
+            /**
+             * @description Account bytecode (hex-encoded)
+             * @example 0x608060405234801561001057600080fd5b50
+             */
+            code?: string | null;
+            /**
+             * Format: int64
+             * @description Account nonce
+             * @example 42
+             */
+            nonce?: number | null;
+            /** @description Account storage slots (key-value pairs, both hex-encoded) */
+            storage?: {
+                [key: string]: string;
+            };
         };
         /** @description Detailed error information for failed requests. */
         ApiError: {
@@ -133,8 +183,6 @@ export interface components {
              *     This is the main response structure for transaction simulation,
              *     containing execution status, gas usage, logs, traces, and any errors. */
             data?: {
-                /** @description Generated access list for gas optimization. */
-                accessList?: components["schemas"]["AccessListEntry"][] | null;
                 /** @description Token balance changes (if tracing enabled). */
                 assetChanges?: components["schemas"]["AssetChange"][] | null;
                 /**
@@ -154,7 +202,6 @@ export interface components {
                  * @example 0x5208
                  */
                 gasUsed: string;
-                performance?: null | components["schemas"]["PerformanceMetrics"];
                 /** @description Unique identifier for this simulation. */
                 simulationId: string;
                 /** @description Overall simulation execution status. */
@@ -190,10 +237,31 @@ export interface components {
          *     This provides a consistent response format across the API,
          *     including success/failure indication, data payload, error information,
          *     and request metadata for tracking and debugging. */
+        ApiResponse_TracerResponse: {
+            /** @description Container for all tracer results. */
+            data?: {
+                "4byteTracer"?: null | components["schemas"]["FourByteResponse"];
+                callTracer?: null | components["schemas"]["CallTraceResponse"];
+                prestateTracer?: null | components["schemas"]["PrestateTraceResponse"];
+                receipt?: null | components["schemas"]["TransactionReceiptInfo"];
+                structLogger?: null | components["schemas"]["StructLogResponse"];
+            };
+            error?: null | components["schemas"]["ApiError"];
+            /** @description Request metadata and timing information. */
+            metadata: components["schemas"]["ResponseMetadata"];
+            /**
+             * @description Indicates whether the request was processed successfully.
+             * @example true
+             */
+            success: boolean;
+        };
+        /** @description Standard API response wrapper for all simulation endpoints.
+         *
+         *     This provides a consistent response format across the API,
+         *     including success/failure indication, data payload, error information,
+         *     and request metadata for tracking and debugging. */
         ApiResponse_Vec_SimulationResult: {
             data?: {
-                /** @description Generated access list for gas optimization. */
-                accessList?: components["schemas"]["AccessListEntry"][] | null;
                 /** @description Token balance changes (if tracing enabled). */
                 assetChanges?: components["schemas"]["AssetChange"][] | null;
                 /**
@@ -213,7 +281,6 @@ export interface components {
                  * @example 0x5208
                  */
                 gasUsed: string;
-                performance?: null | components["schemas"]["PerformanceMetrics"];
                 /** @description Unique identifier for this simulation. */
                 simulationId: string;
                 /** @description Overall simulation execution status. */
@@ -334,6 +401,64 @@ export interface components {
              */
             reason: string;
         };
+        /** @description Individual call frame in the call trace. */
+        CallFrame: {
+            /**
+             * @description Call type (CALL, DELEGATECALL, STATICCALL, CREATE, etc.).
+             * @example CALL
+             */
+            callType: string;
+            /** @description Sub-calls made by this call. */
+            calls?: components["schemas"]["CallFrame"][];
+            /**
+             * Format: int32
+             * @description Call depth.
+             */
+            depth: number;
+            /** @description Error message if call failed. */
+            error?: string | null;
+            /**
+             * @description Sender address.
+             * @example 0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c
+             */
+            from: string;
+            /**
+             * @description Gas provided to the call.
+             * @example 0x7a120
+             */
+            gas: string;
+            /**
+             * @description Gas used by the call.
+             * @example 0x5208
+             */
+            gasUsed: string;
+            /**
+             * @description Input data (hex-encoded).
+             * @example 0xa9059cbb
+             */
+            input: string;
+            /** @description Logs emitted by this call. */
+            logs?: components["schemas"]["LogEntry"][];
+            /**
+             * @description Output data (hex-encoded).
+             * @example 0x01
+             */
+            output: string;
+            /** @description Revert reason if available. */
+            revertReason?: string | null;
+            /** @description Whether the call reverted. */
+            reverted: boolean;
+            /**
+             * @description Recipient address.
+             * @example 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+             */
+            to?: string | null;
+            /**
+             * @description Value transferred (hex-encoded wei).
+             * @example 0x0
+             */
+            value: string;
+        };
         /** @description Result of a single transaction call within the simulation. */
         CallResult: {
             /**
@@ -363,6 +488,33 @@ export interface components {
          * @enum {string}
          */
         CallStatus: "success" | "reverted";
+        /** @description Call tracer result with hierarchical call structure. */
+        CallTraceResponse: {
+            /**
+             * Format: int32
+             * @description Maximum call depth.
+             */
+            maxDepth: number;
+            /** @description Root call frame. */
+            rootCall: components["schemas"]["CallFrame"];
+            /**
+             * Format: int64
+             * @description Total number of calls.
+             */
+            totalCalls: number;
+        };
+        CallTracerConfig: {
+            /**
+             * @description Only trace the top-level call.
+             * @default false
+             */
+            onlyTopCall: boolean;
+            /**
+             * @description Include event logs in call frames.
+             * @default true
+             */
+            withLogs: boolean;
+        };
         /** @description Human-readable event information decoded from log data. */
         DecodedEvent: {
             /**
@@ -441,53 +593,31 @@ export interface components {
             /** @description Transaction index within the block (null for simulations). */
             transactionIndex?: string | null;
         };
-        /** @description Granular breakdown of gas usage by operation type.
-         *
-         *     This provides detailed insights into where gas is being consumed,
-         *     enabling developers to optimize their contracts and transactions. */
-        GasBreakdown: {
+        FourByteInfo: {
             /**
-             * @description Gas cost for access list (EIP-2930).
-             * @example 1000
+             * Format: int64
+             * @description Number of times the function was called
+             * @example 3
              */
-            accessList: string;
+            count: number;
             /**
-             * @description Gas used for external contract calls.
-             * @example 5000
+             * Format: int64
+             * @description Function calldata size in bits
+             * @example 128
              */
-            calls: string;
+            dataSize: number;
+        };
+        FourByteResponse: {
+            /** @description List of four byte identifiers */
+            identifiers?: {
+                [key: string]: components["schemas"]["FourByteInfo"];
+            };
             /**
-             * @description Gas used for computation (opcodes execution).
-             * @example 15000
+             * Format: int64
+             * @description Total number of four byte identifiers
+             * @example 3
              */
-            computation: string;
-            /**
-             * @description Gas used for contract creation.
-             * @example 0
-             */
-            creates: string;
-            /**
-             * @description Intrinsic transaction cost (21,000 gas base cost).
-             * @example 21000
-             */
-            intrinsic: string;
-            /**
-             * @description Gas used for emitting event logs.
-             * @example 1500
-             */
-            logs: string;
-            /**
-             * @description Gas used for memory expansion.
-             * @example 3000
-             */
-            memory: string;
-            /**
-             * @description Gas refunded due to storage cleanup or other refunds.
-             * @example 0
-             */
-            refund: string;
-            /** @description Gas used for storage operations. */
-            storage: components["schemas"]["StorageGasBreakdown"];
+            totalIdentifiers: number;
         };
         HealthStatus: {
             cache: components["schemas"]["CacheHealth"];
@@ -496,29 +626,60 @@ export interface components {
             uptime: number;
             version: string;
         };
-        /** @description Performance metrics for gas profiling and optimization analysis. */
-        PerformanceMetrics: {
+        /** @description Base log entry structure used across different contexts. */
+        LogEntry: {
             /**
-             * Format: int64
-             * @description Total execution time in milliseconds.
+             * @description Contract address that emitted the log.
+             * @example 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
              */
-            executionTime: number;
-            gasBreakdown?: null | components["schemas"]["GasBreakdown"];
+            address: string;
             /**
-             * Format: int64
-             * @description Peak memory usage during execution (bytes).
+             * @description Log data (hex-encoded).
+             * @example 0x00000000000000000000000000000000000000000000000000000000000f4240
              */
-            peakMemoryUsage?: number | null;
+            data: string;
+            /** @description Log topics. */
+            topics: string[];
+        };
+        /** @description Default prestate mode response.
+         *     Contains all account states necessary to execute the transaction. */
+        PrestateDefaultMode: {
+            [key: string]: components["schemas"]["AccountState"];
+        };
+        /** @description Diff prestate mode response.
+         *     Contains the state changes caused by the transaction. */
+        PrestateDiffMode: {
+            /** @description Account states after the transaction */
+            post: {
+                [key: string]: components["schemas"]["AccountState"];
+            };
+            /** @description Account states before the transaction */
+            pre: {
+                [key: string]: components["schemas"]["AccountState"];
+            };
+        };
+        /** @description Prestate tracer response containing account states.
+         *
+         *     The prestate tracer has two modes:
+         *     - Default mode: Returns accounts necessary to execute the transaction
+         *     - Diff mode: Returns the differences between pre and post transaction states */
+        PrestateTraceResponse: components["schemas"]["PrestateDefaultMode"] | components["schemas"]["PrestateDiffMode"];
+        PrestateTracerConfig: {
             /**
-             * Format: int64
-             * @description Number of storage read operations performed.
+             * @description Enable diff mode to show state changes.
+             * @default false
              */
-            stateReads?: number | null;
+            diffMode: boolean;
             /**
-             * Format: int64
-             * @description Number of storage write operations performed.
+             * @description Disable contract code in results.
+             * @default false
              */
-            stateWrites?: number | null;
+            disableCode: boolean;
+            /**
+             * @description Disable storage tracking (not recommended).
+             * @default false
+             */
+            disableStorage: boolean;
         };
         /** @description Metadata included with every API response. */
         ResponseMetadata: {
@@ -545,7 +706,6 @@ export interface components {
             /** @description State overrides to apply during simulation.
              *     Allows modifying account states before execution. */
             stateOverrides?: components["schemas"]["StateOverride"][] | null;
-            traceConfig?: null | components["schemas"]["TraceConfig"];
         };
         /** @description Core simulation parameters including transaction calls and context. */
         SimulationParams: {
@@ -600,8 +760,6 @@ export interface components {
          *     This is the main response structure for transaction simulation,
          *     containing execution status, gas usage, logs, traces, and any errors. */
         SimulationResult: {
-            /** @description Generated access list for gas optimization. */
-            accessList?: components["schemas"]["AccessListEntry"][] | null;
             /** @description Token balance changes (if tracing enabled). */
             assetChanges?: components["schemas"]["AssetChange"][] | null;
             /**
@@ -621,7 +779,6 @@ export interface components {
              * @example 0x5208
              */
             gasUsed: string;
-            performance?: null | components["schemas"]["PerformanceMetrics"];
             /** @description Unique identifier for this simulation. */
             simulationId: string;
             /** @description Overall simulation execution status. */
@@ -633,73 +790,168 @@ export interface components {
          * @enum {string}
          */
         SimulationStatus: "success" | "reverted" | "failed";
-        /** @description State override for a specific account address.
-         *
-         *     This allows modifying the state of an account before simulation,
-         *     including balance, nonce, code, and storage slots. */
+        /** @description State override for simulation and tracing. */
         StateOverride: {
             /**
-             * @description The account address to override.
+             * @description Account address
              * @example 0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c
              */
-            address: string;
+            address?: string | null;
             /**
-             * @description Override the account's balance (hex encoded wei).
-             * @example 0xffffffffffffffff
+             * @description Account balance override (hex-encoded wei).
+             * @example 0x1e8480
              */
             balance?: string | null;
             /**
-             * @description Override the account's code (hex encoded bytecode).
-             *     For EOAs, use "0x" to set empty code.
-             * @example 0x6080604052...
+             * @description Contract code override (hex-encoded).
+             * @example 0x608060405234801561001057600080fd5b50
              */
             code?: string | null;
-            /**
-             * @description Move a precompiled contract to this address.
-             *     This is an advanced feature for testing precompile behavior.
-             * @example 0x0000000000000000000000000000000000000001
-             */
+            /** @description Move precompile contract */
             movePrecompileToAddress?: string | null;
             /**
              * Format: int64
-             * @description Override the account's nonce.
-             * @example 10
+             * @description Account nonce override.
              */
             nonce?: number | null;
-            /** @description Completely replace the account's storage.
-             *     All existing storage will be cleared and replaced with these values.
-             *     Cannot be used together with `state_diff`. */
+            /** @description Storage slots */
             state?: components["schemas"]["StorageSlot"][] | null;
-            /** @description Partially modify the account's storage.
-             *     Only specified slots will be changed, others remain unchanged.
-             *     Cannot be used together with `state`. */
-            stateDiff?: components["schemas"]["StorageSlot"][] | null;
+            /** @description Differential storage override (modifies specific slots). */
+            stateDiff?: {
+                [key: string]: string;
+            } | null;
+            /** @description Complete storage override (replaces all storage). */
+            storage?: {
+                [key: string]: string;
+            } | null;
         };
-        /** @description Storage operation gas usage breakdown. */
-        StorageGasBreakdown: {
-            /**
-             * @description Gas used for storage read operations (SLOAD).
-             * @example 2100
-             */
-            reads: string;
-            /**
-             * @description Gas used for storage write operations (SSTORE).
-             * @example 20000
-             */
-            writes: string;
-        };
-        /** @description Represents a storage slot override. */
+        /** @description Storage slot definition for state overrides. */
         StorageSlot: {
             /**
-             * @description The storage slot key (32 bytes, hex encoded).
+             * @description Storage slot key (32 bytes, hex-encoded).
              * @example 0x0000000000000000000000000000000000000000000000000000000000000001
              */
             slot: string;
             /**
-             * @description The storage slot value (32 bytes, hex encoded).
+             * @description Storage slot value (32 bytes, hex-encoded).
              * @example 0x0000000000000000000000000000000000000000000000000000000000000064
              */
             value: string;
+        };
+        StructLog: {
+            /**
+             * Format: int64
+             * @description Current call depth
+             */
+            depth: number;
+            /** @description Error message if any */
+            error?: string | null;
+            /**
+             * Format: int64
+             * @description remaining gas
+             */
+            gas: number;
+            /**
+             * Format: int64
+             * @description cost for executing op
+             */
+            gasCost: number;
+            /**
+             * Format: int64
+             * @description Size of memory.
+             */
+            memSize?: number | null;
+            /** @description ref <https://github.com/ethereum/go-ethereum/blob/366d2169fbc0e0f803b68c042b77b6b480836dbc/eth/tracers/logger/logger.go#L450-L452> */
+            memory?: string[] | null;
+            /** @description opcode to be executed */
+            op: string;
+            /**
+             * Format: int64
+             * @description program counter
+             */
+            pc: number;
+            /**
+             * Format: int64
+             * @description Refund counter
+             */
+            refund?: number | null;
+            /** @description Last call's return data. Enabled via enableReturnData */
+            returnData?: string | null;
+            /** @description EVM stack */
+            stack?: string[] | null;
+            /** @description Storage slots of current contract read from and written to. Only emitted for SLOAD and
+             *     SSTORE. Disabled via disableStorage */
+            storage?: {
+                [key: string]: string;
+            } | null;
+        };
+        /** @description API response for the struct log tracer.
+         *
+         *     This is the default tracer and the most verbose one.
+         *     It's the most useful one for debugging.
+         *
+         *     Use the [`StructLogResponse::clean`] method to clean the trace. */
+        StructLogResponse: {
+            /**
+             * @description Error message if any
+             * @example Transaction execution failed
+             */
+            error?: string | null;
+            /**
+             * @description Output of the transaction
+             * @example 0x01
+             */
+            output?: string | null;
+            /**
+             * Format: int64
+             * @description Number of times the gas was refunded
+             */
+            refundCounter?: number | null;
+            /** @description Struct logs */
+            structLogs?: components["schemas"]["StructLog"][] | null;
+            /**
+             * Format: int64
+             * @description Total gas used
+             */
+            totalGas: number;
+            /**
+             * Format: int64
+             * @description Total gas refunded
+             * @example 0x1000
+             */
+            totalGasRefunded?: number | null;
+            /**
+             * Format: int64
+             * @description Total opcodes executed
+             */
+            totalOpcodes: number;
+        };
+        StructLoggerConfig: {
+            /**
+             * @description Clean struct logs to reduce response size.
+             * @default true
+             */
+            cleanStructLogs: boolean;
+            /**
+             * @description Enable memory capture (disabled by default for performance).
+             * @default true
+             */
+            disableMemory: boolean;
+            /**
+             * @description Disable return data capture.
+             * @default false
+             */
+            disableReturnData: boolean;
+            /**
+             * @description Disable stack capture.
+             * @default false
+             */
+            disableStack: boolean;
+            /**
+             * @description Disable storage capture.
+             * @default false
+             */
+            disableStorage: boolean;
         };
         /** @description Token contract information. */
         TokenInfo: {
@@ -720,22 +972,81 @@ export interface components {
              */
             symbol?: string | null;
         };
-        /** @description Configuration for execution tracing. */
-        TraceConfig: {
-            /** @description Enable memory capture in traces. */
-            enableMemory?: boolean;
-            /** @description Enable return data capture in traces. */
-            enableReturnData?: boolean;
-            /** @description Enable storage capture in traces. */
-            enableStorage?: boolean;
-            tracer?: null | components["schemas"]["TracerType"];
+        /** @description Request to trace a call simulation. */
+        TraceCallRequest: {
+            /**
+             * @description Block number or tag to trace against (default: "latest").
+             * @example latest
+             */
+            block?: string;
+            blockOverrides?: null | components["schemas"]["BlockOverrides"];
+            /** @description Transaction call to trace. */
+            call: components["schemas"]["TransactionCall"];
+            /** @description State overrides to apply during tracing. */
+            stateOverrides?: {
+                [key: string]: components["schemas"]["StateOverride"];
+            } | null;
+            /** @description Trace configuration options. */
+            tracerConfig?: components["schemas"]["TraceConfig"];
         };
         /**
-         * @description Available tracer types for execution analysis.
-         * @example callTracer
-         * @enum {string}
+         * Trace Configuration
+         * @description Comprehensive trace configuration supporting multiple tracers
          */
-        TracerType: "callTracer" | "prestateTracer" | "structLogger";
+        TraceConfig: components["schemas"]["Tracers"];
+        /**
+         * @description Request to trace a transaction by hash.
+         * @example {
+         *       "returnReceipt": false,
+         *       "tracerConfig": {
+         *         "4byteTracer": true,
+         *         "callTracer": {
+         *           "onlyTopCall": false,
+         *           "withLogs": true
+         *         },
+         *         "prestateTracer": {
+         *           "diffMode": true,
+         *           "disableCode": false,
+         *           "disableStorage": false
+         *         },
+         *         "structLogger": {
+         *           "cleanStructLogs": true,
+         *           "disableMemory": true,
+         *           "disableReturnData": false,
+         *           "disableStack": false,
+         *           "disableStorage": false
+         *         }
+         *       },
+         *       "transactionHash": "0xbc4a51bbcbe7550446c151d0d53ee14d5318188e2af1726e28a481b075fc7b4c"
+         *     }
+         */
+        TraceTransactionRequest: {
+            /** @description Trace configuration options. */
+            tracerConfig?: components["schemas"]["TraceConfig"];
+            /**
+             * @description Transaction hash to trace.
+             * @example 0xbc4a51bbcbe7550446c151d0d53ee14d5318188e2af1726e28a481b075fc7b4c
+             */
+            transactionHash: string;
+        };
+        /** @description Container for all tracer results. */
+        TracerResponse: {
+            "4byteTracer"?: null | components["schemas"]["FourByteResponse"];
+            callTracer?: null | components["schemas"]["CallTraceResponse"];
+            prestateTracer?: null | components["schemas"]["PrestateTraceResponse"];
+            receipt?: null | components["schemas"]["TransactionReceiptInfo"];
+            structLogger?: null | components["schemas"]["StructLogResponse"];
+        };
+        Tracers: {
+            /** @description The 4byteTracer collects the function selectors of every function executed in the lifetime
+             *     of a transaction, along with the size of the supplied call data. The result is a
+             *     [`FourByteFrame`](alloy_rpc_types_trace::geth::four_byte::FourByteFrame) where the keys are
+             *     `SELECTOR-CALLDATASIZE` and the values are number of occurrences of this key. */
+            "4byteTracer"?: boolean;
+            callTracer?: null | components["schemas"]["CallTracerConfig"];
+            prestateTracer?: null | components["schemas"]["PrestateTracerConfig"];
+            structLogger?: null | components["schemas"]["StructLoggerConfig"];
+        };
         /** @description Represents a single transaction call within a simulation. */
         TransactionCall: {
             /**
@@ -767,6 +1078,61 @@ export interface components {
              * @example 0x0
              */
             value?: string | null;
+        };
+        /** @description Transaction receipt information. */
+        TransactionReceiptInfo: {
+            /**
+             * @description Contract address (if contract creation).
+             * @example 0x1234567890abcdef1234567890abcdef1234567890
+             */
+            contractAddress?: string | null;
+            /**
+             * @description Cumulative gas used in the block at the time of the transaction.
+             * @example 0x7a120
+             */
+            cumulativeGasUsed: string;
+            /**
+             * @description Effective gas price (hex-encoded wei).
+             * @example 0x3b9aca00
+             */
+            effectiveGasPrice: string;
+            /**
+             * @description Sender address.
+             * @example 0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c
+             */
+            from: string;
+            /**
+             * @description Gas used by the transaction.
+             * @example 0x5208
+             */
+            gasUsed: string;
+            /**
+             * @description Logs bloom filter.
+             * @example 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+             */
+            logsBloom: string;
+            /**
+             * Format: int64
+             * @description Number of logs emitted.
+             * @example 2
+             */
+            logsCount: number;
+            /**
+             * @description Transaction status.
+             * @example true
+             */
+            status: boolean;
+            /**
+             * @description Recipient address (None for contract creation).
+             * @example 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+             */
+            to?: string | null;
+            /**
+             * Format: int32
+             * @description Transaction type (0 for legacy, 1 for EIP-2930, 2 for EIP-1559).
+             * @example 2
+             */
+            transactionType: number;
         };
     };
     responses: never;
@@ -880,6 +1246,90 @@ export interface operations {
                 };
             };
             /** @description Health check failed */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+        };
+    };
+    trace_call: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TraceCallRequest"];
+            };
+        };
+        responses: {
+            /** @description Trace completed (success or failure) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TracerResponse"];
+                };
+            };
+            /** @description Invalid request parameters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+        };
+    };
+    trace_transaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TraceTransactionRequest"];
+            };
+        };
+        responses: {
+            /** @description Trace completed (success or failure) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TracerResponse"];
+                };
+            };
+            /** @description Invalid request parameters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+            /** @description Internal server error */
             500: {
                 headers: {
                     [name: string]: unknown;

@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::types::GasBreakdown;
-
 /// Complete simulation result containing all execution details.
 ///
 /// This is the main response structure for transaction simulation,
@@ -35,14 +33,6 @@ pub struct SimulationResult {
     /// Token balance changes (if tracing enabled).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub asset_changes: Option<Vec<AssetChange>>,
-
-    /// Detailed performance metrics (if profiling enabled).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub performance: Option<PerformanceMetrics>,
-
-    /// Generated access list for gas optimization.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub access_list: Option<Vec<AccessListEntry>>,
 }
 
 /// Execution status for the overall simulation.
@@ -266,30 +256,6 @@ pub struct CallError {
     pub contract_address: Option<String>,
 }
 
-/// Performance metrics for gas profiling and optimization analysis.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct PerformanceMetrics {
-    /// Total execution time in milliseconds.
-    pub execution_time: u64,
-
-    /// Detailed gas usage breakdown by operation type.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub gas_breakdown: Option<GasBreakdown>,
-
-    /// Number of storage read operations performed.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state_reads: Option<u64>,
-
-    /// Number of storage write operations performed.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state_writes: Option<u64>,
-
-    /// Peak memory usage during execution (bytes).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub peak_memory_usage: Option<u64>,
-}
-
 /// Storage operation gas usage breakdown.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -301,158 +267,4 @@ pub struct StorageGasBreakdown {
     /// Gas used for storage write operations (SSTORE).
     #[schema(example = "20000")]
     pub writes: String,
-}
-
-/// Access list entry for gas optimization.
-///
-/// Access lists (EIP-2930) pre-declare storage slots and addresses
-/// that will be accessed, reducing gas costs for those operations.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct AccessListEntry {
-    /// Contract address that will be accessed.
-    #[schema(
-        example = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        pattern = "^0x[a-fA-F0-9]{40}$"
-    )]
-    pub address: String,
-
-    /// Storage slots that will be accessed at this address.
-    pub storage_keys: Vec<String>,
-}
-
-/// Bundle simulation result containing all transaction results.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct BundleSimulationResult {
-    /// Unique identifier for this bundle simulation.
-    pub bundle_id: String,
-
-    /// The final block number after bundle simulation.
-    #[schema(example = "0x123abd", pattern = "^0x[a-fA-F0-9]+$")]
-    pub block_number: String,
-
-    /// Results for each transaction in the bundle.
-    pub transactions: Vec<BundleTransactionResult>,
-
-    /// Total gas consumed by all transactions in the bundle.
-    #[schema(example = "0x15f90", pattern = "^0x[a-fA-F0-9]+$")]
-    pub total_gas_used: String,
-
-    /// Total gas used in the simulated block.
-    #[schema(example = "0x15f90", pattern = "^0x[a-fA-F0-9]+$")]
-    pub block_gas_used: String,
-
-    /// Aggregated asset changes across all transactions.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub asset_changes: Option<Vec<AssetChange>>,
-
-    /// Performance metrics for the entire bundle.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub performance: Option<PerformanceMetrics>,
-
-    /// Generated access list for the bundle.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub access_list: Option<Vec<AccessListEntry>>,
-}
-
-/// Result of a single transaction within a bundle.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct BundleTransactionResult {
-    /// Index of this transaction within the bundle.
-    pub transaction_index: u32,
-
-    /// Execution status of this transaction.
-    #[schema(example = "success")]
-    pub status: BundleTransactionStatus,
-
-    /// Call results within this transaction.
-    pub calls: Vec<CallResult>,
-
-    /// Gas used by this transaction.
-    #[schema(example = "0x5208", pattern = "^0x[a-fA-F0-9]+$")]
-    pub gas_used: String,
-
-    /// Reason why this transaction was skipped (if applicable).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub skip_reason: Option<String>,
-}
-
-/// Execution status for bundle transactions.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum BundleTransactionStatus {
-    /// Transaction executed successfully.
-    Success,
-    /// Transaction reverted but bundle continued.
-    Reverted,
-    /// Transaction was skipped due to failure.
-    Skipped,
-}
-
-/// Gas estimation result with optimization suggestions.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct GasEstimationResult {
-    /// Estimated gas limit for the transaction.
-    #[schema(example = "0x5208", pattern = "^0x[a-fA-F0-9]+$")]
-    pub gas_estimate: String,
-
-    /// Current gas price on the network.
-    #[schema(example = "0x3b9aca00", pattern = "^0x[a-fA-F0-9]+$")]
-    pub gas_price: String,
-
-    /// Estimated cost breakdown (if available).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub estimated_cost: Option<EstimatedCost>,
-
-    /// Gas optimization suggestions.
-    pub optimizations: Vec<GasOptimization>,
-
-    /// Detailed gas usage breakdown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub breakdown: Option<GasBreakdown>,
-}
-
-/// Estimated transaction cost in various units.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct EstimatedCost {
-    /// Cost in wei (hex encoded).
-    #[schema(example = "0x9184e72a000", pattern = "^0x[a-fA-F0-9]+$")]
-    pub wei: String,
-
-    /// Cost in gwei (decimal string).
-    #[schema(example = "10.0")]
-    pub gwei: String,
-
-    /// Cost in ETH (decimal string).
-    #[schema(example = "0.00001")]
-    pub eth: String,
-
-    /// Cost in USD (if available).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schema(example = "0.025")]
-    pub usd: Option<String>,
-}
-
-/// Gas optimization suggestion.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct GasOptimization {
-    /// Type of optimization.
-    #[schema(example = "access-list")]
-    pub optimization_type: String,
-
-    /// Human-readable description of the optimization.
-    #[schema(example = "Add access list to save ~2100 gas")]
-    pub description: String,
-
-    /// Estimated gas savings from this optimization.
-    #[schema(example = "2100")]
-    pub gas_savings: String,
-
-    /// Implementation details for the optimization.
-    pub implementation: serde_json::Value,
 }

@@ -8,6 +8,7 @@ pub mod validation;
 #[allow(dead_code)]
 pub mod version;
 use alloy_transport_http::reqwest::Url;
+use chrono::{DateTime, Utc};
 pub use services::{service::HyperEvmService, CacheError, RedisCache, RpcProvider};
 use std::{sync::LazyLock, time::SystemTime};
 pub mod handlers;
@@ -76,7 +77,7 @@ where
     let redis_cache = Data::new(RedisCache::init_cache(&app_config.redis).await?);
     info!(target: "altitrace::api", "Starting server on {bind_address}");
     let start_time = *START_TIME;
-    info!(target: "altitrace::api", "Application started at {:?}", start_time);
+    info!(target: "altitrace::api", "Application started at {:?}", DateTime::<Utc>::from(start_time));
     let api_config = Data::new(app_config.clone());
 
     let rpc_url =

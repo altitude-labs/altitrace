@@ -222,8 +222,6 @@ impl HyperEvmService {
                     gas_used: "0x0".to_string(),
                     block_gas_used: "0x0".to_string(),
                     asset_changes: None,
-                    performance: None,
-                    access_list: None,
                 });
             }
         };
@@ -283,9 +281,7 @@ impl HyperEvmService {
             gas_used: format!("0x{:x}", total_gas_used),
             calls: call_results,
             block_gas_used: format!("0x{:x}", simulated_block.inner.header.gas_used),
-            performance: None,
             asset_changes: None,
-            access_list: None,
         };
 
         Ok(simulation_result)
@@ -353,8 +349,6 @@ impl HyperEvmService {
                             gas_used: "0x0".to_string(),
                             block_gas_used: "0x0".to_string(),
                             asset_changes: None,
-                            performance: None,
-                            access_list: None,
                         }
                     }
                 }
