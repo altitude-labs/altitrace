@@ -28,7 +28,7 @@ use clap::{command, Parser};
 use errors::ApiError;
 use eyre::eyre;
 use futures::Future;
-use middlewares::auth::AuthMiddlewareFactory;
+use middlewares::{auth::AuthMiddlewareFactory, cors::CorsMiddlewareFactory};
 use tracing::info;
 use tracing_log::{init_tracing, LogFileConfig, LogFormat, LogsArgs};
 
@@ -92,7 +92,15 @@ where
 
     let server = HttpServer::new(move || {
         let auth_middleware_clone = auth_middleware.clone();
+
+        // Configure CORS middleware
+        let cors_middleware = CorsMiddlewareFactory::create_cors_middleware(
+            &api_config.api.cors,
+            &api_config.environment,
+        );
+
         App::new()
+            .wrap(cors_middleware)
             .app_data(api_config.clone())
             .app_data(redis_cache.clone())
             .service(
