@@ -16,7 +16,6 @@ import type {
   AssetChangeSummary,
   Address,
   BatchSimulationResult,
-  PerformanceMetrics,
 } from '@sdk/types/simulation';
 
 /**
@@ -30,8 +29,6 @@ class ExtendedSimulationResultImpl implements ExtendedSimulationResult {
   public readonly gasUsed: string;
   public readonly blockGasUsed: string;
   public readonly assetChanges: AssetChange[] | null | undefined;
-  public readonly performance: PerformanceMetrics | null | undefined;
-  public readonly accessList: SimulationResult['accessList'];
 
   constructor(result: SimulationResult) {
     this.simulationId = result.simulationId;
@@ -41,8 +38,6 @@ class ExtendedSimulationResultImpl implements ExtendedSimulationResult {
     this.gasUsed = result.gasUsed;
     this.blockGasUsed = result.blockGasUsed;
     this.assetChanges = result.assetChanges ?? undefined;
-    this.performance = result.performance ?? null;
-    this.accessList = result.accessList ?? null;
   }
 
   /**
@@ -180,7 +175,7 @@ export class ResponseProcessor {
 
     // Calculate total execution time from performance data
     const totalExecutionTime = processedResults.reduce((total, result) => {
-      return total + (result.performance?.executionTime ?? 0);
+      return total;
     }, 0);
 
     const batchStatus: 'success' | 'partial' | 'failed' =
@@ -193,48 +188,6 @@ export class ResponseProcessor {
       successCount,
       failureCount,
     };
-  }
-
-  /**
-   * Extract and format gas usage information from simulation results.
-   * @param result - Simulation result
-   * @returns Gas usage breakdown
-   */
-  public static extractGasUsage(result: SimulationResult): GasUsageBreakdown {
-    const totalGasUsed = parseInt(result.gasUsed.replace('0x', ''), 16);
-    const blockGasUsed = parseInt(result.blockGasUsed.replace('0x', ''), 16);
-
-    const callGasUsage = result.calls.map((call, index) => ({
-      callIndex: index,
-      gasUsed: parseInt(call.gasUsed.replace('0x', ''), 16),
-      status: call.status,
-    }));
-
-    const gasBreakdown = result.performance?.gasBreakdown;
-
-    const breakdown = !gasBreakdown
-      ? undefined
-      : ({
-          intrinsic: parseInt(gasBreakdown.intrinsic, 10),
-          computation: parseInt(gasBreakdown.computation, 10),
-          storage: {
-            reads: parseInt(gasBreakdown.storage.reads, 10),
-            writes: parseInt(gasBreakdown.storage.writes, 10),
-          } as const,
-          memory: parseInt(gasBreakdown.memory, 10),
-          logs: parseInt(gasBreakdown.logs, 10),
-          calls: parseInt(gasBreakdown.calls, 10),
-          creates: parseInt(gasBreakdown.creates, 10),
-          refund: parseInt(gasBreakdown.refund, 10),
-          accessList: parseInt(gasBreakdown.accessList, 10),
-        } as const);
-
-    return {
-      totalGasUsed,
-      blockGasUsed,
-      callGasUsage,
-      breakdown,
-    } as const;
   }
 
   /**

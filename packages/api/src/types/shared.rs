@@ -184,67 +184,54 @@ pub type RegularStorageSlotAccess = StorageSlotAccess<StorageValue>;
 pub type TransientSlotAccess = StorageSlotAccess<SimpleStorageValue>;
 
 /// Generic gas breakdown structure that can work with different field types.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GasBreakdown<T = u64> {
     /// Intrinsic transaction cost (21,000 gas base cost).
-    #[schema(example = 21000)]
     pub intrinsic: T,
 
     /// Gas used for computation (opcodes execution).
-    #[schema(example = 15000)]
     pub computation: T,
 
     /// Gas used for storage operations.
     pub storage: StorageGasBreakdown<T>,
 
     /// Gas used for memory expansion.
-    #[schema(example = 3000)]
     pub memory: T,
 
     /// Gas used for emitting event logs.
-    #[schema(example = 1500)]
     pub logs: T,
 
     /// Gas used for external contract calls.
-    #[schema(example = 5000)]
     pub calls: T,
 
     /// Gas used for contract creation.
-    #[schema(example = 0)]
     pub creates: T,
 
     /// Gas refunded due to storage cleanup or other refunds.
-    #[schema(example = 0)]
     pub refund: T,
 
     /// Gas cost for access list (EIP-2930).
-    #[schema(example = 1000)]
     pub access_list: T,
 }
 
 /// Storage operation gas usage breakdown with generic field types.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StorageGasBreakdown<T = u64> {
     /// Gas used for storage read operations (SLOAD).
-    #[schema(example = 2100)]
     pub reads: T,
 
     /// Gas used for storage write operations (SSTORE).
-    #[schema(example = 20000)]
     pub writes: T,
 
     /// Gas used for storage initialization.
-    #[schema(example = 20000)]
     pub initialization: T,
 
     /// Gas used for storage modifications.
-    #[schema(example = 5000)]
     pub modifications: T,
 
     /// Gas refunded from storage cleanup.
-    #[schema(example = 15000)]
     pub cleanup_refund: T,
 }
 
@@ -265,7 +252,7 @@ pub struct LogEntry {
 }
 
 /// Extended log entry with additional trace context.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TraceLogEntry {
     /// Base log information.
