@@ -468,4 +468,51 @@ impl HyperEvmService {
 
         Ok(trace_response)
     }
+
+    pub async fn trace_call_many(
+        &self,
+        request: &TraceCallManyRequest,
+    ) -> Result<Vec<TraceResponse>> {
+        let start_time = Instant::now();
+        let trace_id = generate_trace_id();
+
+        debug!(
+            target: "altitrace::trace",
+            %trace_id,
+            bundles_count = request.bundles_count(),
+            "Starting call many trace"
+        );
+
+        let tracing_strategy = TracingStrategy::from_config(&request.tracer_config);
+
+        let trace_result = tracing_strategy
+            .execute_call_many(request.clone(), |bundles, state_context, options| {
+                let provider = &self.provider.inner;
+                async move {
+                    provider
+                        .debug_trace_call_many(bundles, state_context, options)
+                        .await
+                }
+            })
+            .await?;
+
+        let elapsed_time = start_time.elapsed();
+
+        debug!(
+            target: "altitrace::trace",
+            %trace_id,
+            %trace_result,
+            ?elapsed_time,
+            "Call many trace completed"
+        );
+
+        // Convert TracingResultMany to Vec<TraceResponse>
+        let trace_responses = trace_result
+            .into_individual_results()
+            .into_iter()
+            .map(TraceResponse::new)
+            .collect();
+
+        Ok(trace_responses)
+    }
 }

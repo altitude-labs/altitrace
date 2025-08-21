@@ -4,7 +4,7 @@
 //! types and the corresponding Alloy RPC types used for `HyperEVM` communication.
 
 use super::{dto::*, response::*};
-use crate::types::{shared::StateOverride, BlockOverrides};
+use crate::types::{shared::StateOverride, BlockOverrides, TransactionCall};
 use alloy_primitives::{map::B256HashMap, Address, Bytes, TxKind, B256, U256};
 use alloy_rpc_types_eth::{
     simulate::{SimBlock, SimCallResult, SimulatePayload},

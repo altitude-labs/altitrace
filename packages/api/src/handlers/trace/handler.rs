@@ -19,12 +19,16 @@ use utoipa::OpenApi;
     paths(
         trace_transaction,
         trace_call,
+        trace_call_many,
     ),
     components(
         schemas(
             TraceTransactionRequest,
+            TraceCallManyRequest,
+            TraceCallRequest,
             TracerResponse,
             ApiResponse<TracerResponse>,
+        ApiResponse<Vec<TracerResponse>>,
         ),
     ),
     tags(
@@ -54,7 +58,7 @@ impl From<TraceHandler> for web::Data<TraceHandler> {
 }
 
 #[utoipa::path(
-    get,
+    post,
     path = "/trace/tx",
     tag = "trace",
     summary = "Traces a single transaction execution",
@@ -105,7 +109,7 @@ async fn trace_transaction(
 }
 
 #[utoipa::path(
-    get,
+    post,
     path = "/trace/call",
     tag = "trace",
     summary = "Get a transaction trace from a call request",
@@ -131,6 +135,7 @@ async fn trace_call(
         "Starting call trace"
     );
 
+    // TODO: remove this unwrap by handling errors
     let response = handler.service.trace_call(&request).await.unwrap();
     let mut tracer_response = TracerResponse::from(response.trace_result);
 
@@ -151,17 +156,81 @@ async fn trace_call(
         .into())
 }
 
+#[utoipa::path(
+    post,
+    path = "/trace/call-many",
+    tag = "trace",
+    summary = "Trace multiple calls with state context",
+    description = "Execute debug_trace_call_many to trace multiple calls sequentially with cumulative state changes.",
+    request_body = TraceCallManyRequest,
+    responses(
+        (status = 200, description = "Trace completed (success or failure)", body = ApiResponse<Vec<TracerResponse>>),
+        (status = 400, description = "Invalid request parameters", body = ApiResponse<String>),
+        (status = 500, description = "Internal server error", body = ApiResponse<String>)
+    )
+)]
+async fn trace_call_many(
+    handler: web::Data<TraceHandler>,
+    request: web::Json<TraceCallManyRequest>,
+) -> ApiResult<HttpResponse> {
+    let start_time = Instant::now();
+    let request_id = generate_request_id();
+    let request = request.into_inner();
+
+    debug!(
+        target: "altitrace::trace",
+        %request_id,
+        bundles_count = request.bundles.len(),
+        "Starting call many trace"
+    );
+
+    let responses = handler.service.trace_call_many(&request).await.unwrap();
+
+    // Convert Vec<TraceResponse> to Vec<TracerResponse>
+    let tracer_responses: Vec<TracerResponse> = responses
+        .into_iter()
+        .map(|response| {
+            let mut tracer_response = TracerResponse::from(response.trace_result);
+            if let Some(receipt) = response.receipt {
+                tracer_response = tracer_response.with_receipt(receipt);
+            }
+            if request.tracer_config.should_clean_struct_logger() {
+                tracer_response.clean_struct_logger();
+            }
+            tracer_response
+        })
+        .collect();
+
+    let elapsed = start_time.elapsed();
+
+    debug!(
+        target: "altitrace::trace",
+        %request_id,
+        responses_count = tracer_responses.len(),
+        ?elapsed,
+        "Call many trace completed"
+    );
+
+    Ok(ApiResponse::success_with_timing(tracer_responses, request_id, elapsed.as_millis() as u64)
+        .into())
+}
+
 define_routes!(
     TraceHandler,
     "/trace",
     "/tx" => {
-        method: get,
+        method: post,
         handler: trace_transaction,
         params: { request: web::Json<TraceTransactionRequest> }
     },
     "/call" => {
-        method: get,
+        method: post,
         handler: trace_call,
         params: { request: web::Json<TraceCallRequest> }
+    },
+    "/call-many" => {
+        method: post,
+        handler: trace_call_many,
+        params: { request: web::Json<TraceCallManyRequest> }
     },
 );
