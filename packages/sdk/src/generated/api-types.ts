@@ -71,13 +71,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Get a transaction trace from a call request
          * @description Get a transaction trace from a call request.
          */
-        get: operations["trace_call"];
+        post: operations["trace_call"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trace/call-many": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Trace multiple calls with state context
+         * @description Execute debug_trace_call_many to trace multiple calls sequentially with cumulative state changes.
+         */
+        post: operations["trace_call_many"];
         delete?: never;
         options?: never;
         head?: never;
@@ -91,13 +111,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Traces a single transaction execution
          * @description Traces a single transaction execution.
          */
-        get: operations["trace_transaction"];
-        put?: never;
-        post?: never;
+        post: operations["trace_transaction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -295,6 +315,28 @@ export interface components {
              */
             success: boolean;
         };
+        /** @description Standard API response wrapper for all simulation endpoints.
+         *
+         *     This provides a consistent response format across the API,
+         *     including success/failure indication, data payload, error information,
+         *     and request metadata for tracking and debugging. */
+        ApiResponse_Vec_TracerResponse: {
+            data?: {
+                "4byteTracer"?: null | components["schemas"]["FourByteResponse"];
+                callTracer?: null | components["schemas"]["CallTraceResponse"];
+                prestateTracer?: null | components["schemas"]["PrestateTraceResponse"];
+                receipt?: null | components["schemas"]["TransactionReceiptInfo"];
+                structLogger?: null | components["schemas"]["StructLogResponse"];
+            }[];
+            error?: null | components["schemas"]["ApiError"];
+            /** @description Request metadata and timing information. */
+            metadata: components["schemas"]["ResponseMetadata"];
+            /**
+             * @description Indicates whether the request was processed successfully.
+             * @example true
+             */
+            success: boolean;
+        };
         /** @description Token balance change information. */
         AssetChange: {
             /** @description Token contract information. */
@@ -379,6 +421,11 @@ export interface components {
          * @enum {string}
          */
         BlockTag: "latest" | "earliest" | "safe" | "finalized";
+        Bundle: {
+            blockOverrides?: null | components["schemas"]["BlockOverrides"];
+            /** @description The transactions to execute in the bundle. */
+            transactions: components["schemas"]["TransactionCall"][];
+        };
         CacheHealth: {
             /** Format: int64 */
             latency_ms: number;
@@ -790,6 +837,15 @@ export interface components {
          * @enum {string}
          */
         SimulationStatus: "success" | "reverted" | "failed";
+        StateContext: {
+            /**
+             * @description The block number or tag.
+             * @example 10000000
+             */
+            block?: string;
+            /** @description The transaction index in the block. */
+            tx_index?: components["schemas"]["TxIndex"];
+        };
         /** @description State override for simulation and tracing. */
         StateOverride: {
             /**
@@ -972,6 +1028,15 @@ export interface components {
              */
             symbol?: string | null;
         };
+        /** @description Request to trace many calls. */
+        TraceCallManyRequest: {
+            /** @description The bundle to trace. */
+            bundles: components["schemas"]["Bundle"][];
+            /** @description State context to trace against. */
+            stateContext?: components["schemas"]["StateContext"];
+            /** @description Tracer configuration. */
+            tracerConfig?: components["schemas"]["TraceConfig"];
+        };
         /** @description Request to trace a call simulation. */
         TraceCallRequest: {
             /**
@@ -1134,6 +1199,10 @@ export interface components {
              */
             transactionType: number;
         };
+        TxIndex: "End" | {
+            /** @description Transaction given index. */
+            Index: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -1276,6 +1345,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_TracerResponse"];
+                };
+            };
+            /** @description Invalid request parameters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+        };
+    };
+    trace_call_many: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TraceCallManyRequest"];
+            };
+        };
+        responses: {
+            /** @description Trace completed (success or failure) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Vec_TracerResponse"];
                 };
             };
             /** @description Invalid request parameters */
