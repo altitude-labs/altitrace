@@ -1,0 +1,192 @@
+use crate::{
+    define_routes,
+    handlers::{
+        common::{ApiError, ApiResponse, Handler},
+        simulation::{dto::*, response::*},
+    },
+    services::hyperevm::service::HyperEvmService,
+    ApiResult,
+};
+use actix_web::{web, HttpResponse};
+use std::time::Instant;
+use tracing::debug;
+use utoipa::OpenApi;
+use uuid::Uuid;
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        simulate_transaction,
+        simulate_batch_transaction
+    ),
+    components(
+        schemas(
+            SimulationRequest,
+            SimulationResult,
+            ApiResponse<SimulationResult>,
+            ApiResponse<Vec<SimulationResult>>,
+        ),
+    ),
+    tags(
+        (name = "simulation", description = "HyperEVM transaction simulation endpoints")
+    )
+)]
+pub struct SimulationApiDoc;
+
+pub struct SimulationHandler {
+    service: web::Data<HyperEvmService>,
+}
+
+impl SimulationHandler {
+    pub const fn new(service: web::Data<HyperEvmService>) -> Self {
+        Self { service }
+    }
+
+    pub fn into_app_data(self) -> web::Data<Self> {
+        web::Data::new(self)
+    }
+}
+
+impl From<SimulationHandler> for web::Data<SimulationHandler> {
+    fn from(handler: SimulationHandler) -> Self {
+        handler.into_app_data()
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/simulate",
+    tag = "simulation",
+    summary = "Simulate transaction execution",
+    description = "Simulate a single transaction with comprehensive analysis",
+    request_body = SimulationRequest,
+    responses(
+        (status = 200, description = "Simulation completed (success or failure)", body = ApiResponse<SimulationResult>),
+        (status = 400, description = "Invalid request parameters", body = ApiResponse<String>),
+        (status = 500, description = "Internal server error", body = ApiResponse<String>)
+    )
+)]
+async fn simulate_transaction(
+    handler: web::Data<SimulationHandler>,
+    request: web::Json<SimulationRequest>,
+) -> ApiResult<HttpResponse> {
+    let start_time = Instant::now();
+    let request_id = Uuid::new_v4().to_string();
+    let simulation_request = request.into_inner();
+
+    debug!(
+        target: "altitrace::api::simulation",
+        request_id = %request_id,
+        calls_count = simulation_request.call_count(),
+        "Processing simulation request"
+    );
+
+    match handler
+        .service
+        .simulate_transaction(simulation_request)
+        .await
+    {
+        Ok(result) => {
+            let execution_time = start_time.elapsed().as_millis() as u64;
+            debug!(
+                target: "altitrace::api::simulation",
+                request_id = %request_id,
+                simulation_id = %result.simulation_id,
+                %execution_time,
+                status = ?result.status,
+                "Simulation completed successfully"
+            );
+
+            Ok(ApiResponse::success_with_timing(result, request_id, execution_time).into())
+        }
+        Err(e) => {
+            let execution_time = start_time.elapsed().as_millis() as u64;
+            debug!(
+                request_id = %request_id,
+                execution_time_ms = execution_time,
+                error = ?e,
+                "Simulation failed"
+            );
+
+            let api_error = ApiError::new("SIMULATION_FAILED", e.to_string()).with_suggestion(
+                "Check transaction parameters and ensure the HyperEVM node is accessible",
+            );
+
+            Ok(ApiResponse::<SimulationResult>::error(api_error, request_id).into())
+        }
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/simulate/batch",
+    tag = "simulation",
+    summary = "Simulate multiple independent transactions",
+    description = "Simulate a batch of independent transactions with comprehensive analysis",
+    request_body = Vec<SimulationRequest>,
+    responses(
+        (status = 200, description = "Batch simulation completed (includes individual success/failure)", body = ApiResponse<Vec<SimulationResult>>),
+        (status = 400, description = "Invalid request parameters", body = ApiResponse<String>),
+        (status = 500, description = "Internal server error", body = ApiResponse<String>)
+    )
+)]
+async fn simulate_batch_transaction(
+    handler: web::Data<SimulationHandler>,
+    request: web::Json<Vec<SimulationRequest>>,
+) -> ApiResult<HttpResponse> {
+    let start_time = Instant::now();
+    let request_id = Uuid::new_v4().to_string();
+    let simulation_request = request.into_inner();
+
+    debug!(
+        target: "altitrace::api::simulation",
+        request_id = %request_id,
+        batch_size = simulation_request.len(),
+        "Processing batch simulation request"
+    );
+
+    match handler.service.simulate_batch(simulation_request).await {
+        Ok(result) => {
+            let execution_time = start_time.elapsed().as_millis() as u64;
+            debug!(
+                target: "altitrace::api::simulation",
+                request_id = %request_id,
+                %execution_time,
+                "Batch simulation completed successfully"
+            );
+
+            Ok(ApiResponse::success_with_timing(result, request_id, execution_time).into())
+        }
+        Err(e) => {
+            let execution_time = start_time.elapsed().as_millis() as u64;
+            debug!(
+                target: "altitrace::api::simulation",
+                request_id = %request_id,
+                execution_time_ms = execution_time,
+                error = ?e,
+                "Batch simulation failed"
+            );
+
+            let api_error = ApiError::new("SIMULATION_FAILED", e.to_string()).with_suggestion(
+                "Check transaction parameters and ensure the HyperEVM node is accessible",
+            );
+
+            Ok(ApiResponse::<Vec<SimulationResult>>::error(api_error, request_id).into())
+        }
+    }
+}
+
+define_routes!(
+    SimulationHandler,
+    "/simulate",
+    "" => {
+        method: post,
+        handler: simulate_transaction,
+        params: { request: web::Json<SimulationRequest> }
+    },
+    "/batch" => {
+        method: post,
+        handler: simulate_batch_transaction,
+        params: { request: web::Json<Vec<SimulationRequest>> }
+    }
+);

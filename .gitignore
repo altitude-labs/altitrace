@@ -1,3 +1,9 @@
+# Rust
+target/
+
+# Gitlab
+.gitlab-ci-local
+
 # Logs
 logs
 *.log
@@ -94,7 +100,7 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+**/dist
 
 # Gatsby files
 .cache/

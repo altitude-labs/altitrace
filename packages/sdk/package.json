@@ -1,0 +1,75 @@
+{
+  "name": "@altitrace/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for the Altitrace HyperEVM transaction simulation platform",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup && bun run generate:types",
+    "build:types": "bun run generate:types",
+    "generate:types": "openapi-typescript ../api/swagger.json --output src/generated/api-types.ts",
+    "dev": "tsup --watch",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "typecheck": "tsc --noEmit",
+    "fmt:check": "biome format .",
+    "fmt": "biome format . --write",
+    "lint": "biome check . --write --unsafe && biome format . --write",
+    "lint:check": "biome check .",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "bun run clean && bun run build && bun run test && bun run typecheck"
+  },
+  "keywords": [
+    "ethereum",
+    "hyperevm",
+    "simulation",
+    "blockchain",
+    "typescript",
+    "web3"
+  ],
+  "author": "Altitrace Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/altitrace/altitrace.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/altitrace/altitrace/issues"
+  },
+  "homepage": "https://github.com/altitrace/altitrace/tree/main/packages/sdk#readme",
+  "peerDependencies": {
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.0",
+    "@eslint/js": "^9.33.0",
+    "@types/bun": "^1.2.20",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "eslint": "^9.33.0",
+    "openapi-typescript": "^7.9.1",
+    "prettier": "^3.6.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "viem": "^2.34.0"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
