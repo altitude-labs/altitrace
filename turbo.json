@@ -4,14 +4,24 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", "build/**", ".next/**", "!.next/cache/**", "target/release/**"]
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "outputs": ["target/debug/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
+    },
+    "lint:check": {
+      "dependsOn": ["^lint:check"]
+    },
+    "fmt:check": {
+      "dependsOn": ["^fmt:check"]
+    },
+    "fmt": {
+      "dependsOn": ["^fmt"]
     },
     "check-types": {
       "dependsOn": ["^check-types"]
