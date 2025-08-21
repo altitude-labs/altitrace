@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from 'tsup'
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -12,8 +12,10 @@ export default defineConfig({
   target: 'es2022',
   outDir: 'dist',
   esbuildOptions(options) {
-    options.conditions = ['module'];
+    options.conditions = ['module']
   },
   cjsInterop: true,
-  onSuccess: 'echo "✅ Build completed successfully"'
-});
+  onSuccess: 'echo "✅ Build completed successfully"',
+  esbuildPlugins: [],
+  external: ['viem'],
+})

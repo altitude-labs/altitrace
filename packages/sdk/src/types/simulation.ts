@@ -2,34 +2,32 @@
  * @fileoverview Simulation types and extended interfaces
  */
 
-import type { components } from '@sdk/generated/api-types';
+import type { components } from '@sdk/generated/api-types'
+import type { BlockOverrides, BlockTag } from './block'
+import type { StateOverride } from './state'
+import type {
+  AssetChange,
+  CallError,
+  DecodedEvent,
+  TransactionCall,
+} from './transaction'
 
 // Re-export generated types for convenience
-export type SimulationRequest = components['schemas']['SimulationRequest'];
-export type SimulationResult = components['schemas']['SimulationResult'];
-export type SimulationParams = components['schemas']['SimulationParams'];
-export type SimulationOptions = components['schemas']['SimulationOptions'];
-export type TransactionCall = components['schemas']['TransactionCall'];
-export type CallResult = components['schemas']['CallResult'];
-export type CallStatus = components['schemas']['CallStatus'];
-export type SimulationStatus = components['schemas']['SimulationStatus'];
-export type StateOverride = components['schemas']['StateOverride'];
-export type BlockOverrides = components['schemas']['BlockOverrides'];
-export type BlockTag = components['schemas']['BlockTag'];
-export type EnhancedLog = components['schemas']['EnhancedLog'];
-export type DecodedEvent = components['schemas']['DecodedEvent'];
-export type AssetChange = components['schemas']['AssetChange'];
-export type CallError = components['schemas']['CallError'];
+export type SimulationRequest = components['schemas']['SimulationRequest']
+export type SimulationResult = components['schemas']['SimulationResult']
+export type SimulationParams = components['schemas']['SimulationParams']
+export type SimulationOptions = components['schemas']['SimulationOptions']
+export type SimulationStatus = components['schemas']['SimulationStatus']
 
 // Re-export client types
 export type {
   AltitraceClientConfig,
-  ApiResponse,
   ApiError,
+  ApiResponse,
   NetworkError,
-  RetryConfig,
   Result,
-} from './client';
+  RetryConfig,
+} from './client'
 
 /**
  * Extended simulation result with helper methods.
@@ -37,21 +35,21 @@ export type {
 export interface ExtendedSimulationResult
   extends Omit<SimulationResult, 'assetChanges'> {
   /** Asset changes (can be null or undefined) */
-  assetChanges: AssetChange[] | null | undefined;
+  assetChanges: AssetChange[] | null | undefined
   /** Check if simulation was successful */
-  isSuccess(): boolean;
+  isSuccess(): boolean
   /** Check if simulation failed */
-  isFailed(): boolean;
+  isFailed(): boolean
   /** Get total gas used as a number */
-  getTotalGasUsed(): bigint;
+  getTotalGasUsed(): bigint
   /** Get gas used by a specific call */
-  getCallGasUsed(callIndex: number): bigint;
+  getCallGasUsed(callIndex: number): bigint
   /** Get all errors from failed calls */
-  getErrors(): CallError[];
+  getErrors(): CallError[]
   /** Get asset changes summary */
-  getAssetChangesSummary(): AssetChangeSummary[];
+  getAssetChangesSummary(): AssetChangeSummary[]
   /** Get decoded events from all calls */
-  getDecodedEvents(): DecodedEvent[];
+  getDecodedEvents(): DecodedEvent[]
 }
 
 /**
@@ -59,15 +57,15 @@ export interface ExtendedSimulationResult
  */
 export interface AssetChangeSummary {
   /** Token address */
-  tokenAddress: string;
+  tokenAddress: string
   /** Token symbol (if known) */
-  symbol?: string | null | undefined;
+  symbol?: string | null | undefined
   /** Number of decimals (if known) */
-  decimals?: number | null | undefined;
+  decimals?: number | null | undefined
   /** Net change amount (formatted) */
-  netChange: string;
+  netChange: string
   /** Whether this was a gain or loss */
-  type: 'gain' | 'loss';
+  type: 'gain' | 'loss'
 }
 
 /**
@@ -75,11 +73,11 @@ export interface AssetChangeSummary {
  */
 export interface BatchSimulationConfig {
   /** Array of simulation requests */
-  simulations: SimulationRequest[];
+  simulations: SimulationRequest[]
   /** Whether to stop on first failure */
-  stopOnFailure?: boolean;
+  stopOnFailure?: boolean
   /** Maximum concurrent simulations */
-  maxConcurrency?: number;
+  maxConcurrency?: number
 }
 
 /**
@@ -87,15 +85,15 @@ export interface BatchSimulationConfig {
  */
 export interface BatchSimulationResult {
   /** Individual simulation results */
-  results: ExtendedSimulationResult[];
+  results: ExtendedSimulationResult[]
   /** Overall batch status */
-  batchStatus: 'success' | 'partial' | 'failed';
+  batchStatus: 'success' | 'partial' | 'failed'
   /** Total execution time */
-  totalExecutionTime: number;
+  totalExecutionTime: number
   /** Number of successful simulations */
-  successCount: number;
+  successCount: number
   /** Number of failed simulations */
-  failureCount: number;
+  failureCount: number
 }
 
 /**
@@ -103,29 +101,29 @@ export interface BatchSimulationResult {
  */
 export interface SimulationRequestBuilder {
   /** Add a transaction call */
-  call(call: TransactionCall): SimulationRequestBuilder;
+  call(call: TransactionCall): SimulationRequestBuilder
   /** Set account for asset tracking */
-  forAccount(account: string): SimulationRequestBuilder;
+  forAccount(account: string): SimulationRequestBuilder
   /** Set block number */
-  atBlockNumber(blockNumber: string): SimulationRequestBuilder;
+  atBlockNumber(blockNumber: string): SimulationRequestBuilder
   /** Set block tag */
-  atBlockTag(blockTag: BlockTag): SimulationRequestBuilder;
+  atBlockTag(blockTag: BlockTag): SimulationRequestBuilder
   /** Set block number or tag (convenience method) */
-  atBlock(blockNumberOrTag: string | number | bigint): SimulationRequestBuilder;
+  atBlock(blockNumberOrTag: string | number | bigint): SimulationRequestBuilder
   /** Enable asset change tracking */
-  withAssetChanges(enabled?: boolean): SimulationRequestBuilder;
+  withAssetChanges(enabled?: boolean): SimulationRequestBuilder
   /** Enable transfer tracking */
-  withTransfers(enabled?: boolean): SimulationRequestBuilder;
+  withTransfers(enabled?: boolean): SimulationRequestBuilder
   /** Add state override */
-  withStateOverride(override: StateOverride): SimulationRequestBuilder;
+  withStateOverride(override: StateOverride): SimulationRequestBuilder
   /** Add block overrides */
-  withBlockOverrides(overrides: BlockOverrides): SimulationRequestBuilder;
+  withBlockOverrides(overrides: BlockOverrides): SimulationRequestBuilder
   /** Set validation mode */
-  withValidation(enabled?: boolean): SimulationRequestBuilder;
+  withValidation(enabled?: boolean): SimulationRequestBuilder
   /** Build the final request */
-  build(): SimulationRequest;
+  build(): SimulationRequest
   /** Execute the simulation */
-  execute(): Promise<ExtendedSimulationResult>;
+  execute(): Promise<ExtendedSimulationResult>
 }
 
 /**
@@ -133,15 +131,15 @@ export interface SimulationRequestBuilder {
  */
 export interface TransactionCallConfig {
   /** Target contract address */
-  to?: string | undefined;
+  to?: string | undefined
   /** Sender address */
-  from?: string | undefined;
+  from?: string | undefined
   /** Call data */
-  data?: string | undefined;
+  data?: string | undefined
   /** Value to send (in wei) */
-  value?: string | bigint | undefined;
+  value?: string | bigint | undefined
   /** Gas limit */
-  gas?: string | bigint | undefined;
+  gas?: string | bigint | undefined
 }
 
 /**
@@ -149,21 +147,35 @@ export interface TransactionCallConfig {
  */
 export interface GasEstimate {
   /** Estimated gas limit */
-  gasLimit: bigint;
+  gasLimit: bigint
   /** Gas limit as hex string */
-  gasLimitHex: string;
+  gasLimitHex: string
   /** Base fee (if available) */
-  baseFee?: bigint;
+  baseFee?: bigint
   /** Priority fee (if available) */
-  priorityFee?: bigint;
+  priorityFee?: bigint
   /** Total estimated cost in wei */
-  estimatedCost?: bigint;
+  estimatedCost?: bigint
 }
 
 /**
- * Utility types for working with Ethereum data.
+ * Utility types for working with EVM data.
  */
-export type Address = `0x${string}`;
-export type HexString = `0x${string}`;
-export type HexNumber = `0x${string}`;
-export type Hash = `0x${string}`;
+export type Address = `0x${string}`
+export type HexString = `0x${string}`
+export type HexNumber = `0x${string}`
+export type Hash = `0x${string}`
+
+/**
+ * Simulation execution options.
+ */
+export interface SimulationExecutionOptions {
+  /** Timeout for simulation execution in milliseconds */
+  timeout?: number
+
+  /** Whether to retry on failure */
+  retry?: boolean
+
+  /** Maximum number of retry attempts */
+  maxRetries?: number
+}
