@@ -19,8 +19,8 @@ variables:
 cache:
   key: ${CI_COMMIT_REF_SLUG}
   paths:
-    - telegram/node_modules/.cache
-    - telegram/node_modules/.bun
+    - node_modules/.cache
+    - node_modules/.bun
     - target/debug/.fingerprint
     - target/debug/build
     - target/debug/deps
@@ -51,6 +51,25 @@ cleanup:
       rm -rf node_modules target .cargo dist
   when: always
   allow_failure: true
+
+# node jobs
+build-sdk:
+  stage: build
+  image: oven/bun:alpine
+  before_script:
+    - cd packages/sdk && bun install
+  script:
+    - bun run build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [packages/sdk/**/*, .gitlab-ci.yml]
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes: [packages/sdk/**/*, .gitlab-ci.yml]
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-node
+    paths: [node_modules/, .cache/]
+    policy: pull-push
+    when: on_success
 
 # rust jobs
 clippy:
