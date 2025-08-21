@@ -14,8 +14,8 @@ use alloy_rpc_types::{
 use super::{
     primitives::{FromHexString, PrimitiveError},
     shared::StateOverride,
+    transaction::TransactionCall,
 };
-use crate::handlers::simulation::TransactionCall;
 
 /// Main error type for all conversions in the application.
 #[derive(Debug, Clone, thiserror::Error)]
@@ -78,6 +78,10 @@ impl ConversionService {
         overrides: &HashMap<String, StateOverride>,
     ) -> Result<AlloyStateOverride, ConversionError> {
         let mut alloy_overrides = AlloyStateOverride::default();
+
+        if overrides.is_empty() {
+            return Ok(alloy_overrides);
+        }
 
         for (address_str, override_data) in overrides {
             let address = Address::from_hex_string(address_str)?;

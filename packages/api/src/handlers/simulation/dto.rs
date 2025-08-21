@@ -6,7 +6,7 @@ use crate::{
     handlers::validation::{
         validate_address, validate_block_number_or_tag, validate_hex_string, validate_uint256,
     },
-    types::{shared::StateOverride, BlockOverrides},
+    types::{shared::StateOverride, BlockOverrides, TransactionCall},
     utils::default_true,
 };
 
@@ -210,51 +210,6 @@ pub struct SimulationParams {
     #[serde(default)]
     #[schema(example = false)]
     pub trace_transfers: bool,
-}
-
-/// Represents a single transaction call within a simulation.
-#[derive(Debug, Clone, Deserialize, Serialize, Validate, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct TransactionCall {
-    /// The sender address of the transaction.
-    /// If not specified, the zero address will be used.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_address"))]
-    #[schema(
-        example = "0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c",
-        pattern = "^0x[a-fA-F0-9]{40}$"
-    )]
-    pub from: Option<String>,
-
-    /// The recipient address of the transaction.
-    /// For contract creation, this should be None/null.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_address"))]
-    #[schema(
-        example = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        pattern = "^0x[a-fA-F0-9]{40}$"
-    )]
-    pub to: Option<String>,
-
-    /// The transaction data (calldata).
-    /// For simple ETH transfers, this can be empty or "0x".
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_hex_string"))]
-    #[schema(example = "0xa9059cbb000000000000000000000000", pattern = "^0x[a-fA-F0-9]*$")]
-    pub data: Option<String>,
-
-    /// The value to send with the transaction in wei (hex encoded).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_uint256"))]
-    #[schema(example = "0x0", pattern = "^0x[a-fA-F0-9]*$")]
-    pub value: Option<String>,
-
-    /// Gas limit for the transaction (hex encoded).
-    /// If not specified, it will be estimated automatically.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_uint256"))]
-    #[schema(example = "0x7a120", pattern = "^0x[a-fA-F0-9]*$")]
-    pub gas: Option<String>,
 }
 
 /// Optional parameters for simulation behavior and output.
