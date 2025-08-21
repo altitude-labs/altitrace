@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    handlers::{simulation::TransactionCall, validation::validate_hash},
-    types::{BlockOverrides, StateOverride},
+    handlers::validation::validate_hash,
+    types::{BlockOverrides, Bundle, StateContext, StateOverride, TransactionCall},
     utils::default_latest,
 };
 use serde::{Deserialize, Serialize};
@@ -65,7 +65,7 @@ pub struct TraceCallRequest {
     #[serde(default = "default_latest")]
     pub block: String,
 
-    /// Trace configuration options.
+    /// Trace configuration options. This will used the `callTracer` by default.
     #[validate(nested)]
     #[serde(default)]
     pub tracer_config: TraceConfig,
@@ -81,8 +81,34 @@ pub struct TraceCallRequest {
     pub block_overrides: Option<BlockOverrides>,
 }
 
+/// Request to trace many calls.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceCallManyRequest {
+    /// The bundle to trace.
+    #[validate(nested)]
+    #[validate(length(min = 1, message = "At least one bundle is required"))]
+    pub bundles: Vec<Bundle>,
+
+    /// State context to trace against.
+    #[validate(nested)]
+    #[serde(default)]
+    pub state_context: StateContext,
+
+    /// Tracer configuration.
+    #[validate(nested)]
+    #[serde(default)]
+    pub tracer_config: TraceConfig,
+}
+
+impl TraceCallManyRequest {
+    pub const fn bundles_count(&self) -> usize {
+        self.bundles.len()
+    }
+}
+
 /// Comprehensive trace configuration supporting multiple tracers.
-#[derive(Debug, Default, Clone, Serialize, Deserialize, ToSchema, Validate)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Serialize, Deserialize, ToSchema, Validate)]
 #[serde(default)]
 #[schema(
     title = "Trace Configuration",
@@ -106,6 +132,7 @@ impl TraceConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq, Validate)]
+#[serde(default)]
 pub struct Tracers {
     /// The 4byteTracer collects the function selectors of every function executed in the lifetime
     /// of a transaction, along with the size of the supplied call data. The result is a
@@ -234,5 +261,81 @@ impl Default for StructLoggerConfig {
             disable_return_data: false,
             clean_struct_logs: true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use similar_asserts::assert_eq;
+
+    #[test]
+    fn test_default_tracer_config() {
+        let default_config = TraceConfig::default();
+        assert_eq!(default_config.tracers.struct_logger, None);
+        assert_eq!(default_config.tracers.call_tracer, Some(CallTracerConfig::default()));
+        assert_eq!(default_config.tracers.prestate_tracer, None);
+        assert_eq!(default_config.tracers.four_byte_tracer, false);
+    }
+
+    #[test]
+    fn test_serde_default_trace_config() {
+        let s = r#"{}"#;
+        let config = serde_json::from_str::<TraceConfig>(s).unwrap();
+        assert_eq!(config.tracers.struct_logger, None);
+        assert_eq!(config.tracers.call_tracer, Some(CallTracerConfig::default()));
+        assert_eq!(config.tracers.prestate_tracer, None);
+        assert_eq!(config.tracers.four_byte_tracer, false);
+    }
+
+    #[test]
+    fn test_serde_trace_config_without_struct_logger() {
+        let s = r#"{"4byteTracer": true, "callTracer": null, "prestateTracer": null}"#;
+        let config = serde_json::from_str::<TraceConfig>(s).unwrap();
+        assert_eq!(config.tracers.struct_logger, None);
+        assert_eq!(config.tracers.call_tracer, None);
+        assert_eq!(config.tracers.prestate_tracer, None);
+        assert_eq!(config.tracers.four_byte_tracer, true);
+    }
+
+    #[test]
+    fn test_serde_trace_config() {
+        let s = r#"{"structLogger": null}"#;
+        let config = serde_json::from_str::<TraceConfig>(s).unwrap();
+        assert_eq!(config.tracers, Tracers::default());
+        assert_eq!(config.tracers.struct_logger, None);
+    }
+
+    #[test]
+    fn test_serde_default_trace_call_request() {
+        let s = r#"{"call":{"to":"0x0000000000000000000000000000000000000012","data":"0x","value":"0x0"}}"#;
+        let request = serde_json::from_str::<TraceCallRequest>(s).unwrap();
+        assert_eq!(request.call.to, Some("0x0000000000000000000000000000000000000012".to_string()));
+        assert_eq!(request.call.data, Some("0x".to_string()));
+        assert_eq!(request.call.value, Some("0x0".to_string()));
+        assert_eq!(request.block, "latest");
+        assert_eq!(request.tracer_config, TraceConfig::default());
+    }
+
+    #[test]
+    fn test_serde_trace_call_request_without_struct_logger() {
+        let s = r#"{"call":{"to":"0x0000000000000000000000000000000000000012","data":"0x","value":"0x0"},"block":"latest","tracerConfig":{"4byteTracer": false, "callTracer": null, "prestateTracer": null}}"#;
+        let request = serde_json::from_str::<TraceCallRequest>(s).unwrap();
+        assert_eq!(request.call.to, Some("0x0000000000000000000000000000000000000012".to_string()));
+        assert_eq!(request.call.data, Some("0x".to_string()));
+        assert_eq!(request.call.value, Some("0x0".to_string()));
+        assert_eq!(request.block, "latest");
+        assert_eq!(request.tracer_config.tracers.struct_logger, None);
+        assert_eq!(request.tracer_config.tracers.call_tracer, None);
+        assert_eq!(request.tracer_config.tracers.prestate_tracer, None);
+        assert_eq!(request.tracer_config.tracers.four_byte_tracer, false);
+    }
+
+    #[test]
+    fn test_serde_default_trace_call_many_request() {
+        let s = r#"{"bundles":[{"transactions":[{"call":{"to":"0x0000000000000000000000000000000000000012","data":"0x","value":"0x0"}}]}]}"#;
+        let request = serde_json::from_str::<TraceCallManyRequest>(s).unwrap();
+        assert_eq!(request.state_context, StateContext::default());
+        assert_eq!(request.tracer_config, TraceConfig::default());
     }
 }

@@ -83,6 +83,7 @@ vergen-git2.workspace = true
 [dev-dependencies]
 criterion = { version = "0.7", features = ["html_reports"] }
 proptest = "1.7"
+similar-asserts.workspace = true
 
 [[bin]]
 name = "altitrace-api"
