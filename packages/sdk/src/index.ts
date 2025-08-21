@@ -58,108 +58,143 @@
  */
 
 // Import types for use in utility functions
-import { AltitraceClient } from './client/altitrace-client';
-import type { AltitraceClientConfig } from './types/client';
-
-// Main client export
-export { AltitraceClient } from './client/altitrace-client';
+import { AltitraceClient } from './client/altitrace-client'
+import type { AltitraceClientConfig } from './types/client'
 
 // Builder functions
-export { createSimulationBuilder } from './builders/simulation-builder';
-
+export { createSimulationBuilder } from './builders/simulation-builder'
+export {
+  BlockOverrideHelpers,
+  createTraceBuilder,
+  StateOverrideHelpers,
+  TraceHelpers,
+} from './builders/trace-builder'
+// Main client export
+export { AltitraceClient } from './client/altitrace-client'
+export { SimulationClient } from './client/simulation-client'
+export { TraceClient } from './client/trace-client'
+// Error classes
+export {
+  AltitraceApiError,
+  AltitraceError,
+  AltitraceNetworkError,
+  ConfigurationError,
+  ErrorUtils,
+  SimulationError,
+  ValidationError,
+} from './core/errors'
+// Generated API types (for advanced usage)
+export type { components, operations } from './generated/api-types'
+// Response processor
+export {
+  type ErrorSummary,
+  type EventSummary,
+  type GasUsageBreakdown,
+  ResponseProcessor,
+  type SimulationComparison,
+} from './processors/response-processor'
 // Type definitions
 export type {
+  // Utility types
+  Address,
   // Client types
   AltitraceClientConfig,
-  ApiResponse,
   ApiError,
-  NetworkError,
-  RetryConfig,
-  Result,
-
-  // Simulation types
-  SimulationRequest,
-  SimulationResult,
-  SimulationParams,
-  SimulationOptions,
-  TransactionCall,
-  CallResult,
-  CallStatus,
-  SimulationStatus,
-  StateOverride,
-  BlockOverrides,
-  BlockTag,
-  EnhancedLog,
-  DecodedEvent,
+  ApiResponse,
   AssetChange,
-  PerformanceMetrics,
-  AccessListEntry,
-  CallError,
-
-  // Extended types
-  ExtendedSimulationResult,
   AssetChangeSummary,
   BatchSimulationConfig,
   BatchSimulationResult,
-  SimulationRequestBuilder,
-  TransactionCallConfig,
+  BlockOverrides,
+  BlockTag,
+  CallError,
+  CallResult,
+  CallStatus,
+  DecodedEvent,
+  EnhancedLog,
+  // Extended types
+  ExtendedSimulationResult,
   GasEstimate,
-
-  // Utility types
-  Address,
-  HexString,
-  HexNumber,
   Hash,
-} from './types/simulation';
-
-// Error classes
-export {
-  AltitraceError,
-  ValidationError,
-  AltitraceNetworkError,
-  AltitraceApiError,
-  SimulationError,
-  ConfigurationError,
-  ErrorUtils,
-} from './core/errors';
-
-// Response processor
-export {
-  ResponseProcessor,
-  type GasUsageBreakdown,
-  type EventSummary,
-  type ErrorSummary,
-  type SimulationComparison,
-} from './processors/response-processor';
-
+  HexNumber,
+  HexString,
+  NetworkError,
+  Result,
+  RetryConfig,
+  SimulationExecutionOptions,
+  SimulationOptions,
+  SimulationParams,
+  // Simulation types
+  SimulationRequest,
+  SimulationRequestBuilder,
+  SimulationResult,
+  SimulationStatus,
+  StateOverride,
+  TransactionCall,
+  TransactionCallConfig,
+} from './types'
+export type { AccountState } from './types/state'
+// Trace types
+export type {
+  CallFrame,
+  CallTraceResponse,
+  CallTracerConfig,
+  // Extended types
+  ExtendedTracerResponse,
+  FourByteInfo,
+  FourByteResponse,
+  LogEntry,
+  PrestateDefaultMode,
+  PrestateDiffMode,
+  PrestateTraceResponse,
+  PrestateTracerConfig,
+  StorageSlot,
+  StructLog,
+  StructLoggerConfig,
+  StructLogResponse,
+  TraceCallBuilder,
+  TraceCallRequest,
+  // Configuration types
+  TraceConfig,
+  TraceExecutionOptions,
+  TraceRequestBuilder,
+  // Response types
+  TracerResponse,
+  Tracers,
+  TraceTransactionBuilder,
+  // Request types
+  TraceTransactionRequest,
+  TransactionReceiptInfo,
+} from './types/trace'
+// Export trace type guards
+export { TracerTypeGuards } from './types/trace'
 // Validation utilities
-export { ValidationUtils, TypeGuards } from './utils/validation';
-
+export { TypeGuards, ValidationUtils } from './utils/validation'
 // Viem integration utilities
 export {
-  viemToTransactionCall,
-  transactionCallToViem,
-  viemBatchToTransactionCalls,
-  viemAddressToAddress,
   addressToViemAddress,
-  viemHexToHexString,
-  hexStringToViemHex,
-  bigintToHexNumber,
-  hexNumberToBigint,
-  numberToHexNumber,
-  hexNumberToNumber,
-  GasUtils,
-  WeiUtils,
   BlockUtils,
-} from './utils/viem-integration';
-
-// Generated API types (for advanced usage)
-export type { components, operations } from './generated/api-types';
+  bigintToHexNumber,
+  blockNumberToHexNumber,
+  blockNumberToNumber,
+  GasUtils,
+  hexNumberToBigint,
+  hexNumberToNumber,
+  hexStringToViemHex,
+  isValidBlockNumber,
+  numberToHexNumber,
+  transactionCallToViem,
+  viemAddressToAddress,
+  viemBatchToTransactionCalls,
+  viemHexToHexString,
+  viemToTransactionCall,
+  WeiUtils,
+} from './utils/viem-integration'
 
 /**
  * SDK version information.
  */
-export const VERSION = '1.0.0';
+export const VERSION = '1.0.0'
 
 /**
  * Default configuration values for quick reference.
@@ -173,7 +208,7 @@ export const DEFAULT_CONFIG = {
   RETRIES: 3,
   /** Default user agent header */
   USER_AGENT: '@altitrace/sdk/1.0.0',
-} as const;
+} as const
 
 /**
  * Common block tags for simulation contexts.
@@ -183,7 +218,7 @@ export const BLOCK_TAGS = {
   EARLIEST: 'earliest',
   SAFE: 'safe',
   FINALIZED: 'finalized',
-} as const;
+} as const
 
 /**
  * Common gas limits for different types of transactions.
@@ -197,7 +232,7 @@ export const GAS_LIMITS = {
   UNISWAP_V2_SWAP: '0x3D090', // ~250,000
   /** Uniswap V3 swap */
   UNISWAP_V3_SWAP: '0x493E0', // ~300,000
-} as const;
+} as const
 
 /**
  * Common addresses used in HyperEVM ecosystem.
@@ -209,7 +244,7 @@ export const COMMON_ADDRESSES = {
   HYPE: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
   /** WHYPE address */
   WHYPE: '0x5555555555555555555555555555555555555555',
-} as const;
+} as const
 
 /**
  * Utility function to create a client with common configurations.
@@ -262,9 +297,9 @@ export const createClient = {
       timeout: 10_000,
       ...config,
     }),
-};
+}
 
 /**
  * Re-export the main client as default for convenience.
  */
-export default AltitraceClient;
+export default AltitraceClient

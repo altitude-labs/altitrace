@@ -1,0 +1,23 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["../../biome.json"],
+  "linter": {
+    "rules": {
+      "performance": {
+        "noBarrelFile": "off"
+      },
+      "complexity": {
+        "noStaticOnlyClass": "error"
+      }
+    }
+  },
+  "files": {
+    "includes": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "!node_modules",
+      "!dist",
+      "!src/generated"
+    ]
+  }
+}

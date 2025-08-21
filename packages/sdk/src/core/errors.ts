@@ -8,10 +8,10 @@
 export class AltitraceError extends Error {
   constructor(
     message: string,
-    public code?: string
+    public code?: string,
   ) {
-    super(message);
-    this.name = 'AltitraceError';
+    super(message)
+    this.name = 'AltitraceError'
   }
 }
 
@@ -20,8 +20,8 @@ export class AltitraceError extends Error {
  */
 export class ValidationError extends AltitraceError {
   constructor(message: string) {
-    super(message, 'VALIDATION_ERROR');
-    this.name = 'ValidationError';
+    super(message, 'VALIDATION_ERROR')
+    this.name = 'ValidationError'
   }
 }
 
@@ -29,18 +29,18 @@ export class ValidationError extends AltitraceError {
  * Network error for connectivity issues.
  */
 export class AltitraceNetworkError extends AltitraceError {
-  public type: 'network' = 'network';
-  public override cause?: Error | undefined;
+  public type = 'network' as const
+  public override cause?: Error | undefined
 
   constructor(
     message: string,
     code?: string,
     public statusCode?: number,
-    errorCause?: Error
+    errorCause?: Error,
   ) {
-    super(message, code ?? 'NETWORK_ERROR');
-    this.name = 'AltitraceNetworkError';
-    this.cause = errorCause;
+    super(message, code ?? 'NETWORK_ERROR')
+    this.name = 'AltitraceNetworkError'
+    this.cause = errorCause
   }
 
   /**
@@ -50,8 +50,8 @@ export class AltitraceNetworkError extends AltitraceError {
     return new AltitraceNetworkError(
       `HTTP ${response.status}: ${response.statusText}`,
       'HTTP_ERROR',
-      response.status
-    );
+      response.status,
+    )
   }
 
   /**
@@ -62,15 +62,18 @@ export class AltitraceNetworkError extends AltitraceError {
       `Network error: ${cause.message}`,
       'NETWORK_ERROR',
       undefined,
-      cause
-    );
+      cause,
+    )
   }
 
   /**
    * Create a timeout error.
    */
   static timeout(timeout: number): AltitraceNetworkError {
-    return new AltitraceNetworkError(`Request timed out after ${timeout}ms`, 'TIMEOUT_ERROR');
+    return new AltitraceNetworkError(
+      `Request timed out after ${timeout}ms`,
+      'TIMEOUT_ERROR',
+    )
   }
 
   /**
@@ -81,8 +84,8 @@ export class AltitraceNetworkError extends AltitraceError {
       `Failed to parse response: ${cause.message}`,
       'PARSE_ERROR',
       undefined,
-      cause
-    );
+      cause,
+    )
   }
 }
 
@@ -91,8 +94,8 @@ export class AltitraceNetworkError extends AltitraceError {
  */
 export class AltitraceApiError extends AltitraceError {
   constructor(message: string, code?: string) {
-    super(message, code);
-    this.name = 'AltitraceApiError';
+    super(message, code)
+    this.name = 'AltitraceApiError'
   }
 }
 
@@ -101,8 +104,8 @@ export class AltitraceApiError extends AltitraceError {
  */
 export class SimulationError extends AltitraceError {
   constructor(message: string) {
-    super(message, 'SIMULATION_ERROR');
-    this.name = 'SimulationError';
+    super(message, 'SIMULATION_ERROR')
+    this.name = 'SimulationError'
   }
 }
 
@@ -112,26 +115,26 @@ export class SimulationError extends AltitraceError {
 export class ConfigurationError extends AltitraceError {
   constructor(
     message: string,
-    public configKey?: string
+    public configKey?: string,
   ) {
-    super(message, 'CONFIGURATION_ERROR');
-    this.name = 'ConfigurationError';
+    super(message, 'CONFIGURATION_ERROR')
+    this.name = 'ConfigurationError'
   }
 }
 
 /**
  * Utilities for working with errors.
  */
-export class ErrorUtils {
-  static isAltitraceError(error: unknown): error is AltitraceError {
-    return error instanceof AltitraceError;
-  }
+export const ErrorUtils = {
+  isAltitraceError(error: unknown): error is AltitraceError {
+    return error instanceof AltitraceError
+  },
 
-  static isNetworkError(error: unknown): error is AltitraceNetworkError {
-    return error instanceof AltitraceNetworkError;
-  }
+  isNetworkError(error: unknown): error is AltitraceNetworkError {
+    return error instanceof AltitraceNetworkError
+  },
 
-  static isApiError(error: unknown): error is AltitraceApiError {
-    return error instanceof AltitraceApiError;
-  }
+  isApiError(error: unknown): error is AltitraceApiError {
+    return error instanceof AltitraceApiError
+  },
 }

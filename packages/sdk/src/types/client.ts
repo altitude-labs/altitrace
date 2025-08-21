@@ -7,21 +7,21 @@
  */
 export interface AltitraceClientConfig {
   /** API base URL (default: http://localhost:8080/v1) */
-  baseUrl?: string;
+  baseUrl?: string
   /** Request timeout in milliseconds (default: 30000) */
-  timeout?: number;
+  timeout?: number
   /** Enable debug logging (default: false) */
-  debug?: boolean;
+  debug?: boolean
   /** Custom headers to include in requests */
-  headers?: Record<string, string>;
+  headers?: Record<string, string>
   /** API key for authentication (if required) */
-  apiKey?: string;
+  apiKey?: string
   /** Retry configuration */
-  retryConfig?: RetryConfig;
+  retryConfig?: RetryConfig
   /** Custom fetch implementation */
-  fetch?: typeof globalThis.fetch;
+  fetch?: typeof globalThis.fetch
   /** User agent string */
-  userAgent?: string;
+  userAgent?: string
 }
 
 /**
@@ -29,17 +29,17 @@ export interface AltitraceClientConfig {
  */
 export interface RetryConfig {
   /** Maximum number of retry attempts (default: 3) */
-  maxAttempts: number;
+  maxAttempts: number
   /** Base delay between retries in milliseconds (default: 1000) */
-  baseDelay: number;
+  baseDelay: number
   /** Maximum delay between retries in milliseconds (default: 10000) */
-  maxDelay: number;
+  maxDelay: number
   /** Backoff multiplier for exponential backoff (default: 2) */
-  backoffMultiplier: number;
+  backoffMultiplier: number
   /** HTTP status codes that should trigger retries */
-  retryableStatusCodes: Set<number>;
+  retryableStatusCodes: Set<number>
   /** Function to determine if an error should trigger a retry */
-  shouldRetry: (error: NetworkError, attempt: number) => boolean;
+  shouldRetry: (error: NetworkError, attempt: number) => boolean
 }
 
 /**
@@ -47,17 +47,17 @@ export interface RetryConfig {
  */
 export interface ResolvedClientConfig {
   /** API base URL */
-  baseUrl: string;
+  baseUrl: string
   /** Request timeout in milliseconds */
-  timeout: number;
+  timeout: number
   /** Retry configuration */
-  retries: RetryConfig;
+  retries: RetryConfig
   /** Headers to include in requests */
-  headers: Record<string, string>;
+  headers: Record<string, string>
   /** Fetch implementation to use */
-  fetch: typeof globalThis.fetch;
+  fetch: typeof globalThis.fetch
   /** Enable debug logging */
-  debug: boolean;
+  debug: boolean
 }
 
 /**
@@ -65,17 +65,19 @@ export interface ResolvedClientConfig {
  */
 export interface RequestOptions {
   /** HTTP method for the request */
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   /** Request body data */
-  body?: unknown;
+  body?: unknown
+  /** Query parameters for GET requests */
+  params?: Record<string, any>
   /** Override default timeout */
-  timeout?: number;
+  timeout?: number
   /** Additional headers for this request */
-  headers?: Record<string, string>;
+  headers?: Record<string, string>
   /** Whether to retry this request on failure */
-  retry?: boolean;
+  retry?: boolean
   /** Custom retry configuration for this request */
-  retryConfig?: Partial<RetryConfig>;
+  retryConfig?: Partial<RetryConfig>
 }
 
 /**
@@ -83,13 +85,13 @@ export interface RequestOptions {
  */
 export interface ApiResponse<T> {
   /** Whether the request was successful */
-  success: boolean;
+  success: boolean
   /** Response data (if successful) */
-  data?: T;
+  data?: T
   /** Error details (if failed) */
-  error?: ApiError;
+  error?: ApiError
   /** Request metadata */
-  metadata: ResponseMetadata;
+  metadata: ResponseMetadata
 }
 
 /**
@@ -97,15 +99,15 @@ export interface ApiResponse<T> {
  */
 export interface ApiError {
   /** Machine-readable error code */
-  code: string;
+  code: string
   /** Human-readable error message */
-  message: string;
+  message: string
   /** Optional detailed error information */
-  details?: unknown;
+  details?: unknown
   /** Suggested resolution */
-  suggestion?: string;
+  suggestion?: string
   /** Stack trace (debug builds only) */
-  trace?: string;
+  trace?: string
 }
 
 /**
@@ -113,11 +115,11 @@ export interface ApiError {
  */
 export interface ResponseMetadata {
   /** Unique request identifier */
-  requestId: string;
+  requestId: string
   /** Response timestamp */
-  timestamp: string;
+  timestamp: string
   /** Execution time in milliseconds */
-  executionTime?: number;
+  executionTime?: number
 }
 
 /**
@@ -125,14 +127,16 @@ export interface ResponseMetadata {
  */
 export interface NetworkError extends Error {
   /** Error type discriminator */
-  type: 'network';
+  type: 'network'
   /** HTTP status code (if available) */
-  statusCode?: number | undefined;
+  statusCode?: number | undefined
   /** Original error cause */
-  cause?: Error | undefined;
+  cause?: Error | undefined
 }
 
 /**
  * Generic result type for operations that can succeed or fail.
  */
-export type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
+export type Result<T, E = Error> =
+  | { success: true; data: T }
+  | { success: false; error: E }

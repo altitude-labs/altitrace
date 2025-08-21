@@ -1,0 +1,12 @@
+{
+    "name": "@altitrace/api",
+    "scripts": {
+      "build": "cargo build --release",
+      "test": "cargo test --workspace --all-features",
+      "lint:check": "RUSTFLAGS=\"-D warnings\" cargo clippy --workspace --all-targets --all-features",
+      "fmt:check": "cargo fmt --all --check",
+      "fmt": "cargo fmt --all",
+      "clean": "cargo clean",
+      "dev": "cargo run"
+    }
+  }
