@@ -1,0 +1,93 @@
+[package]
+name = "altitrace-api"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Alloy dependencies
+alloy-consensus.workspace = true
+alloy-primitives.workspace = true
+alloy-sol-types.workspace = true
+alloy-provider.workspace = true
+alloy-rpc-client.workspace = true
+alloy-rpc-types.workspace = true
+alloy-rpc-types-eth.workspace = true
+alloy-rpc-types-mev.workspace = true
+alloy-rpc-types-trace.workspace = true
+alloy-transport.workspace = true
+alloy-transport-http.workspace = true
+alloy-transport-ws.workspace = true
+
+# API
+utoipa = { workspace = true, features = ["chrono"] }
+utoipa-swagger-ui.workspace = true
+
+# Async runtime
+futures.workspace = true
+futures-util.workspace = true
+tokio.workspace = true
+
+# Cache
+redis.workspace = true
+
+# Web framework
+actix.workspace = true
+actix-web.workspace = true
+actix-web-actors.workspace = true
+actix-rt.workspace = true
+actix-cors.workspace = true
+tower.workspace = true
+
+# Serialize
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+serde_repr.workspace = true
+
+# Error handling
+anyhow.workspace = true
+eyre.workspace = true
+thiserror.workspace = true
+
+# Logging and tracing
+rolling-file.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-subscriber.workspace = true
+
+# Configuration
+config.workspace = true
+dotenvy.workspace = true
+
+# Utilities
+num_cpus.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+hex.workspace = true
+regex.workspace = true
+
+# Additional dependencies for API
+bytes = "1.10"
+async-trait = "0.1"
+clap = { version = "4.5.45", features = ["derive", "env"] }
+validator.workspace = true
+
+[build-dependencies]
+vergen = { workspace = true, features = ["build", "cargo", "emit_and_set"] }
+vergen-git2.workspace = true
+
+[dev-dependencies]
+criterion = { version = "0.7", features = ["html_reports"] }
+proptest = "1.7"
+
+[[bin]]
+name = "altitrace-api"
+path = "src/main.rs"
+
+[lib]
+name = "altitrace_api"
+path = "src/lib.rs"
