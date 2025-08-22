@@ -1,131 +1,145 @@
-import { isAddress, isHex } from 'viem';
-import type { Address, HexString as Hex } from '@altitrace/sdk';
-import type { BlockNumber } from '@/types/api';
+import type { Address, HexString as Hex } from '@altitrace/sdk/types'
+import { isAddress, isHex } from 'viem'
+import type { BlockNumber } from '@/types/api'
 
 export class ValidationError extends Error {
-  constructor(message: string, public field: string) {
-    super(message);
-    this.name = 'ValidationError';
+  constructor(
+    message: string,
+    public field: string,
+  ) {
+    super(message)
+    this.name = 'ValidationError'
   }
 }
 
 // Validate Ethereum address
 export function validateAddress(value: string, fieldName = 'address'): Address {
   if (!value) {
-    throw new ValidationError('Address is required', fieldName);
+    throw new ValidationError('Address is required', fieldName)
   }
 
   if (!isAddress(value)) {
-    throw new ValidationError('Invalid address format', fieldName);
+    throw new ValidationError('Invalid address format', fieldName)
   }
 
-  return value as Address;
+  return value as Address
 }
 
 // Validate hex string
 export function validateHex(value: string, fieldName = 'hex'): Hex {
   if (!value) {
-    throw new ValidationError('Hex value is required', fieldName);
+    throw new ValidationError('Hex value is required', fieldName)
   }
 
   if (!isHex(value)) {
-    throw new ValidationError('Invalid hex format - must start with 0x', fieldName);
+    throw new ValidationError(
+      'Invalid hex format - must start with 0x',
+      fieldName,
+    )
   }
 
-  return value as Hex;
+  return value as Hex
 }
 
 // Validate optional hex string
-export function validateOptionalHex(value: string, fieldName = 'hex'): Hex | undefined {
+export function validateOptionalHex(
+  value: string,
+  fieldName = 'hex',
+): Hex | undefined {
   if (!value || value.trim() === '') {
-    return undefined;
+    return undefined
   }
 
-  return validateHex(value, fieldName);
+  return validateHex(value, fieldName)
 }
 
 // Validate block number (hex string)
-export function validateBlockNumber(value: string, fieldName = 'blockNumber'): BlockNumber {
+export function validateBlockNumber(
+  value: string,
+  fieldName = 'blockNumber',
+): BlockNumber {
   if (!value) {
-    throw new ValidationError('Block number is required', fieldName);
+    throw new ValidationError('Block number is required', fieldName)
   }
 
   if (!isHex(value)) {
-    throw new ValidationError('Block number must be in hex format (e.g., 0x123)', fieldName);
+    throw new ValidationError(
+      'Block number must be in hex format (e.g., 0x123)',
+      fieldName,
+    )
   }
 
-  return value as BlockNumber;
+  return value as BlockNumber
 }
 
 // Validate gas value
 export function validateGas(value: string, fieldName = 'gas'): Hex {
-  const hex = validateHex(value, fieldName);
+  const hex = validateHex(value, fieldName)
 
   try {
-    const gasAmount = BigInt(hex);
+    const gasAmount = BigInt(hex)
     if (gasAmount <= 0n) {
-      throw new ValidationError('Gas must be greater than 0', fieldName);
+      throw new ValidationError('Gas must be greater than 0', fieldName)
     }
     if (gasAmount > 30_000_000n) {
-      throw new ValidationError('Gas amount is too high (max 30M)', fieldName);
+      throw new ValidationError('Gas amount is too high (max 30M)', fieldName)
     }
   } catch (error) {
     if (error instanceof ValidationError) {
-      throw error;
+      throw error
     }
-    throw new ValidationError('Invalid gas value', fieldName);
+    throw new ValidationError('Invalid gas value', fieldName)
   }
 
-  return hex;
+  return hex
 }
 
 // Validate ether value (converts to wei hex)
 export function validateValue(value: string, fieldName = 'value'): Hex {
   if (!value || value.trim() === '') {
-    return '0x0' as Hex;
+    return '0x0' as Hex
   }
 
   try {
     // Handle both hex format and decimal format
     if (value.startsWith('0x')) {
       // Already hex format
-      const hex = validateHex(value, fieldName);
-      BigInt(hex); // Validate it's a valid number
-      return hex;
-    } else {
-      // Decimal format - convert to hex
-      const wei = BigInt(value);
-      if (wei < 0n) {
-        throw new ValidationError('Value cannot be negative', fieldName);
-      }
-      return `0x${wei.toString(16)}` as Hex;
+      const hex = validateHex(value, fieldName)
+      BigInt(hex) // Validate it's a valid number
+      return hex
     }
+    // Decimal format - convert to hex
+    const wei = BigInt(value)
+    if (wei < 0n) {
+      throw new ValidationError('Value cannot be negative', fieldName)
+    }
+    return `0x${wei.toString(16)}` as Hex
   } catch (error) {
     if (error instanceof ValidationError) {
-      throw error;
+      throw error
     }
-    throw new ValidationError('Invalid value format', fieldName);
+    throw new ValidationError('Invalid value format', fieldName)
   }
 }
 
 // Validate required field
 export function validateRequired(value: string, fieldName: string): string {
   if (!value || value.trim() === '') {
-    throw new ValidationError(`${fieldName} is required`, fieldName);
+    throw new ValidationError(`${fieldName} is required`, fieldName)
   }
-  return value.trim();
+  return value.trim()
 }
 
 // Validate JSON string
 export function validateJson(value: string, fieldName = 'json'): unknown {
   if (!value || value.trim() === '') {
-    throw new ValidationError('JSON is required', fieldName);
+    throw new ValidationError('JSON is required', fieldName)
   }
 
   try {
-    return JSON.parse(value);
+    return JSON.parse(value)
   } catch {
-    throw new ValidationError('Invalid JSON format', fieldName);
+    throw new ValidationError('Invalid JSON format', fieldName)
   }
 }
 
@@ -134,45 +148,45 @@ export function validateNumber(
   value: string | number,
   min?: number,
   max?: number,
-  fieldName = 'number'
+  fieldName = 'number',
 ): number {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
+  const num = typeof value === 'string' ? Number.parseFloat(value) : value
 
-  if (isNaN(num)) {
-    throw new ValidationError('Must be a valid number', fieldName);
+  if (Number.isNaN(num)) {
+    throw new ValidationError('Must be a valid number', fieldName)
   }
 
   if (min !== undefined && num < min) {
-    throw new ValidationError(`Must be at least ${min}`, fieldName);
+    throw new ValidationError(`Must be at least ${min}`, fieldName)
   }
 
   if (max !== undefined && num > max) {
-    throw new ValidationError(`Must be at most ${max}`, fieldName);
+    throw new ValidationError(`Must be at most ${max}`, fieldName)
   }
 
-  return num;
+  return num
 }
 
 // Format validation errors for display
 export function formatValidationError(error: ValidationError): string {
-  return `${error.field}: ${error.message}`;
+  return `${error.field}: ${error.message}`
 }
 
 // Collect validation errors from multiple fields
 export function collectValidationErrors(
-  validators: Array<() => void>
+  validators: Array<() => void>,
 ): ValidationError[] {
-  const errors: ValidationError[] = [];
+  const errors: ValidationError[] = []
 
   for (const validator of validators) {
     try {
-      validator();
+      validator()
     } catch (error) {
       if (error instanceof ValidationError) {
-        errors.push(error);
+        errors.push(error)
       }
     }
   }
 
-  return errors;
+  return errors
 }

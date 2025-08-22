@@ -13,6 +13,7 @@ export default defineConfig({
     'src/builders/helpers/state-context-helpers.ts',
     'src/builders/helpers/state-override-helpers.ts',
     'src/builders/helpers/block-override-helpers.ts',
+    'src/types/index.ts',
     'src/utils/validation.ts',
     'src/utils/viem-integration.ts',
   ],
