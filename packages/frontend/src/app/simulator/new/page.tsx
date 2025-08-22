@@ -1,15 +1,10 @@
 'use client'
 
+import { AltitraceClient } from '@altitrace/sdk'
 import type {
   HexString as Hex,
   SimulationRequest as SdkSimulationRequest,
-} from '@altitrace/sdk'
-import {
-  AltitraceApiError,
-  AltitraceClient,
-  AltitraceNetworkError,
-  ValidationError as SdkValidationError,
-} from '@altitrace/sdk'
+} from '@altitrace/sdk/types'
 import { ArrowLeftIcon } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
@@ -20,7 +15,7 @@ import { Layout } from '@/components/layout'
 // Removed unused imports
 import { Alert, AlertDescription, Button } from '@/components/ui'
 import type { ParsedAbi } from '@/types/api'
-import { SimulationStorage } from '@/utils/storage'
+import { getRequest, store } from '@/utils/storage'
 import {
   type EnhancedSimulationResult,
   executeEnhancedSimulation,
@@ -75,7 +70,7 @@ function NewSimulationPageContent() {
   useEffect(() => {
     const rerunId = searchParams.get('rerun')
     if (rerunId && !isPreFilled) {
-      const storedRequest = SimulationStorage.getRequest(rerunId)
+      const storedRequest = getRequest(rerunId)
       if (storedRequest) {
         // Pre-fill form with stored request data
         console.log('Pre-filling form with:', storedRequest)
@@ -153,7 +148,7 @@ function NewSimulationPageContent() {
       // Store simulation result with UUID using proper storage system
       const simulationId = generateSimulationId()
 
-      SimulationStorage.store(
+      store(
         simulationId,
         { params: request.params, options: request.options },
         {
@@ -168,13 +163,7 @@ function NewSimulationPageContent() {
       // Navigate to dedicated results page
       router.push(`/simulator/${simulationId}`)
     } catch (err) {
-      if (err instanceof SdkValidationError)
-        setError(`Validation error: ${err.message}`)
-      else if (err instanceof AltitraceApiError)
-        setError(`API error: ${err.message}`)
-      else if (err instanceof AltitraceNetworkError)
-        setError(`Network error: ${err.message}`)
-      else setError('An unexpected error occurred')
+      setError(`An unexpected error occurred: ${err}`)
     } finally {
       setLoading(false)
     }
@@ -233,11 +222,7 @@ function NewSimulationPageContent() {
           <div className="space-y-6">
             {/* ABI Import */}
             <div data-section="abi-import">
-              <AbiImport
-                onAbiImport={handleAbiImport}
-                currentAbi={abi}
-                startMinimized={true}
-              />
+              <AbiImport onAbiImport={handleAbiImport} currentAbi={abi} />
             </div>
 
             {/* Function Selector */}

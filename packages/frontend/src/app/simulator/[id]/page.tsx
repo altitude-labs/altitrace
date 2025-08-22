@@ -1,11 +1,6 @@
 'use client'
 
-import {
-  AltitraceApiError,
-  AltitraceClient,
-  AltitraceNetworkError,
-  ValidationError as SdkValidationError,
-} from '@altitrace/sdk'
+import { AltitraceClient } from '@altitrace/sdk'
 import {
   ArrowLeftIcon,
   ClockIcon,
@@ -19,7 +14,7 @@ import { Layout } from '@/components/layout'
 import { EnhancedSimulationResults } from '@/components/simulation/EnhancedSimulationResults'
 import { Alert, AlertDescription, Button } from '@/components/ui'
 import type { StoredSimulation } from '@/utils/storage'
-import { SimulationStorage } from '@/utils/storage'
+import { exportSimulation, retrieveById } from '@/utils/storage'
 import {
   type EnhancedSimulationResult,
   executeEnhancedSimulation,
@@ -57,9 +52,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
 
       try {
         // Load simulation parameters
-        const storedSimulation = SimulationStorage.retrieveById(
-          resolvedParams.id,
-        )
+        const storedSimulation = retrieveById(resolvedParams.id)
 
         if (!storedSimulation) {
           setError('Simulation not found')
@@ -85,13 +78,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
 
         // Auto-switch to trace tab if we have call hierarchy
       } catch (err) {
-        if (err instanceof SdkValidationError)
-          setError(`Validation error: ${err.message}`)
-        else if (err instanceof AltitraceApiError)
-          setError(`API error: ${err.message}`)
-        else if (err instanceof AltitraceNetworkError)
-          setError(`Network error: ${err.message}`)
-        else setError('Failed to execute simulation')
+        setError(`An unexpected error occurred: ${err}`)
       } finally {
         setLoading(false)
         setExecuting(false)
@@ -127,7 +114,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             : undefined,
         })
 
-        const exportData = await SimulationStorage.exportSimulation(
+        const exportData = await exportSimulation(
           resolvedParams.id,
           (request) => executeEnhancedSimulation(client, request),
         )
