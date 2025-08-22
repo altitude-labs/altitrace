@@ -1,9 +1,14 @@
-import { HTMLAttributes, forwardRef } from 'react';
-import { clsx } from 'clsx';
-import { AlertCircleIcon, CheckCircleIcon, InfoIcon, AlertTriangleIcon } from 'lucide-react';
+import { clsx } from 'clsx'
+import {
+  AlertCircleIcon,
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  InfoIcon,
+} from 'lucide-react'
+import { forwardRef, type HTMLAttributes } from 'react'
 
 export interface AlertProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'destructive' | 'success' | 'warning';
+  variant?: 'default' | 'destructive' | 'success' | 'warning'
 }
 
 const Alert = forwardRef<HTMLDivElement, AlertProps>(
@@ -13,9 +18,9 @@ const Alert = forwardRef<HTMLDivElement, AlertProps>(
       destructive: AlertCircleIcon,
       success: CheckCircleIcon,
       warning: AlertTriangleIcon,
-    };
+    }
 
-    const Icon = icons[variant];
+    const Icon = icons[variant]
 
     return (
       <div
@@ -32,38 +37,40 @@ const Alert = forwardRef<HTMLDivElement, AlertProps>(
             'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 [&>svg]:text-yellow-600 dark:[&>svg]:text-yellow-400':
               variant === 'warning',
           },
-          className
+          className,
         )}
         {...props}
       >
         <Icon className="h-4 w-4 absolute left-4 top-4" />
         <div className="ml-6">{props.children}</div>
       </div>
-    );
-  }
-);
-Alert.displayName = 'Alert';
+    )
+  },
+)
+Alert.displayName = 'Alert'
 
-const AlertTitle = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h5
-      ref={ref}
-      className={clsx('mb-1 font-medium leading-none tracking-tight', className)}
-      {...props}
-    />
-  )
-);
-AlertTitle.displayName = 'AlertTitle';
+const AlertTitle = forwardRef<
+  HTMLParagraphElement,
+  HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h5
+    ref={ref}
+    className={clsx('mb-1 font-medium leading-none tracking-tight', className)}
+    {...props}
+  />
+))
+AlertTitle.displayName = 'AlertTitle'
 
-const AlertDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={clsx('text-sm [&_p]:leading-relaxed', className)}
-      {...props}
-    />
-  )
-);
-AlertDescription.displayName = 'AlertDescription';
+const AlertDescription = forwardRef<
+  HTMLParagraphElement,
+  HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={clsx('text-sm [&_p]:leading-relaxed', className)}
+    {...props}
+  />
+))
+AlertDescription.displayName = 'AlertDescription'
 
-export { Alert, AlertTitle, AlertDescription };
+export { Alert, AlertTitle, AlertDescription }

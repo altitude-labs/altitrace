@@ -1,26 +1,39 @@
-import { SelectHTMLAttributes, forwardRef, useId } from 'react';
-import { clsx } from 'clsx';
-import { ChevronDownIcon } from 'lucide-react';
+import { clsx } from 'clsx'
+import { ChevronDownIcon } from 'lucide-react'
+import { forwardRef, type SelectHTMLAttributes, useId } from 'react'
 
 export interface SelectOption {
-  value: string;
-  label: string;
-  disabled?: boolean;
+  value: string
+  label: string
+  disabled?: boolean
 }
 
-export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
-  options: SelectOption[];
-  placeholder?: string;
-  error?: string;
-  label?: string;
-  description?: string;
+export interface SelectProps
+  extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
+  options: SelectOption[]
+  placeholder?: string
+  error?: string
+  label?: string
+  description?: string
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, options, placeholder, error, label, description, id, ...props }, ref) => {
-    const generatedId = useId();
-    const selectId = id || generatedId;
-    
+  (
+    {
+      className,
+      options,
+      placeholder,
+      error,
+      label,
+      description,
+      id,
+      ...props
+    },
+    ref,
+  ) => {
+    const generatedId = useId()
+    const selectId = id || generatedId
+
     return (
       <div className="space-y-2">
         {label && (
@@ -31,7 +44,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             {label}
           </label>
         )}
-        
+
         <div className="relative">
           <select
             id={selectId}
@@ -43,7 +56,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 'border-destructive focus-visible:ring-destructive': error,
               },
               'pr-8', // Space for chevron icon
-              className
+              className,
             )}
             ref={ref}
             {...props}
@@ -63,22 +76,20 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          
+
           <ChevronDownIcon className="absolute right-2 top-3 h-4 w-4 opacity-50 pointer-events-none" />
         </div>
-        
+
         {description && !error && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
-        
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
-    );
-  }
-);
+    )
+  },
+)
 
-Select.displayName = 'Select';
+Select.displayName = 'Select'
 
-export { Select };
+export { Select }
