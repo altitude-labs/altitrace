@@ -20,7 +20,7 @@ export function DecHexToggle({
   label,
   showLabel = true,
 }: DecHexToggleProps) {
-  const [showHex, setShowHex] = useState(true) // Default to hex since most blockchain data is hex
+  const [showHex, setShowHex] = useState(false) // Default to hex since most blockchain data is hex
 
   // Parse value and convert between formats
   const getDisplayValue = () => {

@@ -1,9 +1,10 @@
 'use client'
 
 import type { CallResult } from '@altitrace/sdk/types'
-import { AlertTriangleIcon, TagIcon } from 'lucide-react'
+import { AlertTriangleIcon, Loader2Icon, TagIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Badge, Card, CardContent, Select } from '@/components/ui'
+import { useEventSignature } from '@/hooks/useEventSignature'
 
 interface EnhancedEventDisplayProps {
   call: CallResult
@@ -62,7 +63,11 @@ export function EnhancedEventDisplay({
       </div>
 
       {call.logs.map((log: LogEntry, logIndex: number) => (
-        <EventCard key={logIndex} log={log} logIndex={logIndex} />
+        <EventCard
+          key={`log-${log.address}-${logIndex}`}
+          log={log}
+          logIndex={logIndex}
+        />
       ))}
     </div>
   )
@@ -73,7 +78,16 @@ type FormatType = 'hex' | 'dec' | 'address' | 'text'
 function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
   const eventSignature = log.topics[0]
   const knownEvent = KNOWN_EVENT_SIGNATURES[eventSignature]
-  const hasKnownDecoding = !!knownEvent
+
+  // Use the hook to lookup unknown signatures
+  const { eventData: lookupEvent, isLoading: isLookingUp } = useEventSignature(
+    !knownEvent ? eventSignature : undefined,
+    knownEvent,
+  )
+
+  // Use either known event or looked up event
+  const eventInfo = knownEvent || lookupEvent
+  const hasKnownDecoding = !!eventInfo
 
   // Smart default format detection
   const getDefaultFormat = (value: string, paramType?: string): FormatType => {
@@ -110,7 +124,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
     getDefaultFormat(
       log.data,
       hasKnownDecoding
-        ? knownEvent.params.find((p) => !p.indexed)?.type
+        ? eventInfo.params.find((p) => !p.indexed)?.type
         : undefined,
     ),
   )
@@ -122,7 +136,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
         if (index === 0) {
           formats[index] = 'hex' // Event signature always hex
         } else if (hasKnownDecoding) {
-          const indexedParams = knownEvent.params.filter((p) => p.indexed)
+          const indexedParams = eventInfo.params.filter((p) => p.indexed)
           const paramType = indexedParams[index - 1]?.type
           formats[index] = getDefaultFormat(topic, paramType)
         } else {
@@ -133,13 +147,9 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
     },
   )
 
-  const formatAddress = (addr: string) =>
-    `${addr.slice(0, 6)}...${addr.slice(-6)}`
-
   const getExplorerUrl = (address: string) => {
     const explorerUrl =
-      process.env.NEXT_PUBLIC_EXPLORER_URL ||
-      'https://explorer.hyperliquid-testnet.xyz'
+      process.env.NEXT_PUBLIC_EXPLORER_URL || 'https://hyperevmscan.io'
     return `${explorerUrl}/address/${address}`
   }
 
@@ -242,7 +252,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
             <span className="text-sm font-medium">Address</span>
             <div className="flex items-center gap-2 mt-1">
               <code className="text-sm font-mono text-blue-600">
-                {formatAddress(log.address)}
+                {log.address}
               </code>
               <Badge variant="outline" className="text-xs">
                 Log #{logIndex}
@@ -254,11 +264,18 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
           <div>
             <span className="text-sm font-medium">Name</span>
             <div className="mt-1">
-              {hasKnownDecoding ? (
+              {isLookingUp ? (
+                <div className="flex items-center gap-2">
+                  <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="font-mono text-sm text-muted-foreground">
+                    Looking up event signature...
+                  </span>
+                </div>
+              ) : hasKnownDecoding ? (
                 <span className="font-mono text-sm">
-                  {knownEvent.name}(
-                  {knownEvent.params.map((p, i) => {
-                    const indexedParams = knownEvent.params.filter(
+                  {eventInfo.name}(
+                  {eventInfo.params.map((p, i) => {
+                    const indexedParams = eventInfo.params.filter(
                       (param) => param.indexed,
                     )
                     const topicIndex = p.indexed
@@ -270,7 +287,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                         {p.indexed && `index_topic_${topicIndex} `}
                         {!p.indexed && 'topic_data '}
                         <span>{p.type}</span> <span>{p.name}</span>
-                        {i < knownEvent.params.length - 1 && ', '}
+                        {i < eventInfo.params.length - 1 && ', '}
                       </span>
                     )
                   })}
@@ -298,14 +315,14 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
             {log.topics.map((topic, topicIndex) => {
               const isIndexedParam = hasKnownDecoding && topicIndex > 0
               const indexedParams = hasKnownDecoding
-                ? knownEvent.params.filter((p) => p.indexed)
+                ? eventInfo.params.filter((p) => p.indexed)
                 : []
               const paramName =
                 isIndexedParam && indexedParams[topicIndex - 1]?.name
               const currentFormat = topicFormats[topicIndex] || 'hex'
 
               return (
-                <div key={topicIndex} className="space-y-1">
+                <div key={`topic-${topicIndex}-${topic}`} className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
@@ -313,7 +330,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                     >
                       {topicIndex}
                     </Badge>
-                    <code className="bg-muted px-2 py-1 rounded text-xs font-mono flex-1">
+                    <code className="bg-muted px-2 py-1 rounded text-xs font-mono flex-1 break-all">
                       {topic}
                     </code>
                   </div>
@@ -340,18 +357,19 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                       {currentFormat === 'address' &&
                       isValidAddress(formatValue(topic, currentFormat)) ? (
                         <button
+                          type="button"
                           onClick={() =>
                             handleAddressClick(
                               formatValue(topic, currentFormat),
                             )
                           }
-                          className="bg-background px-2 py-1 rounded text-xs font-mono flex-1 text-left text-blue-600 hover:text-blue-800 hover:bg-muted cursor-pointer border-none"
+                          className="bg-background px-2 py-1 rounded text-xs font-mono flex-1 text-left text-blue-600 hover:text-blue-800 hover:bg-muted cursor-pointer border-none break-all"
                           title={`View ${formatValue(topic, currentFormat)} on explorer`}
                         >
                           {formatValue(topic, currentFormat)}
                         </button>
                       ) : (
-                        <code className="bg-background px-2 py-1 rounded text-xs font-mono flex-1">
+                        <code className="bg-background px-2 py-1 rounded text-xs font-mono flex-1 break-all">
                           {formatValue(topic, currentFormat)}
                         </code>
                       )}
@@ -373,7 +391,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
               options={getFormatOptions(
                 log.data,
                 hasKnownDecoding
-                  ? knownEvent.params.find((p) => !p.indexed)?.type
+                  ? eventInfo.params.find((p) => !p.indexed)?.type
                   : undefined,
               )}
               className="w-24"
@@ -381,8 +399,8 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
           </div>
 
           {log.data && log.data !== '0x' ? (
-            <div className="bg-muted p-3 rounded">
-              {hasKnownDecoding && knownEvent.params.find((p) => !p.indexed) ? (
+            <div className="bg-muted p-3 rounded overflow-hidden">
+              {hasKnownDecoding && eventInfo.params.find((p) => !p.indexed) ? (
                 <div className="text-sm">
                   <span className="text-muted-foreground font-mono">
                     value:{' '}
@@ -390,16 +408,17 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                   {dataFormat === 'address' &&
                   isValidAddress(formatValue(log.data, dataFormat)) ? (
                     <button
+                      type="button"
                       onClick={() =>
                         handleAddressClick(formatValue(log.data, dataFormat))
                       }
-                      className="font-mono text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-none p-0"
+                      className="font-mono text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-none p-0 break-all"
                       title={`View ${formatValue(log.data, dataFormat)} on explorer`}
                     >
                       {formatValue(log.data, dataFormat)}
                     </button>
                   ) : (
-                    <code className="font-mono">
+                    <code className="font-mono break-all block">
                       {formatValue(log.data, dataFormat)}
                     </code>
                   )}
@@ -407,16 +426,17 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
               ) : dataFormat === 'address' &&
                 isValidAddress(formatValue(log.data, dataFormat)) ? (
                 <button
+                  type="button"
                   onClick={() =>
                     handleAddressClick(formatValue(log.data, dataFormat))
                   }
-                  className="text-xs font-mono break-all text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-none p-0 text-left w-full"
+                  className="text-xs font-mono break-all text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-none p-0 text-left w-full block"
                   title={`View ${formatValue(log.data, dataFormat)} on explorer`}
                 >
                   {formatValue(log.data, dataFormat)}
                 </button>
               ) : (
-                <code className="text-xs font-mono break-all">
+                <code className="text-xs font-mono break-all block">
                   {formatValue(log.data, dataFormat)}
                 </code>
               )}
