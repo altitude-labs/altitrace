@@ -3,9 +3,6 @@
   "extends": ["../../biome.json"],
   "linter": {
     "rules": {
-      "performance": {
-        "noBarrelFile": "off"
-      },
       "complexity": {
         "noStaticOnlyClass": "error"
       }

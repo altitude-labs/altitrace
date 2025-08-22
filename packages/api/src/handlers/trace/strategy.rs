@@ -219,6 +219,7 @@ impl TracingStrategy {
             Self::StructLoggerOnly(options) | Self::TracersOnly(options) => {
                 let call_options = self.create_call_options(options, None, None);
                 let trace = trace_fn(alloy_bundles, alloy_state_context, call_options).await?;
+
                 Ok(TracingResultMany::Single(trace))
             }
             Self::Hybrid { tracers_options, struct_logger_options } => {
@@ -325,6 +326,52 @@ impl TracingResult {
                 }
             }
         }
+    }
+
+    /// Extract [`DefaultFrame`] from JS trace if possible
+    pub fn extract_default_frame_from_js(&self) -> Option<DefaultFrame> {
+        let js_value = match self {
+            Self::Single(GethTrace::JS(value)) => Some(value),
+            Self::Dual { struct_logger_trace, .. } => {
+                if let GethTrace::JS(value) = struct_logger_trace.as_ref() {
+                    Some(value)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        if let Some(json_value) = js_value {
+            Self::try_extract_default_frame_from_json(json_value)
+        } else {
+            None
+        }
+    }
+
+    /// Try to extract [`DefaultFrame`] from a JSON value
+    fn try_extract_default_frame_from_json(json_value: &serde_json::Value) -> Option<DefaultFrame> {
+        match json_value {
+            // Handle array case - search through all elements for a DefaultFrame
+            serde_json::Value::Array(arr) => {
+                for element in arr {
+                    if let Some(default_frame) = Self::try_parse_as_default_frame(element) {
+                        return Some(default_frame);
+                    }
+                }
+                None
+            }
+            // Handle single object case
+            _ => Self::try_parse_as_default_frame(json_value),
+        }
+    }
+
+    /// Try to parse a single JSON value as a [`DefaultFrame`]
+    fn try_parse_as_default_frame(value: &serde_json::Value) -> Option<DefaultFrame> {
+        if let serde_json::Value::Object(_) = value {
+            return serde_json::from_value::<DefaultFrame>(value.clone()).ok();
+        }
+        None
     }
 
     /// Check if this result contains multiple traces
