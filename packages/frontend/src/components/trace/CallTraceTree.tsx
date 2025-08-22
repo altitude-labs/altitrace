@@ -1,6 +1,6 @@
 'use client'
 
-import type { ExtendedTracerResponse } from '@altitrace/sdk'
+import type { ExtendedTracerResponse } from '@altitrace/sdk/types'
 import {
   CheckCircleIcon,
   ClockIcon,

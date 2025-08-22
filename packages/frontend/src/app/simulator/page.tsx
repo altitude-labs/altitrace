@@ -11,8 +11,12 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Layout } from '@/components/layout'
 import { Button, Card } from '@/components/ui'
-import type { StoredSimulation } from '@/utils/storage'
-import { SimulationStorage } from '@/utils/storage'
+import {
+  deleteSimulation,
+  getStats,
+  retrieveAll,
+  type StoredSimulation,
+} from '@/utils/storage'
 
 export default function SimulatorDashboard() {
   const router = useRouter()
@@ -21,18 +25,18 @@ export default function SimulatorDashboard() {
 
   useEffect(() => {
     // Load simulations and stats using proper storage system
-    const loadedSimulations = SimulationStorage.retrieveAll()
-    const loadedStats = SimulationStorage.getStats()
+    const loadedSimulations = retrieveAll()
+    const loadedStats = getStats()
 
     setSimulations(loadedSimulations)
     setStats(loadedStats)
   }, [])
 
   const handleDeleteSimulation = (id: string) => {
-    const success = SimulationStorage.delete(id)
+    const success = deleteSimulation(id)
     if (success) {
-      const updatedSimulations = SimulationStorage.retrieveAll()
-      const updatedStats = SimulationStorage.getStats()
+      const updatedSimulations = retrieveAll()
+      const updatedStats = getStats()
       setSimulations(updatedSimulations)
       setStats(updatedStats)
     }
