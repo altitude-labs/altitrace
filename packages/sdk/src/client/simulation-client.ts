@@ -343,6 +343,13 @@ export class SimulationClient {
       return events
     }
 
+    extended.getLogCount = () => {
+      return result.calls.reduce(
+        (acc, call) => acc + (call.logs?.length || 0),
+        0,
+      )
+    }
+
     return extended
   }
 }

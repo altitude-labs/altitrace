@@ -48,6 +48,8 @@ export interface ExtendedSimulationResult
   getErrors(): CallError[]
   /** Get asset changes summary */
   getAssetChangesSummary(): AssetChangeSummary[]
+  /** Get the total number of logs across all calls */
+  getLogCount(): number
   /** Get decoded events from all calls */
   getDecodedEvents(): DecodedEvent[]
 }
