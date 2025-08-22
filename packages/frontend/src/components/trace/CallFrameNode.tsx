@@ -1,73 +1,76 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Card, CardContent, Badge } from '@/components/ui';
-import { CallTypeIcon } from '@/components/shared/CallTypeIcon';
-import type { CallFrame } from '@altitrace/sdk';
-import { 
-  ChevronDownIcon, 
-  ChevronRightIcon, 
-  FuelIcon,
-  CheckCircleIcon,
-  XCircleIcon,
+import type { CallFrame } from '@altitrace/sdk'
+import {
+  AlertCircleIcon,
   ArrowRightIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   EyeIcon,
-  AlertCircleIcon
-} from 'lucide-react';
+  FuelIcon,
+  XCircleIcon,
+} from 'lucide-react'
+import { useState } from 'react'
+import { CallTypeIcon } from '@/components/shared/CallTypeIcon'
+import { Badge, Card, CardContent } from '@/components/ui'
 
 interface CallFrameNodeProps {
-  frame: CallFrame;
-  depth?: number;
-  index?: number;
-  isRoot?: boolean;
+  frame: CallFrame
+  depth?: number
+  index?: number
+  isRoot?: boolean
 }
 
 /**
  * Individual call frame node with hierarchical display
  */
-export function CallFrameNode({ 
-  frame, 
-  depth = 0, 
-  index = 0, 
-  isRoot = false 
+export function CallFrameNode({
+  frame,
+  depth = 0,
+  index = 0,
+  isRoot = false,
 }: CallFrameNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(depth === 0); // Root expanded by default
-  const [showDetails, setShowDetails] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(depth === 0) // Root expanded by default
+  const [showDetails, setShowDetails] = useState(false)
 
-  const hasSubcalls = frame.calls && frame.calls.length > 0;
-  const gasUsedNumber = parseInt(frame.gasUsed, 16);
-  const gasProvidedNumber = parseInt(frame.gas, 16);
-  const isSuccess = !frame.reverted;
+  const hasSubcalls = frame.calls && frame.calls.length > 0
+  const gasUsedNumber = Number.parseInt(frame.gasUsed, 16)
+  const gasProvidedNumber = Number.parseInt(frame.gas, 16)
+  const isSuccess = !frame.reverted
 
   // Calculate depth-based styling
   const depthColors = [
-    'border-l-blue-500',    // Depth 0
-    'border-l-green-500',   // Depth 1  
-    'border-l-orange-500',  // Depth 2
-    'border-l-purple-500',  // Depth 3
-    'border-l-pink-500',    // Depth 4
-  ];
-  const borderColor = depthColors[depth % depthColors.length] || 'border-l-gray-500';
+    'border-l-blue-500', // Depth 0
+    'border-l-green-500', // Depth 1
+    'border-l-orange-500', // Depth 2
+    'border-l-purple-500', // Depth 3
+    'border-l-pink-500', // Depth 4
+  ]
+  const borderColor =
+    depthColors[depth % depthColors.length] || 'border-l-gray-500'
 
   // Format address for display
   const formatAddress = (address: string) => {
-    if (!address) return 'N/A';
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
+    if (!address) return 'N/A'
+    return `${address.slice(0, 6)}...${address.slice(-4)}`
+  }
 
   // Decode function signature from input data
   const getFunctionSignature = () => {
     if (!frame.input || frame.input === '0x' || frame.input.length < 10) {
-      return null;
+      return null
     }
-    return frame.input.slice(0, 10); // First 4 bytes (8 hex chars + 0x)
-  };
+    return frame.input.slice(0, 10) // First 4 bytes (8 hex chars + 0x)
+  }
 
-  const functionSig = getFunctionSignature();
+  const functionSig = getFunctionSignature()
 
   return (
     <div className={`${depth > 0 ? 'ml-4' : ''}`}>
-      <Card className={`mb-1 border-l-4 ${borderColor} ${!isSuccess ? 'bg-red-50 border-red-200' : ''}`}>
+      <Card
+        className={`mb-1 border-l-4 ${borderColor} ${!isSuccess ? 'bg-red-50 border-red-200' : ''}`}
+      >
         <CardContent className="p-3">
           {/* Main call header */}
           <div className="flex items-center justify-between mb-2">
@@ -126,7 +129,9 @@ export function CallFrameNode({
             {/* Gas usage - show consumed gas */}
             <div className="flex items-center gap-1 text-sm">
               <FuelIcon className="h-3 w-3 text-orange-500" />
-              <span className="font-mono">{gasUsedNumber.toLocaleString()}</span>
+              <span className="font-mono">
+                {gasUsedNumber.toLocaleString()}
+              </span>
               <span className="text-xs text-muted-foreground">gas used</span>
             </div>
           </div>
@@ -135,7 +140,9 @@ export function CallFrameNode({
           {frame.value && frame.value !== '0x0' && (
             <div className="flex items-center gap-2 mb-1 text-sm">
               <span className="text-muted-foreground">Value:</span>
-              <span className="font-mono">{BigInt(frame.value).toLocaleString()}</span>
+              <span className="font-mono">
+                {BigInt(frame.value).toLocaleString()}
+              </span>
               <span className="text-xs text-muted-foreground">wei</span>
             </div>
           )}
@@ -148,9 +155,7 @@ export function CallFrameNode({
                 <span className="font-medium text-red-800 text-sm">Failed</span>
               </div>
               {frame.error && (
-                <div className="text-xs text-red-700">
-                  {frame.error}
-                </div>
+                <div className="text-xs text-red-700">{frame.error}</div>
               )}
             </div>
           )}
@@ -159,7 +164,8 @@ export function CallFrameNode({
           {hasSubcalls && (
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs text-muted-foreground">
-                📁 {frame.calls!.length} subcall{frame.calls!.length !== 1 ? 's' : ''}
+                📁 {frame.calls!.length} subcall
+                {frame.calls!.length !== 1 ? 's' : ''}
               </span>
               {!isExpanded && (
                 <button
@@ -176,7 +182,9 @@ export function CallFrameNode({
           {showDetails && (
             <div className="mt-2 p-2 bg-muted rounded text-xs space-y-1">
               <div>
-                <span className="font-medium">Gas:</span> Used {gasUsedNumber.toLocaleString()}, Remaining {(gasProvidedNumber - gasUsedNumber).toLocaleString()}
+                <span className="font-medium">Gas:</span> Used{' '}
+                {gasUsedNumber.toLocaleString()}, Remaining{' '}
+                {(gasProvidedNumber - gasUsedNumber).toLocaleString()}
               </div>
 
               {frame.input && frame.input !== '0x' && (
@@ -226,5 +234,5 @@ export function CallFrameNode({
         </div>
       )}
     </div>
-  );
+  )
 }

@@ -1,17 +1,18 @@
-import { TextareaHTMLAttributes, forwardRef, useId } from 'react';
-import { clsx } from 'clsx';
+import { clsx } from 'clsx'
+import { forwardRef, type TextareaHTMLAttributes, useId } from 'react'
 
-export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
-  error?: string;
-  label?: string;
-  description?: string;
+export interface TextareaProps
+  extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  error?: string
+  label?: string
+  description?: string
 }
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, error, label, description, id, ...props }, ref) => {
-    const generatedId = useId();
-    const textareaId = id || generatedId;
-    
+    const generatedId = useId()
+    const textareaId = id || generatedId
+
     return (
       <div className="space-y-2">
         {label && (
@@ -22,7 +23,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             {label}
           </label>
         )}
-        
+
         <textarea
           id={textareaId}
           className={clsx(
@@ -33,24 +34,22 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             {
               'border-destructive focus-visible:ring-destructive': error,
             },
-            className
+            className,
           )}
           ref={ref}
           {...props}
         />
-        
+
         {description && !error && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
-        
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
-    );
-  }
-);
+    )
+  },
+)
 
-Textarea.displayName = 'Textarea';
+Textarea.displayName = 'Textarea'
 
-export { Textarea };
+export { Textarea }

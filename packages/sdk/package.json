@@ -71,6 +71,11 @@
       "types": "./dist/utils/viem-integration.d.ts",
       "import": "./dist/utils/viem-integration.js",
       "require": "./dist/utils/viem-integration.cjs"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js",
+      "require": "./dist/types/index.cjs"
     }
   },
   "files": [

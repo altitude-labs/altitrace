@@ -1,56 +1,88 @@
-'use client';
+'use client'
 
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import type { ExtendedSimulationResult } from '@altitrace/sdk';
-import { FuelIcon, PieChartIcon, BarChart3Icon } from 'lucide-react';
+import type { ExtendedSimulationResult } from '@altitrace/sdk/types'
+import { BarChart3Icon, FuelIcon, PieChartIcon } from 'lucide-react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 
-interface GasUsageChartProps { result: ExtendedSimulationResult }
+interface GasUsageChartProps {
+  result: ExtendedSimulationResult
+}
 
 export function GasUsageChart({ result }: GasUsageChartProps) {
   // Prepare data for visualization
-  const callsData = result.calls?.map((call: ExtendedSimulationResult['calls'][number], index: number) => ({
-    name: `Call #${index + 1}`,
-    gasUsed: parseInt(call.gasUsed, 16),
-    status: call.status,
-    callIndex: call.callIndex,
-  })) || [];
+  const callsData =
+    result.calls?.map(
+      (call: ExtendedSimulationResult['calls'][number], index: number) => ({
+        name: `Call #${index + 1}`,
+        gasUsed: Number.parseInt(call.gasUsed, 16),
+        status: call.status,
+        callIndex: call.callIndex,
+      }),
+    ) || []
 
-  const totalGasUsed = parseInt(result.gasUsed, 16);
+  const totalGasUsed = Number.parseInt(result.gasUsed, 16)
   // const blockGasUsed = parseInt(result.blockGasUsed, 16);
 
   // Pie chart data for gas distribution
-  const pieData = callsData.map((call: { name: string; gasUsed: number; status: string }) => ({
-    name: call.name,
-    value: call.gasUsed,
-    status: call.status,
-  }));
+  const pieData = callsData.map(
+    (call: { name: string; gasUsed: number; status: string }) => ({
+      name: call.name,
+      value: call.gasUsed,
+      status: call.status,
+    }),
+  )
 
   // Colors for different statuses
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'success':
-        return '#10b981'; // green-500
+        return '#10b981' // green-500
       case 'reverted':
-        return '#ef4444'; // red-500
+        return '#ef4444' // red-500
       default:
-        return '#6b7280'; // gray-500
+        return '#6b7280' // gray-500
     }
-  };
+  }
 
-  const COLORS = callsData.map((call: { status: string }) => getStatusColor(call.status));
+  const COLORS = callsData.map((call: { status: string }) =>
+    getStatusColor(call.status),
+  )
 
   // Summary statistics
-  const successfulCalls = callsData.filter((call: { status: string }) => call.status === 'success').length;
-  const revertedCalls = callsData.filter((call: { status: string }) => call.status === 'reverted').length;
-  const averageGasPerCall = totalGasUsed / callsData.length;
+  const successfulCalls = callsData.filter(
+    (call: { status: string }) => call.status === 'success',
+  ).length
+  const revertedCalls = callsData.filter(
+    (call: { status: string }) => call.status === 'reverted',
+  ).length
+  const averageGasPerCall = totalGasUsed / callsData.length
 
   const summaryData = [
-    { name: 'Total Gas Used', value: totalGasUsed.toLocaleString(), color: '#3b82f6' },
-    { name: 'Average per Call', value: Math.round(averageGasPerCall).toLocaleString(), color: '#8b5cf6' },
+    {
+      name: 'Total Gas Used',
+      value: totalGasUsed.toLocaleString(),
+      color: '#3b82f6',
+    },
+    {
+      name: 'Average per Call',
+      value: Math.round(averageGasPerCall).toLocaleString(),
+      color: '#8b5cf6',
+    },
     { name: 'Successful Calls', value: successfulCalls, color: '#10b981' },
     { name: 'Reverted Calls', value: revertedCalls, color: '#ef4444' },
-  ];
+  ]
 
   return (
     <div className="space-y-6">
@@ -62,7 +94,10 @@ export function GasUsageChart({ result }: GasUsageChartProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{item.name}</p>
-                  <p className="text-2xl font-bold" style={{ color: item.color }}>
+                  <p
+                    className="text-2xl font-bold"
+                    style={{ color: item.color }}
+                  >
                     {item.value}
                   </p>
                 </div>
@@ -86,20 +121,20 @@ export function GasUsageChart({ result }: GasUsageChartProps) {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={callsData}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis 
-                  dataKey="name" 
+                <XAxis
+                  dataKey="name"
                   tick={{ fontSize: 12 }}
                   className="text-muted-foreground"
                 />
-                <YAxis 
+                <YAxis
                   tick={{ fontSize: 12 }}
                   className="text-muted-foreground"
                   tickFormatter={(value) => value.toLocaleString()}
                 />
-                <Tooltip 
+                <Tooltip
                   formatter={(value) => [
                     `${Number(value).toLocaleString()} gas`,
-                    'Gas Used'
+                    'Gas Used',
                   ]}
                   labelFormatter={(label) => `${label}`}
                   contentStyle={{
@@ -108,11 +143,7 @@ export function GasUsageChart({ result }: GasUsageChartProps) {
                     borderRadius: '6px',
                   }}
                 />
-                <Bar 
-                  dataKey="gasUsed" 
-                  fill="#3b82f6"
-                  radius={[4, 4, 0, 0]}
-                />
+                <Bar dataKey="gasUsed" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -134,17 +165,25 @@ export function GasUsageChart({ result }: GasUsageChartProps) {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                  label={({ name, percent }) =>
+                    `${name}: ${(percent * 100).toFixed(1)}%`
+                  }
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {pieData.map((entry: { value: number }, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {pieData.map((_entry: { value: number }, index: number) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
-                <Tooltip 
-                  formatter={(value) => [`${Number(value).toLocaleString()} gas`, 'Gas Used']}
+                <Tooltip
+                  formatter={(value) => [
+                    `${Number(value).toLocaleString()} gas`,
+                    'Gas Used',
+                  ]}
                   contentStyle={{
                     backgroundColor: 'hsl(var(--background))',
                     border: '1px solid hsl(var(--border))',
@@ -210,14 +249,22 @@ export function GasUsageChart({ result }: GasUsageChartProps) {
                 ⚠️ Optimization Opportunities
               </h4>
               <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
-                <li>• {revertedCalls} call{revertedCalls > 1 ? 's' : ''} reverted - consider checking preconditions</li>
-                <li>• Reverted calls still consume gas for execution up to the failure point</li>
-                <li>• Use view functions or eth_call for read-only operations</li>
+                <li>
+                  • {revertedCalls} call{revertedCalls > 1 ? 's' : ''} reverted
+                  - consider checking preconditions
+                </li>
+                <li>
+                  • Reverted calls still consume gas for execution up to the
+                  failure point
+                </li>
+                <li>
+                  • Use view functions or eth_call for read-only operations
+                </li>
               </ul>
             </div>
           )}
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from 'next/link'
 
 export function Footer() {
   return (
@@ -14,7 +14,8 @@ export function Footer() {
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
-              Simulate, debug, and analyze EVM transactions with precision and control.
+              Simulate, debug, and analyze EVM transactions with precision and
+              control.
             </p>
           </div>
 
@@ -23,12 +24,18 @@ export function Footer() {
             <h4 className="font-semibold">Product</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/simulator" className="hover:text-primary transition-colors">
+                <Link
+                  href="/simulator"
+                  className="hover:text-primary transition-colors"
+                >
                   Transaction Simulator
                 </Link>
               </li>
               <li>
-                <a href="/docs" className="hover:text-primary transition-colors">
+                <a
+                  href="/docs"
+                  className="hover:text-primary transition-colors"
+                >
                   Documentation
                 </a>
               </li>
@@ -45,17 +52,26 @@ export function Footer() {
             <h4 className="font-semibold">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a href="/examples" className="hover:text-primary transition-colors">
+                <a
+                  href="/examples"
+                  className="hover:text-primary transition-colors"
+                >
                   Examples
                 </a>
               </li>
               <li>
-                <a href="/guides" className="hover:text-primary transition-colors">
+                <a
+                  href="/guides"
+                  className="hover:text-primary transition-colors"
+                >
                   Guides
                 </a>
               </li>
               <li>
-                <a href="/changelog" className="hover:text-primary transition-colors">
+                <a
+                  href="/changelog"
+                  className="hover:text-primary transition-colors"
+                >
                   Changelog
                 </a>
               </li>
@@ -67,9 +83,9 @@ export function Footer() {
             <h4 className="font-semibold">Community</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a 
-                  href="https://github.com/altitrace/altitrace" 
-                  target="_blank" 
+                <a
+                  href="https://github.com/altitrace/altitrace"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors"
                 >
@@ -77,9 +93,9 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a 
-                  href="https://twitter.com/altitrace" 
-                  target="_blank" 
+                <a
+                  href="https://twitter.com/altitrace"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors"
                 >
@@ -87,9 +103,9 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a 
-                  href="https://discord.gg/altitrace" 
-                  target="_blank" 
+                <a
+                  href="https://discord.gg/altitrace"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors"
                 >
@@ -106,18 +122,22 @@ export function Footer() {
             © 2024 AltiTrace. Built for HyperEVM.
           </div>
           <div className="flex items-center gap-6 mt-4 md:mt-0">
-            <a href="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <a
+              href="/privacy"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
               Privacy Policy
             </a>
-            <a href="/terms" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <a
+              href="/terms"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
               Terms of Service
             </a>
-            <div className="text-sm text-muted-foreground">
-              v0.1.0-beta
-            </div>
+            <div className="text-sm text-muted-foreground">v0.1.0-beta</div>
           </div>
         </div>
       </div>
     </footer>
-  );
+  )
 }

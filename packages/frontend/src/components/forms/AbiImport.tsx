@@ -1,100 +1,111 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Textarea, Alert, AlertDescription } from '@/components/ui';
-import { parseAbiJson, AbiError } from '@/utils/abi';
-import { AbiFunction, ParsedAbi } from '@/types/api';
-import { FileTextIcon, CheckIcon, AlertCircleIcon } from 'lucide-react';
+import { AlertCircleIcon, CheckIcon, FileTextIcon } from 'lucide-react'
+import { useState } from 'react'
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Textarea,
+} from '@/components/ui'
+import type { AbiFunction, ParsedAbi } from '@/types/api'
+import { AbiError, parseAbiJson } from '@/utils/abi'
 
 interface AbiImportProps {
-  onAbiImport: (abi: ParsedAbi, rawAbi: string) => void;
-  currentAbi?: ParsedAbi | null;
+  onAbiImport: (abi: ParsedAbi, rawAbi: string) => void
+  currentAbi?: ParsedAbi | null
 }
 
 export function AbiImport({ onAbiImport, currentAbi }: AbiImportProps) {
-  const [abiJson, setAbiJson] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [abiJson, setAbiJson] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   const handleImport = async () => {
     if (!abiJson.trim()) {
-      setError('Please paste ABI JSON');
-      return;
+      setError('Please paste ABI JSON')
+      return
     }
 
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
 
     try {
-      const parsedAbi = parseAbiJson(abiJson);
-      
+      const parsedAbi = parseAbiJson(abiJson)
+
       if (parsedAbi.functions.length === 0) {
-        setError('No functions found in ABI');
-        return;
+        setError('No functions found in ABI')
+        return
       }
 
-      onAbiImport(parsedAbi, abiJson);
-      setSuccess(`Successfully imported ABI with ${parsedAbi.functions.length} functions`);
-      
+      onAbiImport(parsedAbi, abiJson)
+      setSuccess(
+        `Successfully imported ABI with ${parsedAbi.functions.length} functions`,
+      )
+
       // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       if (err instanceof AbiError) {
-        setError(err.message);
+        setError(err.message)
       } else {
-        setError('Failed to parse ABI');
+        setError('Failed to parse ABI')
       }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleClear = () => {
-    setAbiJson('');
-    setError(null);
-    setSuccess(null);
-  };
+    setAbiJson('')
+    setError(null)
+    setSuccess(null)
+  }
 
   const loadExampleAbi = () => {
     const exampleAbi = [
       {
-        "inputs": [
-          {"name": "spender", "type": "address"},
-          {"name": "amount", "type": "uint256"}
+        inputs: [
+          { name: 'spender', type: 'address' },
+          { name: 'amount', type: 'uint256' },
         ],
-        "name": "approve",
-        "outputs": [{"name": "", "type": "bool"}],
-        "stateMutability": "nonpayable",
-        "type": "function"
+        name: 'approve',
+        outputs: [{ name: '', type: 'bool' }],
+        stateMutability: 'nonpayable',
+        type: 'function',
       },
       {
-        "inputs": [
-          {"name": "to", "type": "address"},
-          {"name": "amount", "type": "uint256"}
+        inputs: [
+          { name: 'to', type: 'address' },
+          { name: 'amount', type: 'uint256' },
         ],
-        "name": "transfer",
-        "outputs": [{"name": "", "type": "bool"}],
-        "stateMutability": "nonpayable",
-        "type": "function"
+        name: 'transfer',
+        outputs: [{ name: '', type: 'bool' }],
+        stateMutability: 'nonpayable',
+        type: 'function',
       },
       {
-        "inputs": [
-          {"name": "owner", "type": "address"},
-          {"name": "spender", "type": "address"}
+        inputs: [
+          { name: 'owner', type: 'address' },
+          { name: 'spender', type: 'address' },
         ],
-        "name": "allowance",
-        "outputs": [{"name": "", "type": "uint256"}],
-        "stateMutability": "view",
-        "type": "function"
-      }
-    ];
+        name: 'allowance',
+        outputs: [{ name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+      },
+    ]
 
-    setAbiJson(JSON.stringify(exampleAbi, null, 2));
-    setError(null);
-    setSuccess(null);
-  };
+    setAbiJson(JSON.stringify(exampleAbi, null, 2))
+    setError(null)
+    setSuccess(null)
+  }
 
   return (
     <Card>
@@ -110,7 +121,7 @@ export function AbiImport({ onAbiImport, currentAbi }: AbiImportProps) {
           )}
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {error && (
           <Alert variant="destructive">
@@ -146,19 +157,12 @@ export function AbiImport({ onAbiImport, currentAbi }: AbiImportProps) {
           >
             Import ABI
           </Button>
-          
-          <Button
-            variant="outline"
-            onClick={loadExampleAbi}
-          >
+
+          <Button variant="outline" onClick={loadExampleAbi}>
             Load ERC-20 Example
           </Button>
-          
-          <Button
-            variant="ghost"
-            onClick={handleClear}
-            disabled={!abiJson}
-          >
+
+          <Button variant="ghost" onClick={handleClear} disabled={!abiJson}>
             Clear
           </Button>
         </div>
@@ -169,9 +173,15 @@ export function AbiImport({ onAbiImport, currentAbi }: AbiImportProps) {
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {currentAbi.functions.map((func: AbiFunction, index) => (
                 <div key={index} className="text-sm font-mono">
-                  <span className="text-blue-600 dark:text-blue-400">{func.name}</span>
+                  <span className="text-blue-600 dark:text-blue-400">
+                    {func.name}
+                  </span>
                   <span className="text-muted-foreground">
-                    ({func.inputs.map(input => `${input.type} ${input.name}`).join(', ')})
+                    (
+                    {func.inputs
+                      .map((input) => `${input.type} ${input.name}`)
+                      .join(', ')}
+                    )
                   </span>
                   <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-background">
                     {func.stateMutability}
@@ -183,5 +193,5 @@ export function AbiImport({ onAbiImport, currentAbi }: AbiImportProps) {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
