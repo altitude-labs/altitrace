@@ -2,6 +2,7 @@ stages:
   - lint
   - build
   - test
+  - dummy
   - success
 
 variables:
@@ -41,6 +42,13 @@ cache:
       when: always
   interruptible: true
   timeout: 30m
+
+dummy:
+  stage: dummy
+  script:
+    - echo "Dummy job"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  
 
 # Cleanup job
 cleanup:
