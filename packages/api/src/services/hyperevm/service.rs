@@ -495,7 +495,6 @@ impl HyperEvmService {
                 }
             })
             .await?;
-
         let elapsed_time = start_time.elapsed();
 
         debug!(

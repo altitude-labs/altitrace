@@ -14,10 +14,17 @@ import type { TransactionCall } from './transaction'
 export type TraceTransactionRequest =
   components['schemas']['TraceTransactionRequest']
 export type TraceCallRequest = components['schemas']['TraceCallRequest']
+export type TraceCallManyRequest = components['schemas']['TraceCallManyRequest']
 export type TracerResponse = components['schemas']['TracerResponse']
+export type TracerManyResponse = TracerResponse[]
 export type TraceConfig = components['schemas']['TraceConfig']
 export type Tracers = components['schemas']['Tracers']
 export type StorageSlot = components['schemas']['StorageSlot']
+
+// Bundle and StateContext types
+export type Bundle = components['schemas']['Bundle']
+export type StateContext = components['schemas']['StateContext']
+export type TxIndex = components['schemas']['TxIndex']
 
 // Tracer configuration types
 export type CallTracerConfig = components['schemas']['CallTracerConfig']
@@ -80,6 +87,9 @@ export interface TraceRequestBuilder {
 
   /** Set call parameters for call tracing */
   call(call: TransactionCall): TraceCallBuilder
+
+  /** Set multiple calls for call-many tracing */
+  callMany(bundles: Bundle[]): TraceCallManyBuilder
 }
 
 export interface TraceTransactionBuilder {
@@ -134,6 +144,41 @@ export interface TraceCallBuilder {
 
   /** Execute the trace request */
   execute(): Promise<ExtendedTracerResponse>
+}
+
+export interface TraceCallManyBuilder {
+  /** Set state context for tracing */
+  withStateContext(context: StateContext): TraceCallManyBuilder
+
+  /** Set state context to a specific block */
+  atBlock(block: string | number): TraceCallManyBuilder
+
+  /** Set state context to latest block */
+  atLatest(): TraceCallManyBuilder
+
+  /** Set transaction index within the block */
+  withTransactionIndex(index: number): TraceCallManyBuilder
+
+  /** Set transaction index to end of block (-1) */
+  atEnd(): TraceCallManyBuilder
+
+  /** Configure tracer options */
+  withTracers(config: TraceConfig): TraceCallManyBuilder
+
+  /** Enable call tracer with options */
+  withCallTracer(config?: CallTracerConfig): TraceCallManyBuilder
+
+  /** Enable prestate tracer with options */
+  withPrestateTracer(config?: PrestateTracerConfig): TraceCallManyBuilder
+
+  /** Enable struct logger with options */
+  withStructLogger(config?: StructLoggerConfig): TraceCallManyBuilder
+
+  /** Enable 4byte tracer */
+  with4ByteTracer(): TraceCallManyBuilder
+
+  /** Execute the trace request */
+  execute(): Promise<TracerManyResponse>
 }
 
 // Utility types

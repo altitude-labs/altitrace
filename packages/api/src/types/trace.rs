@@ -71,6 +71,7 @@ impl From<StateContext> for AlloyStateContext {
 pub enum TxIndex {
     /// End of the block. -1 is used to indicate the end of the block.
     #[default]
+    #[schema(rename = "-1")]
     End,
     /// Transaction given index.
     Index(usize),

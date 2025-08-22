@@ -9,10 +9,14 @@ import { AltitraceApiError, ValidationError } from '@sdk/core/errors'
 import type { HttpClient } from '@sdk/core/http-client'
 import type { components } from '@sdk/generated/api-types'
 import type {
+  Bundle,
   ExtendedTracerResponse,
+  StateContext,
   TraceCallBuilder,
+  TraceCallManyBuilder,
   TraceExecutionOptions,
   TraceRequestBuilder,
+  TracerManyResponse,
   TraceTransactionBuilder,
 } from '@sdk/types/trace'
 import { ValidationUtils } from '@sdk/utils/validation'
@@ -20,6 +24,7 @@ import { ValidationUtils } from '@sdk/utils/validation'
 // Type aliases for OpenAPI generated types
 type TraceTransactionRequest = components['schemas']['TraceTransactionRequest']
 type TraceCallRequest = components['schemas']['TraceCallRequest']
+type TraceCallManyRequest = components['schemas']['TraceCallManyRequest']
 type TracerResponse = components['schemas']['TracerResponse']
 type TraceConfig = components['schemas']['TraceConfig']
 type TransactionCall = components['schemas']['TransactionCall']
@@ -37,6 +42,9 @@ const DEFAULT_TRACERS: TraceConfig = {
     onlyTopCall: false,
     withLogs: true,
   },
+  '4byteTracer': false,
+  prestateTracer: null,
+  structLogger: null,
 }
 
 /**
@@ -117,6 +125,60 @@ export class TraceClient {
     )
 
     return this.extendTracerResponse(response)
+  }
+
+  /**
+   * Trace multiple calls with state context directly.
+   */
+  async traceCallMany(
+    bundles: Bundle[],
+    stateContext?: StateContext,
+    config?: TraceConfig,
+    options?: TraceExecutionOptions,
+  ): Promise<TracerManyResponse> {
+    // Validate bundles
+    if (!bundles || bundles.length === 0) {
+      throw new ValidationError('At least one bundle is required')
+    }
+
+    // Validate bundle transactions
+    for (const bundle of bundles) {
+      if (!bundle.transactions || bundle.transactions.length === 0) {
+        throw new ValidationError(
+          'Each bundle must contain at least one transaction',
+        )
+      }
+
+      for (const tx of bundle.transactions) {
+        if (tx.to && !ValidationUtils.isAddress(tx.to)) {
+          throw new ValidationError('Invalid "to" address in transaction')
+        }
+        if (tx.from && !ValidationUtils.isAddress(tx.from)) {
+          throw new ValidationError('Invalid "from" address in transaction')
+        }
+      }
+    }
+
+    const request: TraceCallManyRequest = {
+      bundles,
+      stateContext: stateContext || {
+        block: 'latest',
+        txIndex: '-1',
+      },
+      tracerConfig: config || DEFAULT_TRACERS,
+    }
+
+    const response = await this.executeRequest<TracerManyResponse>(
+      'post',
+      '/trace/call-many',
+      request,
+      options,
+    )
+
+    // Extend each response in the array
+    return response.map((tracerResponse) =>
+      this.extendTracerResponse(tracerResponse),
+    )
   }
 
   /**
@@ -339,6 +401,10 @@ class TraceRequestBuilderImpl implements TraceRequestBuilder {
   call(call: TransactionCall): TraceCallBuilder {
     return new TraceCallBuilderImpl(this.client, call)
   }
+
+  callMany(bundles: Bundle[]): TraceCallManyBuilder {
+    return new TraceCallManyBuilderImpl(this.client, bundles)
+  }
 }
 
 /**
@@ -486,6 +552,106 @@ class TraceCallBuilderImpl implements TraceCallBuilder {
         if (this.blockOverrides) result.blockOverrides = this.blockOverrides
         return result
       })(),
+      this.options,
+    )
+  }
+}
+
+/**
+ * Implementation of the call-many trace builder.
+ */
+class TraceCallManyBuilderImpl implements TraceCallManyBuilder {
+  private stateContext: StateContext = {
+    block: 'latest',
+    txIndex: '-1',
+  }
+  private config: TraceConfig = { ...DEFAULT_TRACERS }
+  private options?: TraceExecutionOptions
+
+  constructor(
+    private client: TraceClient,
+    private bundles: Bundle[],
+  ) {}
+
+  withStateContext(context: StateContext): TraceCallManyBuilder {
+    this.stateContext = { ...context }
+    return this
+  }
+
+  atBlock(block: string | number): TraceCallManyBuilder {
+    const blockStr =
+      typeof block === 'number' ? `0x${block.toString(16)}` : block
+    this.stateContext = {
+      ...this.stateContext,
+      block: blockStr,
+    }
+    return this
+  }
+
+  atLatest(): TraceCallManyBuilder {
+    this.stateContext = {
+      ...this.stateContext,
+      block: 'latest',
+    }
+    return this
+  }
+
+  withTransactionIndex(index: number): TraceCallManyBuilder {
+    this.stateContext = {
+      ...this.stateContext,
+      txIndex: { Index: index },
+    }
+    return this
+  }
+
+  atEnd(): TraceCallManyBuilder {
+    this.stateContext = {
+      ...this.stateContext,
+      txIndex: '-1',
+    }
+    return this
+  }
+
+  withTracers(config: TraceConfig): TraceCallManyBuilder {
+    this.config = { ...config }
+    return this
+  }
+
+  withCallTracer(config?: CallTracerConfig): TraceCallManyBuilder {
+    this.config.callTracer = config || { onlyTopCall: false, withLogs: true }
+    return this
+  }
+
+  withPrestateTracer(config?: PrestateTracerConfig): TraceCallManyBuilder {
+    this.config.prestateTracer = config || {
+      diffMode: false,
+      disableCode: false,
+      disableStorage: false,
+    }
+    return this
+  }
+
+  withStructLogger(config?: StructLoggerConfig): TraceCallManyBuilder {
+    this.config.structLogger = config || {
+      cleanStructLogs: true,
+      disableMemory: true,
+      disableReturnData: false,
+      disableStack: false,
+      disableStorage: false,
+    }
+    return this
+  }
+
+  with4ByteTracer(): TraceCallManyBuilder {
+    this.config['4byteTracer'] = true
+    return this
+  }
+
+  async execute(): Promise<TracerManyResponse> {
+    return this.client.traceCallMany(
+      this.bundles,
+      this.stateContext,
+      this.config,
       this.options,
     )
   }
