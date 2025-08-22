@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from '@/components/ui'
 import type { AccessListDisplayData, AccessListSummary } from '@/types/api'
+import { formatNumber } from '@/utils'
 import type { GasComparisonAnalysis } from '@/utils/trace-integration'
 import { GasComparisonView } from './GasComparisonView'
 
@@ -40,8 +41,6 @@ export function AccessListView({
     summary: accessListData.getAccessListSummary(),
   }
 
-  const gasUsedDecimal = Number.parseInt(displayData.gasUsed, 16)
-
   return (
     <div className="space-y-6">
       {/* Gas Comparison Analysis - Show prominently if available */}
@@ -62,10 +61,7 @@ export function AccessListView({
                 <span className="text-sm text-muted-foreground">Gas Used</span>
               </div>
               <div className="font-mono text-lg">
-                {gasUsedDecimal.toLocaleString()}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {displayData.gasUsed}
+                {formatNumber(Number(displayData.gasUsed))}
               </div>
             </div>
 
