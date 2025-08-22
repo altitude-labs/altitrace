@@ -1,11 +1,11 @@
 use crate::{
     define_routes,
+    error::{ApiError, ApiResult},
     handlers::{
-        common::{ApiError, ApiResponse, Handler},
+        common::{ApiResponse, Handler},
         simulation::{dto::*, response::*},
     },
     services::hyperevm::service::HyperEvmService,
-    ApiResult,
 };
 use actix_web::{web, HttpResponse};
 use std::time::Instant;
@@ -82,6 +82,7 @@ async fn simulate_transaction(
         target: "altitrace::api::simulation",
         request_id = %request_id,
         calls_count = simulation_request.call_count(),
+        ?simulation_request,
         "Processing simulation request"
     );
 
@@ -112,11 +113,7 @@ async fn simulate_transaction(
                 "Simulation failed"
             );
 
-            let api_error = ApiError::new("SIMULATION_FAILED", e.to_string()).with_suggestion(
-                "Check transaction parameters and ensure the HyperEVM node is accessible",
-            );
-
-            Ok(ApiResponse::<SimulationResult>::error(api_error, request_id).into())
+            Err(ApiError::from(e))
         }
     }
 }
@@ -146,6 +143,7 @@ async fn simulate_batch_transaction(
         target: "altitrace::api::simulation",
         request_id = %request_id,
         batch_size = simulation_request.len(),
+        ?simulation_request,
         "Processing batch simulation request"
     );
 
@@ -171,11 +169,7 @@ async fn simulate_batch_transaction(
                 "Batch simulation failed"
             );
 
-            let api_error = ApiError::new("SIMULATION_FAILED", e.to_string()).with_suggestion(
-                "Check transaction parameters and ensure the HyperEVM node is accessible",
-            );
-
-            Ok(ApiResponse::<Vec<SimulationResult>>::error(api_error, request_id).into())
+            Err(ApiError::from(e))
         }
     }
 }
@@ -204,6 +198,7 @@ async fn create_access_list(
     debug!(
         target: "altitrace::api::simulation",
         request_id = %request_id,
+        ?access_list_request,
         "Processing access list request"
     );
 
@@ -233,11 +228,7 @@ async fn create_access_list(
                 "Access list request failed"
             );
 
-            let api_error = ApiError::new("ACCESS_LIST_FAILED", e.to_string()).with_suggestion(
-                "Check transaction parameters and ensure the HyperEVM node is accessible",
-            );
-
-            Ok(ApiResponse::<AccessListResponse>::error(api_error, request_id).into())
+            Err(ApiError::from(e))
         }
     }
 }
