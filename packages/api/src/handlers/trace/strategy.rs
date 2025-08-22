@@ -11,6 +11,7 @@ use alloy_rpc_types_trace::geth::{
 use std::{future::Future, str::FromStr};
 
 use crate::{
+    error::RpcError,
     handlers::{
         simulation::conversion::convert_block_overrides,
         trace::{TraceCallRequest, TraceConfig, Tracers},
@@ -105,14 +106,21 @@ impl TracingStrategy {
     }
 
     /// Execute transaction trace
-    pub async fn execute<F, Fut, E>(&self, tx_hash: TxHash, trace_fn: F) -> Result<TracingResult, E>
+    pub async fn execute<F, Fut, E>(
+        &self,
+        tx_hash: TxHash,
+        trace_fn: F,
+    ) -> Result<TracingResult, RpcError>
     where
         F: Fn(TxHash, GethDebugTracingOptions) -> Fut + Clone,
         Fut: Future<Output = Result<GethTrace, E>>,
+        E: Into<RpcError>,
     {
         match self {
             Self::StructLoggerOnly(options) | Self::TracersOnly(options) => {
-                let trace = trace_fn(tx_hash, options.clone()).await?;
+                let trace = trace_fn(tx_hash, options.clone())
+                    .await
+                    .map_err(|e| e.into())?;
                 Ok(TracingResult::Single(trace))
             }
             Self::Hybrid { tracers_options, struct_logger_options } => {
@@ -121,7 +129,7 @@ impl TracingStrategy {
                 let struct_logger_fut = trace_fn(tx_hash, struct_logger_options.clone());
 
                 let (tracers_trace, struct_logger_trace) =
-                    tokio::try_join!(tracers_fut, struct_logger_fut)?;
+                    tokio::try_join!(tracers_fut, struct_logger_fut).map_err(|e| e.into())?;
 
                 Ok(TracingResult::Dual {
                     tracers_trace,
@@ -136,10 +144,11 @@ impl TracingStrategy {
         &self,
         call_request: TraceCallRequest,
         trace_fn: F,
-    ) -> Result<TracingResult, E>
+    ) -> Result<TracingResult, RpcError>
     where
         F: Fn(AlloyTransactionRequest, BlockId, GethDebugTracingCallOptions) -> Fut + Clone,
         Fut: Future<Output = Result<GethTrace, E>>,
+        E: Into<RpcError>,
     {
         let TraceCallRequest {
             call,
@@ -150,23 +159,34 @@ impl TracingStrategy {
             ..
         } = call_request;
 
-        // TODO: handle errors by replacing ok with err, and return the error to the client
-        let block_overrides =
-            block_overrides.and_then(|overrides| convert_block_overrides(overrides).ok());
+        let block_overrides = block_overrides
+            .map(convert_block_overrides)
+            .transpose()
+            .map_err(|e| {
+                RpcError::invalid_params("trace_call", format!("Invalid block overrides: {}", e))
+            })?;
 
         let state_overrides = state_overrides
-            .and_then(|overrides| ConversionService::state_overrides_to_alloy(&overrides).ok());
+            .map(|overrides| ConversionService::state_overrides_to_alloy(&overrides))
+            .transpose()
+            .map_err(|e| {
+                RpcError::invalid_params("trace_call", format!("Invalid state overrides: {}", e))
+            })?;
 
-        let tx_request = AlloyTransactionRequest::try_from(call)
-            .map_err(|e| eyre::anyhow!("Failed to convert call: {}", e))
-            .unwrap();
-        let block_id = BlockId::from_str(&block).unwrap_or_default();
+        let tx_request = AlloyTransactionRequest::try_from(call).map_err(|e| {
+            RpcError::invalid_params("trace_call", format!("Failed to convert call: {}", e))
+        })?;
+        let block_id = BlockId::from_str(&block).map_err(|_| {
+            RpcError::invalid_params("trace_call", format!("Invalid block identifier: {}", block))
+        })?;
 
         match self {
             Self::StructLoggerOnly(options) | Self::TracersOnly(options) => {
                 let call_options =
                     self.create_call_options(options, state_overrides, block_overrides);
-                let trace = trace_fn(tx_request, block_id, call_options).await?;
+                let trace = trace_fn(tx_request, block_id, call_options)
+                    .await
+                    .map_err(|e| e.into())?;
                 Ok(TracingResult::Single(trace))
             }
             Self::Hybrid { tracers_options, struct_logger_options } => {
@@ -187,7 +207,7 @@ impl TracingStrategy {
                 let struct_logger_fut = trace_fn(tx_request, block_id, struct_logger_call_options);
 
                 let (tracers_trace, struct_logger_trace) =
-                    tokio::try_join!(tracers_fut, struct_logger_fut)?;
+                    tokio::try_join!(tracers_fut, struct_logger_fut).map_err(|e| e.into())?;
 
                 Ok(TracingResult::Dual {
                     tracers_trace,
@@ -202,10 +222,11 @@ impl TracingStrategy {
         &self,
         call_request: TraceCallManyRequest,
         trace_fn: F,
-    ) -> Result<TracingResultMany, E>
+    ) -> Result<TracingResultMany, RpcError>
     where
         F: Fn(Vec<AlloyBundle>, AlloyStateContext, GethDebugTracingCallOptions) -> Fut + Clone,
         Fut: Future<Output = Result<Vec<GethTrace>, E>>,
+        E: Into<RpcError>,
     {
         let TraceCallManyRequest { bundles, state_context, .. } = call_request;
 
@@ -218,7 +239,9 @@ impl TracingStrategy {
         match self {
             Self::StructLoggerOnly(options) | Self::TracersOnly(options) => {
                 let call_options = self.create_call_options(options, None, None);
-                let trace = trace_fn(alloy_bundles, alloy_state_context, call_options).await?;
+                let trace = trace_fn(alloy_bundles, alloy_state_context, call_options)
+                    .await
+                    .map_err(|e| e.into())?;
 
                 Ok(TracingResultMany::Single(trace))
             }
@@ -235,7 +258,7 @@ impl TracingStrategy {
                     trace_fn(alloy_bundles, alloy_state_context, struct_logger_call_options);
 
                 let (tracers_trace, struct_logger_trace) =
-                    tokio::try_join!(tracers_fut, struct_logger_fut)?;
+                    tokio::try_join!(tracers_fut, struct_logger_fut).map_err(|e| e.into())?;
 
                 Ok(TracingResultMany::Dual {
                     tracers_trace,

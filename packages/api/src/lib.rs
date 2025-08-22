@@ -1,5 +1,5 @@
 pub mod config;
-pub mod errors;
+pub mod error;
 pub mod routes;
 pub mod services;
 pub mod types;
@@ -9,7 +9,7 @@ pub mod validation;
 pub mod version;
 use alloy_transport_http::reqwest::Url;
 use chrono::{DateTime, Utc};
-pub use services::{service::HyperEvmService, CacheError, RedisCache, RpcProvider};
+pub use services::{service::HyperEvmService, RedisCache, RpcProvider};
 use std::{sync::LazyLock, time::SystemTime};
 pub mod handlers;
 pub mod macros;
@@ -29,13 +29,12 @@ pub use config::*;
 
 use ::tracing::info;
 use clap::{command, Parser};
-use errors::ApiError;
+use error::{ApiResult, CacheError};
 use eyre::eyre;
 use futures::Future;
 use middlewares::{auth::AuthMiddlewareFactory, cors::CorsMiddlewareFactory};
 use tracing_log::{init_tracing, LogFileConfig, LogFormat, LogsArgs};
 
-pub type ApiResult<T> = Result<T, ApiError>;
 pub type CacheResult<T> = Result<T, CacheError>;
 
 /// The start time of the application, used for uptime calculations.
