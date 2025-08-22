@@ -1,6 +1,6 @@
 'use client'
 
-import type { CallFrame } from '@altitrace/sdk'
+import type { CallFrame } from '@altitrace/sdk/types'
 import {
   AlertCircleIcon,
   ArrowRightIcon,
