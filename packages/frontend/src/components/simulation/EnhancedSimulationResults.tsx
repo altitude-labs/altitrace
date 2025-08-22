@@ -46,7 +46,7 @@ export function EnhancedSimulationResults({
 
   // Use SDK helper methods
   const isSuccess = result.isSuccess()
-  const decodedEvents = result.getDecodedEvents()
+  const logCount = result.getLogCount()
   const assetChanges = result.getAssetChangesSummary()
 
   const tabConfig = [
@@ -75,7 +75,7 @@ export function EnhancedSimulationResults({
       id: 'events',
       label: 'Events',
       icon: ListIcon,
-      count: decodedEvents.length,
+      count: logCount,
     },
     {
       id: 'assets',
@@ -340,7 +340,7 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
             <div className="space-y-2">
               {errors.map((error, index: number) => (
                 <div
-                  key={index}
+                  key={`error-${error.reason || error.message || index}`}
                   className="text-sm text-red-600 dark:text-red-400"
                 >
                   {error.reason || error.message || 'Unknown error'}
@@ -364,7 +364,7 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
             <div className="space-y-2">
               {assetChanges.map((change, index: number) => (
                 <div
-                  key={index}
+                  key={`asset-${change.tokenAddress}-${change.type}-${index}`}
                   className="flex items-center justify-between p-2 bg-muted/50 rounded"
                 >
                   <div className="flex items-center gap-2">
@@ -417,7 +417,7 @@ function CallsBreakdown({
     <div className="space-y-4">
       {result.calls.map((call, index: number) => (
         <CallCard
-          key={index}
+          key={`call-${call.callIndex}-${index}`}
           call={call}
           callIndex={index}
           setActiveTab={setActiveTab}
@@ -574,7 +574,11 @@ function EventsBreakdown({ result }: { result: EnhancedSimulationResult }) {
         (call, index: number) =>
           call.logs &&
           call.logs.length > 0 && (
-            <EnhancedEventDisplay key={index} call={call} callIndex={index} />
+            <EnhancedEventDisplay
+              key={`event-${call.status}-${index}`}
+              call={call}
+              callIndex={index}
+            />
           ),
       )}
     </div>
@@ -637,7 +641,7 @@ function AssetChangesBreakdown({
   return (
     <div className="space-y-4">
       {assetChanges.map((change, index: number) => (
-        <Card key={index}>
+        <Card key={`${change.tokenAddress}-${change.type}-${index}`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

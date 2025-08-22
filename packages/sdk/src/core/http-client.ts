@@ -81,7 +81,9 @@ export class HttpClient {
       timeout: config.timeout ?? DEFAULT_CONFIG.timeout,
       retries: config.retryConfig ?? DEFAULT_CONFIG.retryConfig,
       headers: { ...DEFAULT_CONFIG.headers, ...config.headers },
-      fetch: config.fetch ? config.fetch.bind(globalThis) : DEFAULT_CONFIG.fetch,
+      fetch: config.fetch
+        ? config.fetch.bind(globalThis)
+        : DEFAULT_CONFIG.fetch,
       debug: config.debug ?? DEFAULT_CONFIG.debug,
     }
   }
