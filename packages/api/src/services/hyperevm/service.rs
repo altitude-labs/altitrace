@@ -56,7 +56,9 @@ impl std::default::Default for BlockContext {
 /// Implementation of `BlockContextProvider` for `SimulationParams`.
 impl BlockContextProvider for SimulationParams {
     fn block_number(&self) -> Option<u64> {
-        parse_block_number(self.block_number.as_ref().unwrap()).ok()
+        self.block_number
+            .as_ref()
+            .and_then(|bn| parse_block_number(bn).ok())
     }
 
     fn block_tag(&self) -> Option<&BlockTag> {
