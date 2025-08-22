@@ -53,6 +53,84 @@ export function validateOptionalHex(
   return validateHex(value, fieldName)
 }
 
+// Validate optional block number (hex or decimal)
+export function validateOptionalBlockNumber(
+  value: string,
+  fieldName = 'blockNumber',
+): BlockNumber | undefined {
+  if (!value || value.trim() === '') {
+    return undefined
+  }
+
+  try {
+    // Handle both hex format and decimal format
+    if (value.startsWith('0x')) {
+      // Hex format
+      if (!isHex(value)) {
+        throw new ValidationError(
+          'Block number must be in valid hex format (e.g., 0x123)',
+          fieldName,
+        )
+      }
+      return value as BlockNumber
+    }
+    // Decimal format - convert to hex
+    const blockNum = BigInt(value)
+    if (blockNum < 0n) {
+      throw new ValidationError('Block number cannot be negative', fieldName)
+    }
+    return `0x${blockNum.toString(16)}` as BlockNumber
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw error
+    }
+    throw new ValidationError('Invalid block number format', fieldName)
+  }
+}
+
+// Validate optional gas value (hex or decimal)
+export function validateOptionalGas(
+  value: string,
+  fieldName = 'gas',
+): Hex | undefined {
+  if (!value || value.trim() === '') {
+    return undefined
+  }
+
+  try {
+    let gasHex: Hex
+
+    // Handle both hex format and decimal format
+    if (value.startsWith('0x')) {
+      // Hex format
+      gasHex = validateHex(value, fieldName)
+    } else {
+      // Decimal format - convert to hex
+      const gasAmount = BigInt(value)
+      if (gasAmount <= 0n) {
+        throw new ValidationError('Gas must be greater than 0', fieldName)
+      }
+      gasHex = `0x${gasAmount.toString(16)}` as Hex
+    }
+
+    // Validate gas amount limits
+    const gasAmount = BigInt(gasHex)
+    if (gasAmount <= 0n) {
+      throw new ValidationError('Gas must be greater than 0', fieldName)
+    }
+    if (gasAmount > 100_000_000n) {
+      throw new ValidationError('Gas amount is too high (max 100M)', fieldName)
+    }
+
+    return gasHex
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw error
+    }
+    throw new ValidationError('Invalid gas value format', fieldName)
+  }
+}
+
 // Validate block number (hex string)
 export function validateBlockNumber(
   value: string,

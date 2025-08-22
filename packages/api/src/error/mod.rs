@@ -1,0 +1,22 @@
+pub mod alloy_conversions;
+pub mod api;
+pub mod cache;
+pub mod context;
+pub mod conversion;
+pub mod execution;
+pub mod provider;
+pub mod response;
+pub mod rpc;
+pub mod service;
+pub mod validation;
+
+pub use api::{ApiError, ApiResult};
+pub use cache::CacheError;
+pub use context::ErrorContext;
+pub use conversion::ConversionError;
+pub use execution::ExecutionError;
+pub use provider::ProviderError;
+pub use response::{ErrorDetail, ErrorResponse};
+pub use rpc::RpcError;
+pub use service::ServiceError;
+pub use validation::ValidationError;

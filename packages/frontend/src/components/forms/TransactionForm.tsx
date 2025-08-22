@@ -33,6 +33,8 @@ import type { ParsedAbi } from '@/types/api'
 import {
   ValidationError,
   validateAddress,
+  validateOptionalBlockNumber,
+  validateOptionalGas,
   validateOptionalHex,
   validateValue,
 } from '@/utils/validation'
@@ -234,7 +236,7 @@ export function TransactionForm({
 
     try {
       if (formData.gas) {
-        validateOptionalHex(formData.gas, 'gas')
+        validateOptionalGas(formData.gas, 'gas')
       }
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -246,7 +248,7 @@ export function TransactionForm({
     // Validate block number if used
     if (useBlockNumber && formData.blockNumber) {
       try {
-        validateOptionalHex(formData.blockNumber, 'blockNumber')
+        validateOptionalBlockNumber(formData.blockNumber, 'blockNumber')
       } catch (error) {
         if (error instanceof ValidationError) {
           newErrors.blockNumber = error.message
@@ -482,7 +484,7 @@ export function TransactionForm({
                       description={
                         compact
                           ? undefined
-                          : 'Specific block number in hex format (e.g., 0x123abc)'
+                          : 'Specific block number in decimal or hex format (e.g., 123456 or 0x1e240)'
                       }
                     />
                   ) : (

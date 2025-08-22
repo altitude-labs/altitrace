@@ -2,13 +2,13 @@ use std::time::Instant;
 
 use crate::{
     define_routes,
+    error::{ApiError, ApiResult},
     handlers::{
         common::{ApiResponse, Handler},
         trace::{dto::*, TracerResponse},
     },
     services::hyperevm::service::HyperEvmService,
     utils::generate_request_id,
-    ApiResult,
 };
 use actix_web::{web, HttpResponse};
 use tracing::debug;
@@ -81,31 +81,51 @@ async fn trace_transaction(
     debug!(
         target: "altitrace::trace",
         %request_id,
-        "Starting transaction trace"
+        ?request,
+        "Starting transaction trace",
     );
 
-    let response = handler.service.trace_transaction(&request).await.unwrap();
-    let mut tracer_response = TracerResponse::from(response.trace_result);
+    match handler.service.trace_transaction(&request).await {
+        Ok(response) => {
+            let mut tracer_response = TracerResponse::from(response.trace_result);
 
-    if let Some(receipt) = response.receipt {
-        tracer_response = tracer_response.with_receipt(receipt);
+            if let Some(receipt) = response.receipt {
+                tracer_response = tracer_response.with_receipt(receipt);
+            }
+
+            if request.tracer_config.should_clean_struct_logger() {
+                tracer_response.clean_struct_logger();
+            }
+
+            let elapsed = start_time.elapsed();
+
+            debug!(
+                target: "altitrace::trace",
+                %request_id,
+                ?elapsed,
+                "Transaction trace completed"
+            );
+
+            Ok(ApiResponse::success_with_timing(
+                tracer_response,
+                request_id,
+                elapsed.as_millis() as u64,
+            )
+            .into())
+        }
+        Err(e) => {
+            let elapsed = start_time.elapsed();
+            debug!(
+                target: "altitrace::trace",
+                %request_id,
+                ?elapsed,
+                error = ?e,
+                "Transaction trace failed"
+            );
+
+            Err(ApiError::from(e))
+        }
     }
-
-    if request.tracer_config.should_clean_struct_logger() {
-        tracer_response.clean_struct_logger();
-    }
-
-    let elapsed = start_time.elapsed();
-
-    debug!(
-        target: "altitrace::trace",
-        %request_id,
-        ?elapsed,
-        "Transaction trace completed"
-    );
-
-    Ok(ApiResponse::success_with_timing(tracer_response, request_id, elapsed.as_millis() as u64)
-        .into())
 }
 
 #[utoipa::path(
@@ -132,28 +152,47 @@ async fn trace_call(
     debug!(
         target: "altitrace::trace",
         %request_id,
+        ?request,
         "Starting call trace"
     );
 
-    // TODO: remove this unwrap by handling errors
-    let response = handler.service.trace_call(&request).await.unwrap();
-    let mut tracer_response = TracerResponse::from(response.trace_result);
+    match handler.service.trace_call(&request).await {
+        Ok(response) => {
+            let mut tracer_response = TracerResponse::from(response.trace_result);
 
-    if request.tracer_config.should_clean_struct_logger() {
-        tracer_response.clean_struct_logger();
+            if request.tracer_config.should_clean_struct_logger() {
+                tracer_response.clean_struct_logger();
+            }
+
+            let elapsed = start_time.elapsed();
+
+            debug!(
+                target: "altitrace::trace",
+                %request_id,
+                ?elapsed,
+                "Call trace completed"
+            );
+
+            Ok(ApiResponse::success_with_timing(
+                tracer_response,
+                request_id,
+                elapsed.as_millis() as u64,
+            )
+            .into())
+        }
+        Err(e) => {
+            let elapsed = start_time.elapsed();
+            debug!(
+                target: "altitrace::trace",
+                %request_id,
+                ?elapsed,
+                error = ?e,
+                "Call trace failed"
+            );
+
+            Err(ApiError::from(e))
+        }
     }
-
-    let elapsed = start_time.elapsed();
-
-    debug!(
-        target: "altitrace::trace",
-        %request_id,
-        ?elapsed,
-        "Call trace completed"
-    );
-
-    Ok(ApiResponse::success_with_timing(tracer_response, request_id, elapsed.as_millis() as u64)
-        .into())
 }
 
 #[utoipa::path(
@@ -180,39 +219,58 @@ async fn trace_call_many(
     debug!(
         target: "altitrace::trace",
         %request_id,
+        ?request,
         bundles_count = request.bundles.len(),
         "Starting call many trace"
     );
 
-    let responses = handler.service.trace_call_many(&request).await.unwrap();
+    match handler.service.trace_call_many(&request).await {
+        Ok(responses) => {
+            // Convert Vec<TraceResponse> to Vec<TracerResponse>
+            let tracer_responses: Vec<TracerResponse> = responses
+                .into_iter()
+                .map(|response| {
+                    let mut tracer_response = TracerResponse::from(response.trace_result);
+                    if let Some(receipt) = response.receipt {
+                        tracer_response = tracer_response.with_receipt(receipt);
+                    }
+                    if request.tracer_config.should_clean_struct_logger() {
+                        tracer_response.clean_struct_logger();
+                    }
+                    tracer_response
+                })
+                .collect();
 
-    // Convert Vec<TraceResponse> to Vec<TracerResponse>
-    let tracer_responses: Vec<TracerResponse> = responses
-        .into_iter()
-        .map(|response| {
-            let mut tracer_response = TracerResponse::from(response.trace_result);
-            if let Some(receipt) = response.receipt {
-                tracer_response = tracer_response.with_receipt(receipt);
-            }
-            if request.tracer_config.should_clean_struct_logger() {
-                tracer_response.clean_struct_logger();
-            }
-            tracer_response
-        })
-        .collect();
+            let elapsed = start_time.elapsed();
 
-    let elapsed = start_time.elapsed();
+            debug!(
+                target: "altitrace::trace",
+                %request_id,
+                responses_count = tracer_responses.len(),
+                ?elapsed,
+                "Call many trace completed"
+            );
 
-    debug!(
-        target: "altitrace::trace",
-        %request_id,
-        responses_count = tracer_responses.len(),
-        ?elapsed,
-        "Call many trace completed"
-    );
+            Ok(ApiResponse::success_with_timing(
+                tracer_responses,
+                request_id,
+                elapsed.as_millis() as u64,
+            )
+            .into())
+        }
+        Err(e) => {
+            let elapsed = start_time.elapsed();
+            debug!(
+                target: "altitrace::trace",
+                %request_id,
+                ?elapsed,
+                error = ?e,
+                "Call many trace failed"
+            );
 
-    Ok(ApiResponse::success_with_timing(tracer_responses, request_id, elapsed.as_millis() as u64)
-        .into())
+            Err(ApiError::from(e))
+        }
+    }
 }
 
 define_routes!(
