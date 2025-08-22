@@ -200,14 +200,18 @@ pub struct SimulationParams {
 
     /// Enable tracking of ERC-20/ERC-721 token balance changes.
     /// Requires `account` parameter to be set.
-    #[serde(default)]
+    ///
+    /// NOTE: This is currently not supported
+    ///
+    /// TODO: Viem logic <https://github.com/wevm/viem/blob/100156844c85989bb8c26ca587da7a62a282136b/src/actions/public/simulateCalls.ts#L166>
+    #[serde(default = "default_true")]
     #[schema(example = false)]
     pub trace_asset_changes: bool,
 
     /// Enable tracking of ETH transfers as ERC-20-like logs.
     /// ETH transfers will appear with address 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.
     /// Requires `account` parameter to be set.
-    #[serde(default)]
+    #[serde(default = "default_true")]
     #[schema(example = false)]
     pub trace_transfers: bool,
 }
@@ -269,6 +273,7 @@ impl SimulationParams {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use similar_asserts::assert_eq;
     use std::collections::HashMap;
 
     #[test]
@@ -288,5 +293,14 @@ mod tests {
 
         override_state.state_diff = None;
         assert!(override_state.validate_state_exclusivity().is_ok());
+    }
+
+    #[test]
+    fn test_serde_default_simulation_params() {
+        let s = r#"{"calls": [{}]}"#;
+        let params: SimulationParams = serde_json::from_str(s).unwrap();
+        assert_eq!(params.validation, true);
+        assert_eq!(params.trace_asset_changes, true);
+        assert_eq!(params.trace_transfers, true);
     }
 }

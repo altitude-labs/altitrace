@@ -775,6 +775,10 @@ export interface components {
             /**
              * @description Enable tracking of ERC-20/ERC-721 token balance changes.
              *     Requires `account` parameter to be set.
+             *
+             *     NOTE: This is currently not supported
+             *
+             *     TODO: Viem logic <https://github.com/wevm/viem/blob/100156844c85989bb8c26ca587da7a62a282136b/src/actions/public/simulateCalls.ts#L166>
              * @example false
              */
             traceAssetChanges?: boolean;
@@ -844,7 +848,7 @@ export interface components {
              */
             block?: string;
             /** @description The transaction index in the block. */
-            tx_index?: components["schemas"]["TxIndex"];
+            txIndex?: components["schemas"]["TxIndex"];
         };
         /** @description State override for simulation and tracing. */
         StateOverride: {
@@ -1051,7 +1055,7 @@ export interface components {
             stateOverrides?: {
                 [key: string]: components["schemas"]["StateOverride"];
             } | null;
-            /** @description Trace configuration options. */
+            /** @description Trace configuration options. This will used the `callTracer` by default. */
             tracerConfig?: components["schemas"]["TraceConfig"];
         };
         /**
@@ -1103,14 +1107,23 @@ export interface components {
             structLogger?: null | components["schemas"]["StructLogResponse"];
         };
         Tracers: {
-            /** @description The 4byteTracer collects the function selectors of every function executed in the lifetime
+            /**
+             * @description The 4byteTracer collects the function selectors of every function executed in the lifetime
              *     of a transaction, along with the size of the supplied call data. The result is a
              *     [`FourByteFrame`](alloy_rpc_types_trace::geth::four_byte::FourByteFrame) where the keys are
-             *     `SELECTOR-CALLDATASIZE` and the values are number of occurrences of this key. */
-            "4byteTracer"?: boolean;
-            callTracer?: null | components["schemas"]["CallTracerConfig"];
-            prestateTracer?: null | components["schemas"]["PrestateTracerConfig"];
-            structLogger?: null | components["schemas"]["StructLoggerConfig"];
+             *     `SELECTOR-CALLDATASIZE` and the values are number of occurrences of this key.
+             * @default false
+             */
+            "4byteTracer": boolean;
+            /** @default {
+             *       "onlyTopCall": false,
+             *       "withLogs": true
+             *     } */
+            callTracer: null | components["schemas"]["CallTracerConfig"];
+            /** @default null */
+            prestateTracer: null | components["schemas"]["PrestateTracerConfig"];
+            /** @default null */
+            structLogger: null | components["schemas"]["StructLoggerConfig"];
         };
         /** @description Represents a single transaction call within a simulation. */
         TransactionCall: {
@@ -1199,7 +1212,7 @@ export interface components {
              */
             transactionType: number;
         };
-        TxIndex: "End" | {
+        TxIndex: "-1" | {
             /** @description Transaction given index. */
             Index: number;
         };

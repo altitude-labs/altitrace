@@ -17,6 +17,7 @@ import type {
   TraceRequestBuilder,
   TransactionCall,
 } from '@sdk/types'
+import type { Bundle, StateContext, TracerManyResponse } from '@sdk/types/trace'
 import { SimulationClient } from './simulation-client'
 import { TraceClient } from './trace-client'
 
@@ -155,6 +156,27 @@ export class AltitraceClient {
     return this.traceClient.traceCall(
       call,
       block,
+      this.buildTraceConfig(options),
+    )
+  }
+
+  /**
+   * Trace multiple calls with state context directly.
+   * This is a convenience method for multiple call traces.
+   */
+  async traceCallMany(
+    bundles: Bundle[],
+    options?: {
+      stateContext?: StateContext
+      callTracer?: boolean
+      prestateTracer?: boolean
+      structLogger?: boolean
+      fourByteTracer?: boolean
+    },
+  ): Promise<TracerManyResponse> {
+    return this.traceClient.traceCallMany(
+      bundles,
+      options?.stateContext,
       this.buildTraceConfig(options),
     )
   }
