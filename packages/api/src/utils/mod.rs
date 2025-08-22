@@ -23,3 +23,8 @@ pub fn generate_trace_id() -> String {
 pub fn generate_batch_id() -> String {
     format!("batch_{}", Uuid::new_v4())
 }
+
+/// Helper for generating access list identifiers.
+pub fn generate_access_list_id() -> String {
+    format!("access_list_{}", Uuid::new_v4())
+}

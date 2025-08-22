@@ -1,11 +1,10 @@
 use crate::{
     handlers::{
-        simulation::conversion::convert_block_overrides,
+        simulation::{conversion::convert_block_overrides, AccessList},
         validation::{validate_address, validate_hex_string, validate_uint256},
     },
     types::shared::BlockOverrides,
 };
-
 use alloy_rpc_types::{Bundle as AlloyBundle, TransactionReceipt};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -54,6 +53,10 @@ pub struct TransactionCall {
     #[validate(custom(function = "validate_uint256"))]
     #[schema(example = "0x7a120", pattern = "^0x[a-fA-F0-9]*$")]
     pub gas: Option<String>,
+
+    /// Access list to use for the transaction.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_list: Option<AccessList>,
 }
 
 /// Transaction receipt information.
