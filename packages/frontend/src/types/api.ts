@@ -7,6 +7,22 @@ export type BlockTag = 'latest' | 'earliest' | 'safe' | 'finalized'
 
 // Note: API contract types are provided by @altitrace/sdk. Only UI-local types remain here.
 
+// Access list types for UI components
+export interface AccessListSummary {
+  address: string
+  storageSlotCount: number
+  storageSlots: string[]
+}
+
+export interface AccessListDisplayData {
+  accountCount: number
+  totalStorageSlots: number
+  gasUsed: string
+  isSuccess: boolean
+  error?: string
+  summary: AccessListSummary[]
+}
+
 // ABI and function types for the UI
 export interface AbiFunction {
   name: string

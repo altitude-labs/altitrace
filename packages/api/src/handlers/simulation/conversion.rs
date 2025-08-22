@@ -63,39 +63,38 @@ impl TryFrom<TransactionCall> for AlloyTransactionRequest {
     fn try_from(call: TransactionCall) -> Result<Self> {
         let mut tx_request = Self::default();
 
-        // Convert 'to' field
         if let Some(to_str) = call.to {
             let address = Address::from_str(&to_str)
                 .map_err(|e| anyhow!("Invalid 'to' address '{}': {}", to_str, e))?;
             tx_request.to = Some(TxKind::Call(address));
         }
 
-        // Convert 'from' field
         if let Some(from_str) = call.from {
             let address = Address::from_str(&from_str)
                 .map_err(|e| anyhow!("Invalid 'from' address '{}': {}", from_str, e))?;
             tx_request.from = Some(address);
         }
 
-        // Convert 'data' field
         if let Some(data_str) = call.data {
             let bytes = Bytes::from_str(&data_str)
                 .map_err(|e| anyhow!("Invalid 'data' hex '{}': {}", data_str, e))?;
             tx_request.input = TransactionInput { input: Some(bytes), data: None };
         }
 
-        // Convert 'value' field
         if let Some(value_str) = call.value {
             let value = U256::from_str(&value_str)
                 .map_err(|e| anyhow!("Invalid 'value' '{}': {}", value_str, e))?;
             tx_request.value = Some(value);
         }
 
-        // Convert 'gas' field
         if let Some(gas_str) = call.gas {
             let gas = u64::from_str_radix(gas_str.trim_start_matches("0x"), 16)
                 .map_err(|e| anyhow!("Invalid 'gas' '{}': {}", gas_str, e))?;
             tx_request.gas = Some(gas);
+        }
+
+        if let Some(access_list) = call.access_list {
+            tx_request.access_list = Some(access_list.into());
         }
 
         Ok(tx_request)
@@ -343,6 +342,7 @@ mod tests {
             data: Some("0xa9059cbb".to_string()),
             value: Some("0x1000".to_string()),
             gas: Some("0x5208".to_string()),
+            access_list: None,
         };
 
         let alloy_request: AlloyTransactionRequest = api_call.try_into().unwrap();
@@ -364,6 +364,7 @@ mod tests {
                     data: Some("0xa9059cbb".to_string()),
                     value: None,
                     gas: None,
+                    access_list: None,
                 }],
                 account: Some("0x123d35Cc6634C0532925a3b844Bc9e7595f06e8c".to_string()),
                 block_number: Some("0x123abc".to_string()),

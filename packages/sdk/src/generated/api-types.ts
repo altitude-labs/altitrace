@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/simulate/access-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get the access list for a transaction
+         * @description Get the access list for a transaction
+         */
+        post: operations["create_access_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/simulate/batch": {
         parameters: {
             query?: never;
@@ -128,6 +148,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccessList: components["schemas"]["AccessListItem"][];
+        AccessListItem: {
+            /** @description Account address that would be loaded at the start of execution. */
+            address: string;
+            /** @description Storage slots that would be accessed by the account. */
+            storageKeys: string[];
+        };
+        /** @description Access list request. This will return the different account and slots that are accessed by the
+         *     transaction. */
+        AccessListRequest: {
+            /**
+             * @description The block number or tag.
+             * @example 10000000
+             */
+            block?: string;
+            /** @description The transaction parameters to simulate. */
+            params: components["schemas"]["TransactionCall"];
+        };
+        /** @description Access list response. */
+        AccessListResponse: {
+            /** @description Access list. */
+            accessList: components["schemas"]["AccessList"];
+            /** @description Error if the transaction failed. */
+            error?: string | null;
+            /**
+             * @description Gas used by the transaction.
+             * @example 1000000
+             */
+            gasUsed: string;
+        };
         /** @description Represents the state of an account. */
         AccountState: {
             /**
@@ -169,6 +219,33 @@ export interface components {
             suggestion?: string | null;
             /** @description Stack trace for debugging (only in debug builds). */
             trace?: string | null;
+        };
+        /** @description Standard API response wrapper for all simulation endpoints.
+         *
+         *     This provides a consistent response format across the API,
+         *     including success/failure indication, data payload, error information,
+         *     and request metadata for tracking and debugging. */
+        ApiResponse_AccessListResponse: {
+            /** @description Access list response. */
+            data?: {
+                /** @description Access list. */
+                accessList: components["schemas"]["AccessList"];
+                /** @description Error if the transaction failed. */
+                error?: string | null;
+                /**
+                 * @description Gas used by the transaction.
+                 * @example 1000000
+                 */
+                gasUsed: string;
+            };
+            error?: null | components["schemas"]["ApiError"];
+            /** @description Request metadata and timing information. */
+            metadata: components["schemas"]["ResponseMetadata"];
+            /**
+             * @description Indicates whether the request was processed successfully.
+             * @example true
+             */
+            success: boolean;
         };
         /** @description Standard API response wrapper for all simulation endpoints.
          *
@@ -1127,6 +1204,7 @@ export interface components {
         };
         /** @description Represents a single transaction call within a simulation. */
         TransactionCall: {
+            accessList?: null | components["schemas"]["AccessList"];
             /**
              * @description The transaction data (calldata).
              *     For simple ETH transfers, this can be empty or "0x".
@@ -1245,6 +1323,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_SimulationResult"];
+                };
+            };
+            /** @description Invalid request parameters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+        };
+    };
+    create_access_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessListRequest"];
+            };
+        };
+        responses: {
+            /** @description Access list request completed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_AccessListResponse"];
                 };
             };
             /** @description Invalid request parameters */

@@ -5,11 +5,16 @@
 import { AltitraceApiError } from '@sdk/core/errors'
 import { HttpClient } from '@sdk/core/http-client'
 import type {
+  AccessList,
+  AccessListComparisonBuilder,
+  AccessListExecutionOptions,
+  AccessListRequestBuilder,
   AltitraceClientConfig,
   ApiResponse,
   BatchSimulationConfig,
   BatchSimulationResult,
   BlockTag,
+  ExtendedAccessListResponse,
   ExtendedSimulationResult,
   ExtendedTracerResponse,
   SimulationRequest,
@@ -18,6 +23,7 @@ import type {
   TransactionCall,
 } from '@sdk/types'
 import type { Bundle, StateContext, TracerManyResponse } from '@sdk/types/trace'
+import { AccessListClient } from './access-list-client'
 import { SimulationClient } from './simulation-client'
 import { TraceClient } from './trace-client'
 
@@ -31,11 +37,13 @@ export class AltitraceClient {
   private httpClient: HttpClient
   private simulationClient: SimulationClient
   private traceClient: TraceClient
+  private accessListClient: AccessListClient
 
   constructor(config: AltitraceClientConfig = {}) {
     this.httpClient = new HttpClient(config)
     this.simulationClient = new SimulationClient(this.httpClient)
     this.traceClient = new TraceClient(this.httpClient)
+    this.accessListClient = new AccessListClient(this.httpClient)
   }
 
   /**
@@ -50,6 +58,20 @@ export class AltitraceClient {
    */
   trace(): TraceRequestBuilder {
     return this.traceClient.trace()
+  }
+
+  /**
+   * Create an access list request builder.
+   */
+  accessList(): AccessListRequestBuilder {
+    return this.accessListClient.createAccessList()
+  }
+
+  /**
+   * Create an access list comparison builder for gas optimization analysis.
+   */
+  compareAccessList(): AccessListComparisonBuilder {
+    return this.accessListClient.compareAccessList()
   }
 
   /**
@@ -94,6 +116,42 @@ export class AltitraceClient {
     },
   ): Promise<ExtendedSimulationResult> {
     return this.simulationClient.simulateCall(call, options)
+  }
+
+  /**
+   * Generate an access list for a transaction call without using the builder pattern.
+   * This is a convenience method for simple access list generation.
+   */
+  async generateAccessList(
+    call: TransactionCall,
+    options?: {
+      block?: string | number | bigint
+      executionOptions?: AccessListExecutionOptions
+    },
+  ): Promise<ExtendedAccessListResponse> {
+    return this.accessListClient.generateAccessList(call, options)
+  }
+
+  /**
+   * Execute a simulation with a pre-generated access list for gas optimization.
+   * This is a convenience method that combines simulation with access list usage.
+   */
+  async simulateCallWithAccessList(
+    call: Omit<TransactionCall, 'accessList'>,
+    accessList: AccessList,
+    options?: {
+      blockTag?: BlockTag | string
+      validation?: boolean
+      traceAssetChanges?: boolean
+      traceTransfers?: boolean
+      account?: string
+    },
+  ): Promise<ExtendedSimulationResult> {
+    return this.simulationClient.simulateCallWithAccessList(
+      call,
+      accessList,
+      options,
+    )
   }
 
   /**
@@ -241,5 +299,13 @@ export class AltitraceClient {
    */
   get tracing(): TraceClient {
     return this.traceClient
+  }
+
+  /**
+   * Get direct access to the access list client.
+   * Useful for advanced access list operations.
+   */
+  get accessLists(): AccessListClient {
+    return this.accessListClient
   }
 }

@@ -11,7 +11,10 @@ use crate::{
     },
     services::hyperevm::RpcProvider,
     types::{TraceResponse, TransactionReceiptInfo},
-    utils::{generate_batch_id, generate_trace_id, validation::parse_block_number},
+    utils::{
+        generate_access_list_id, generate_batch_id, generate_trace_id,
+        validation::parse_block_number,
+    },
 };
 
 use alloy_primitives::B256;
@@ -56,7 +59,9 @@ impl std::default::Default for BlockContext {
 /// Implementation of `BlockContextProvider` for `SimulationParams`.
 impl BlockContextProvider for SimulationParams {
     fn block_number(&self) -> Option<u64> {
-        parse_block_number(self.block_number.as_ref().unwrap()).ok()
+        self.block_number
+            .as_ref()
+            .and_then(|bn| parse_block_number(bn).ok())
     }
 
     fn block_tag(&self) -> Option<&BlockTag> {
@@ -373,6 +378,47 @@ impl HyperEvmService {
         );
 
         Ok(results)
+    }
+
+    pub async fn create_access_list(
+        &self,
+        request: &AccessListRequest,
+    ) -> Result<AccessListResponse> {
+        let start_time = Instant::now();
+        let request_id = generate_access_list_id();
+        let access_list_request = request.clone();
+
+        debug!(
+            target: "altitrace::simulation",
+            request_id = %request_id,
+            "Processing access list request"
+        );
+
+        let block_id = BlockId::from_str(&access_list_request.block).unwrap_or_default();
+
+        let tx_request = match access_list_request.try_into_tx_request() {
+            Ok(tx_request) => tx_request,
+            Err(e) => {
+                return Err(anyhow!("Invalid transaction call: {}", e));
+            }
+        };
+
+        let access_list_response = self
+            .provider
+            .inner
+            .create_access_list(&tx_request)
+            .block_id(block_id)
+            .await?;
+
+        let execution_time = start_time.elapsed();
+        debug!(
+            target: "altitrace::simulation",
+            request_id = %request_id,
+            ?execution_time,
+            "Access list request completed"
+        );
+
+        Ok(access_list_response.into())
     }
 
     pub async fn trace_transaction(
