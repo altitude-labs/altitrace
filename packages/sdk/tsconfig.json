@@ -26,6 +26,6 @@
       "@sdk/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "test/client.test.ts", "test/validation.test.ts", "test/viem-integration.test.ts", "test"],
+  "include": ["src/**/*", "test/client.test.ts", "test/validation.test.ts", "test/viem-integration.test.ts", "test", "examples/access-list-usage.ts"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }

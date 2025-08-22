@@ -251,11 +251,19 @@ function NewSimulationPageContent() {
               <div className="bg-card border rounded-lg p-4">
                 <h3 className="text-sm font-medium mb-3">Status</h3>
                 {loading && (
-                  <div className="text-center py-2">
-                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">
-                      Simulating...
-                    </p>
+                  <div className="text-center py-3">
+                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-foreground">
+                        Running Enhanced Simulation
+                      </p>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <div>• Executing transaction simulation</div>
+                        <div>• Generating call trace data</div>
+                        <div>• Creating access list optimization</div>
+                        <div>• Comparing gas efficiency</div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -280,6 +288,16 @@ function NewSimulationPageContent() {
                         Gas: {simulationResult.getTotalGasUsed().toString()}
                       </div>
                       <div>Calls: {simulationResult.calls?.length || 0}</div>
+                      {simulationResult.hasGasComparison && (
+                        <div className="text-xs text-green-600 font-medium">
+                          ⚡ Gas optimization available
+                        </div>
+                      )}
+                      {simulationResult.hasCallHierarchy && (
+                        <div className="text-xs text-blue-600">
+                          🔍 Call trace enhanced
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

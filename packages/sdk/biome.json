@@ -14,7 +14,8 @@
       "src/**/*.tsx",
       "!node_modules",
       "!dist",
-      "!src/generated"
+      "!src/generated",
+      "!examples"
     ]
   }
 }

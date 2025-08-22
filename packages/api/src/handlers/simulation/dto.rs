@@ -1,3 +1,5 @@
+use alloy_rpc_types::TransactionRequest;
+use eyre::eyre;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -7,7 +9,7 @@ use crate::{
         validate_address, validate_block_number_or_tag, validate_hex_string, validate_uint256,
     },
     types::{shared::StateOverride, BlockOverrides, TransactionCall},
-    utils::default_true,
+    utils::{default_latest, default_true},
 };
 
 /// Represents a complete simulation request for transaction execution.
@@ -46,6 +48,28 @@ pub struct BatchSimulationRequest {
     /// Common options applied to all simulations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub common_options: Option<SimulationOptions>,
+}
+
+/// Access list request. This will return the different account and slots that are accessed by the
+/// transaction.
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AccessListRequest {
+    /// The transaction parameters to simulate.
+    #[validate(nested)]
+    pub params: TransactionCall,
+    /// The block number or tag.
+    #[validate(custom(function = "validate_block_number_or_tag"))]
+    #[serde(default = "default_latest")]
+    #[schema(example = "10000000")]
+    pub block: String,
+}
+
+impl AccessListRequest {
+    pub fn try_into_tx_request(self) -> eyre::Result<TransactionRequest> {
+        TransactionRequest::try_from(self.params)
+            .map_err(|e| eyre!("Invalid transaction call: {}", e))
+    }
 }
 
 /// Bundle simulation request for interdependent transactions.
