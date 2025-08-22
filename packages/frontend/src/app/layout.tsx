@@ -6,7 +6,8 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'AltiTrace - HyperEVM Transaction Simulator',
-  description: 'Simulate, debug, and analyze EVM transactions within the HyperEVM network',
+  description:
+    'Simulate, debug, and analyze EVM transactions within the HyperEVM network',
 }
 
 export default function RootLayout({

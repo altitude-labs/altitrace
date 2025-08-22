@@ -1,7 +1,7 @@
-import Link from 'next/link';
-import { Layout } from '@/components/layout';
-import { Button } from '@/components/ui';
-import { PlayIcon, BookOpenIcon, CodeIcon } from 'lucide-react';
+import { BookOpenIcon, CodeIcon, PlayIcon } from 'lucide-react'
+import Link from 'next/link'
+import { Layout } from '@/components/layout'
+import { Button } from '@/components/ui'
 
 export default function Home() {
   return (
@@ -10,15 +10,14 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center space-y-8 mb-16">
           <div className="space-y-4">
-            <h1 className="text-5xl font-bold text-foreground">
-              AltiTrace
-            </h1>
+            <h1 className="text-5xl font-bold text-foreground">AltiTrace</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Simulate, debug, and analyze EVM transactions within the HyperEVM network. 
-              Test your transactions before they hit the chain with full traceability and state control.
+              Simulate, debug, and analyze EVM transactions within the HyperEVM
+              network. Test your transactions before they hit the chain with
+              full traceability and state control.
             </p>
           </div>
-          
+
           <div className="flex items-center justify-center gap-4">
             <Link href="/simulator/new">
               <Button size="lg" className="text-lg px-8">
@@ -32,7 +31,12 @@ export default function Home() {
                 View Simulator
               </Button>
             </Link>
-            <Button variant="outline" size="lg" className="text-lg px-8" disabled>
+            <Button
+              variant="outline"
+              size="lg"
+              className="text-lg px-8"
+              disabled
+            >
               <BookOpenIcon className="h-5 w-5 mr-2" />
               Documentation (Coming Soon)
             </Button>
@@ -45,31 +49,35 @@ export default function Home() {
             <div className="text-4xl mb-4">🔍</div>
             <h3 className="font-semibold mb-2">Transaction Simulation</h3>
             <p className="text-sm text-muted-foreground">
-              Execute transactions against live or historical HyperEVM states with full validation
+              Execute transactions against live or historical HyperEVM states
+              with full validation
             </p>
           </div>
-          
+
           <div className="bg-card rounded-lg p-6 border text-center">
             <div className="text-4xl mb-4">📊</div>
             <h3 className="font-semibold mb-2">Detailed Analytics</h3>
             <p className="text-sm text-muted-foreground">
-              Gas breakdowns, event logs, asset flows, and execution traces with visual charts
+              Gas breakdowns, event logs, asset flows, and execution traces with
+              visual charts
             </p>
           </div>
-          
+
           <div className="bg-card rounded-lg p-6 border text-center">
             <div className="text-4xl mb-4">⚙️</div>
             <h3 className="font-semibold mb-2">State Control</h3>
             <p className="text-sm text-muted-foreground">
-              Override state values, impersonate accounts, and modify contract code for testing
+              Override state values, impersonate accounts, and modify contract
+              code for testing
             </p>
           </div>
-          
+
           <div className="bg-card rounded-lg p-6 border text-center">
             <div className="text-4xl mb-4">🔗</div>
             <h3 className="font-semibold mb-2">Bundle Support</h3>
             <p className="text-sm text-muted-foreground">
-              Simulate complex transaction bundles with dependency analysis and state persistence
+              Simulate complex transaction bundles with dependency analysis and
+              state persistence
             </p>
           </div>
         </div>
@@ -78,10 +86,11 @@ export default function Home() {
         <div className="bg-muted rounded-lg p-8 text-center">
           <h2 className="text-2xl font-semibold mb-4">Built for Developers</h2>
           <p className="text-muted-foreground mb-6 max-w-3xl mx-auto">
-            AltiTrace provides a comprehensive toolchain for HyperEVM development with ABI import, 
-            function builders, and detailed error analysis to streamline your workflow.
+            AltiTrace provides a comprehensive toolchain for HyperEVM
+            development with ABI import, function builders, and detailed error
+            analysis to streamline your workflow.
           </p>
-          
+
           <div className="flex items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <CodeIcon className="h-4 w-4" />
@@ -103,5 +112,5 @@ export default function Home() {
         </div>
       </div>
     </Layout>
-  );
+  )
 }

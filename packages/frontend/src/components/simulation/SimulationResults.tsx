@@ -1,24 +1,31 @@
-'use client';
+'use client'
 
-import { Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
-import type { ExtendedSimulationResult } from '@altitrace/sdk';
-import type { CallResult } from '@altitrace/sdk';
-import { formatWeiValue } from '@/utils/abi';
-import { 
-  CheckCircleIcon, 
-  XCircleIcon, 
-  FuelIcon, 
-  HashIcon,
+import type { CallResult, ExtendedSimulationResult } from '@altitrace/sdk/types'
+import {
+  CheckCircleIcon,
   ClockIcon,
+  FuelIcon,
+  HashIcon,
+  TrendingDownIcon,
   TrendingUpIcon,
-  TrendingDownIcon
-} from 'lucide-react';
+  XCircleIcon,
+} from 'lucide-react'
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui'
+import { formatWeiValue } from '@/utils/abi'
 
-interface SimulationResultsProps { result: ExtendedSimulationResult }
+interface SimulationResultsProps {
+  result: ExtendedSimulationResult
+}
 
 export function SimulationResults({ result }: SimulationResultsProps) {
-  const gasUsedDecimal = parseInt(result.gasUsed, 16);
-  const blockNumberDecimal = parseInt(result.blockNumber, 16);
+  const gasUsedDecimal = Number.parseInt(result.gasUsed, 16)
+  const blockNumberDecimal = Number.parseInt(result.blockNumber, 16)
 
   return (
     <div className="space-y-6">
@@ -35,29 +42,43 @@ export function SimulationResults({ result }: SimulationResultsProps) {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <ClockIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Block Number</span>
+                <span className="text-sm text-muted-foreground">
+                  Block Number
+                </span>
               </div>
-              <div className="font-mono text-lg">{blockNumberDecimal.toLocaleString()}</div>
-              <div className="text-xs text-muted-foreground">{result.blockNumber}</div>
+              <div className="font-mono text-lg">
+                {blockNumberDecimal.toLocaleString()}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {result.blockNumber}
+              </div>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <FuelIcon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Gas Used</span>
               </div>
-              <div className="font-mono text-lg">{gasUsedDecimal.toLocaleString()}</div>
-              <div className="text-xs text-muted-foreground">{result.gasUsed}</div>
+              <div className="font-mono text-lg">
+                {gasUsedDecimal.toLocaleString()}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {result.gasUsed}
+              </div>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Calls</span>
               </div>
-              <div className="font-mono text-lg">{result.calls?.length || 0}</div>
+              <div className="font-mono text-lg">
+                {result.calls?.length || 0}
+              </div>
               <div className="text-xs text-muted-foreground">
-                {result.calls?.filter((c: CallResult) => c.status === 'success').length || 0} successful
+                {result.calls?.filter((c: CallResult) => c.status === 'success')
+                  .length || 0}{' '}
+                successful
               </div>
             </div>
           </div>
@@ -90,16 +111,16 @@ export function SimulationResults({ result }: SimulationResultsProps) {
         </Card>
       )}
     </div>
-  );
+  )
 }
 
 interface CallResultCardProps {
-  call: CallResult;
+  call: CallResult
 }
 
 function CallResultCard({ call }: CallResultCardProps) {
-  const gasUsedDecimal = parseInt(call.gasUsed, 16);
-  const isSuccess = call.status === 'success';
+  const gasUsedDecimal = Number.parseInt(call.gasUsed, 16)
+  const isSuccess = call.status === 'success'
 
   return (
     <Card>
@@ -121,13 +142,25 @@ function CallResultCard({ call }: CallResultCardProps) {
       <CardContent className="space-y-4">
         {/* Gas Usage */}
         <div>
-          <label className="text-sm font-medium text-muted-foreground">Gas Used</label>
-          <div className="font-mono text-sm">{gasUsedDecimal.toLocaleString()} ({call.gasUsed})</div>
+          <label
+            htmlFor="gas-used"
+            className="text-sm font-medium text-muted-foreground"
+          >
+            Gas Used
+          </label>
+          <div className="font-mono text-sm">
+            {gasUsedDecimal.toLocaleString()} ({call.gasUsed})
+          </div>
         </div>
 
         {/* Return Data */}
         <div>
-          <label className="text-sm font-medium text-muted-foreground">Return Data</label>
+          <label
+            htmlFor="return-data"
+            className="text-sm font-medium text-muted-foreground"
+          >
+            Return Data
+          </label>
           <div className="bg-muted p-3 rounded font-mono text-sm break-all">
             {call.returnData || '0x'}
           </div>
@@ -138,28 +171,56 @@ function CallResultCard({ call }: CallResultCardProps) {
           <div className="bg-red-50 dark:bg-red-950 p-4 rounded border border-red-200 dark:border-red-800">
             <div className="space-y-2">
               <div>
-                <label className="text-sm font-medium text-red-700 dark:text-red-300">Error Type</label>
-                <div className="text-sm text-red-600 dark:text-red-400">{call.error.errorType}</div>
+                <label
+                  htmlFor="error-type"
+                  className="text-sm font-medium text-red-700 dark:text-red-300"
+                >
+                  Error Type
+                </label>
+                <div className="text-sm text-red-600 dark:text-red-400">
+                  {call.error.errorType}
+                </div>
               </div>
-              
+
               {call.error.reason && (
                 <div>
-                  <label className="text-sm font-medium text-red-700 dark:text-red-300">Reason</label>
-                  <div className="text-sm text-red-600 dark:text-red-400">{call.error.reason}</div>
+                  <label
+                    htmlFor="error-reason"
+                    className="text-sm font-medium text-red-700 dark:text-red-300"
+                  >
+                    Reason
+                  </label>
+                  <div className="text-sm text-red-600 dark:text-red-400">
+                    {call.error.reason}
+                  </div>
                 </div>
               )}
-              
+
               {call.error.message && (
                 <div>
-                  <label className="text-sm font-medium text-red-700 dark:text-red-300">Message</label>
-                  <div className="text-sm text-red-600 dark:text-red-400">{call.error.message}</div>
+                  <label
+                    htmlFor="error-message"
+                    className="text-sm font-medium text-red-700 dark:text-red-300"
+                  >
+                    Message
+                  </label>
+                  <div className="text-sm text-red-600 dark:text-red-400">
+                    {call.error.message}
+                  </div>
                 </div>
               )}
-              
+
               {call.error.contractAddress && (
                 <div>
-                  <label className="text-sm font-medium text-red-700 dark:text-red-300">Contract</label>
-                  <div className="text-sm text-red-600 dark:text-red-400 font-mono">{call.error.contractAddress}</div>
+                  <label
+                    htmlFor="error-contract"
+                    className="text-sm font-medium text-red-700 dark:text-red-300"
+                  >
+                    Contract
+                  </label>
+                  <div className="text-sm text-red-600 dark:text-red-400 font-mono">
+                    {call.error.contractAddress}
+                  </div>
                 </div>
               )}
             </div>
@@ -169,75 +230,105 @@ function CallResultCard({ call }: CallResultCardProps) {
         {/* Event Logs */}
         {call.logs && call.logs.length > 0 && (
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+            <label
+              htmlFor="event-logs"
+              className="text-sm font-medium text-muted-foreground mb-2 block"
+            >
               Event Logs ({call.logs.length})
             </label>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {call.logs.map((log: NonNullable<CallResult['logs']>[number], logIndex: number) => (
-                <div key={logIndex} className="bg-muted p-3 rounded text-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono text-xs">{log.address}</span>
-                    {log.decoded && (
-                      <Badge variant="outline" className="text-xs">
-                        {log.decoded.name}
-                      </Badge>
+              {call.logs.map(
+                (
+                  log: NonNullable<CallResult['logs']>[number],
+                  logIndex: number,
+                ) => (
+                  <div key={logIndex} className="bg-muted p-3 rounded text-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono text-xs">{log.address}</span>
+                      {log.decoded && (
+                        <Badge variant="outline" className="text-xs">
+                          {log.decoded.name}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {log.decoded ? (
+                      <div className="space-y-1">
+                        <div className="font-medium">{log.decoded.summary}</div>
+                        {log.decoded.standard && (
+                          <div className="text-xs text-muted-foreground">
+                            Standard: {log.decoded.standard}
+                          </div>
+                        )}
+                        {log.decoded.params.length > 0 && (
+                          <div className="space-y-1 mt-2">
+                            {log.decoded.params.map(
+                              (
+                                param: {
+                                  name: string
+                                  value: string
+                                  indexed?: boolean
+                                },
+                                paramIndex: number,
+                              ) => (
+                                <div key={paramIndex} className="text-xs">
+                                  <span className="font-medium">
+                                    {param.name}:
+                                  </span>{' '}
+                                  {param.value}
+                                  {param.indexed && (
+                                    <Badge
+                                      variant="outline"
+                                      className="ml-1 text-xs"
+                                    >
+                                      indexed
+                                    </Badge>
+                                  )}
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="text-xs">
+                          <span className="font-medium">Topics:</span>{' '}
+                          {log.topics.length}
+                        </div>
+                        <div className="text-xs font-mono break-all">
+                          {log.data}
+                        </div>
+                      </div>
                     )}
                   </div>
-                  
-                  {log.decoded ? (
-                    <div className="space-y-1">
-                      <div className="font-medium">{log.decoded.summary}</div>
-                      {log.decoded.standard && (
-                        <div className="text-xs text-muted-foreground">
-                          Standard: {log.decoded.standard}
-                        </div>
-                      )}
-                      {log.decoded.params.length > 0 && (
-                        <div className="space-y-1 mt-2">
-                          {log.decoded.params.map((param: { name: string; value: string; indexed?: boolean }, paramIndex: number) => (
-                            <div key={paramIndex} className="text-xs">
-                              <span className="font-medium">{param.name}:</span> {param.value}
-                              {param.indexed && (
-                                <Badge variant="outline" className="ml-1 text-xs">indexed</Badge>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="text-xs">
-                        <span className="font-medium">Topics:</span> {log.topics.length}
-                      </div>
-                      <div className="text-xs font-mono break-all">{log.data}</div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </div>
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
-interface AssetChangeCardProps { change: NonNullable<ExtendedSimulationResult['assetChanges']>[0] }
+interface AssetChangeCardProps {
+  change: NonNullable<ExtendedSimulationResult['assetChanges']>[0]
+}
 
 function AssetChangeCard({ change }: AssetChangeCardProps) {
-  if (!change) return null;
+  if (!change) return null
 
-  const preValue = BigInt(change.value.pre);
-  const postValue = BigInt(change.value.post);
-  const diffValue = BigInt(change.value.diff);
-  const isPositive = diffValue > 0n;
-  const isNegative = diffValue < 0n;
+  const preValue = BigInt(change.value.pre)
+  const postValue = BigInt(change.value.post)
+  const diffValue = BigInt(change.value.diff)
+  const isPositive = diffValue > 0n
+  const isNegative = diffValue < 0n
 
   const formatBalance = (value: bigint) => {
-    const decimals = change.token.decimals || 18;
-    return formatWeiValue(value.toString(), decimals);
-  };
+    const decimals = change.token.decimals || 18
+    return formatWeiValue(value.toString(), decimals)
+  }
 
   return (
     <div className="bg-muted p-4 rounded border">
@@ -248,17 +339,21 @@ function AssetChangeCard({ change }: AssetChangeCardProps) {
             <Badge variant="outline">{change.token.symbol}</Badge>
           )}
         </div>
-        
+
         <div className="flex items-center gap-1 text-sm">
           {isPositive && <TrendingUpIcon className="h-4 w-4 text-green-500" />}
           {isNegative && <TrendingDownIcon className="h-4 w-4 text-red-500" />}
-          <span className={isPositive ? 'text-green-600' : isNegative ? 'text-red-600' : ''}>
+          <span
+            className={
+              isPositive ? 'text-green-600' : isNegative ? 'text-red-600' : ''
+            }
+          >
             {isPositive && '+'}
             {formatBalance(diffValue)}
           </span>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <span className="text-muted-foreground">Before:</span>
@@ -270,5 +365,5 @@ function AssetChangeCard({ change }: AssetChangeCardProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

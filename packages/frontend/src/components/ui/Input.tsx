@@ -1,17 +1,20 @@
-import { InputHTMLAttributes, forwardRef, useId } from 'react';
-import { clsx } from 'clsx';
+import { clsx } from 'clsx'
+import { forwardRef, type InputHTMLAttributes, useId } from 'react'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  error?: string;
-  label?: string;
-  description?: string;
+  error?: string
+  label?: string
+  description?: string
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type = 'text', error, label, description, id, ...props }, ref) => {
-    const generatedId = useId();
-    const inputId = id || generatedId;
-    
+  (
+    { className, type = 'text', error, label, description, id, ...props },
+    ref,
+  ) => {
+    const generatedId = useId()
+    const inputId = id || generatedId
+
     return (
       <div className="space-y-2">
         {label && (
@@ -22,7 +25,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
-        
+
         <input
           id={inputId}
           type={type}
@@ -35,24 +38,22 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {
               'border-destructive focus-visible:ring-destructive': error,
             },
-            className
+            className,
           )}
           ref={ref}
           {...props}
         />
-        
+
         {description && !error && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
-        
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
-    );
-  }
-);
+    )
+  },
+)
 
-Input.displayName = 'Input';
+Input.displayName = 'Input'
 
-export { Input };
+export { Input }
