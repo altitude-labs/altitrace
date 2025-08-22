@@ -88,7 +88,7 @@ export function SimulationResults({ result }: SimulationResultsProps) {
       {/* Call Results */}
       <div className="space-y-4">
         {result.calls?.map((call: CallResult, index: number) => (
-          <CallResultCard key={index} call={call} />
+          <CallResultCard key={`call-${call.callIndex}-${index}`} call={call} />
         ))}
       </div>
 
@@ -104,7 +104,10 @@ export function SimulationResults({ result }: SimulationResultsProps) {
           <CardContent>
             <div className="space-y-4">
               {result.assetChanges.map((change, index) => (
-                <AssetChangeCard key={index} change={change} />
+                <AssetChangeCard
+                  key={`asset-${change.token.address}-${index}`}
+                  change={change}
+                />
               ))}
             </div>
           </CardContent>
@@ -242,7 +245,10 @@ function CallResultCard({ call }: CallResultCardProps) {
                   log: NonNullable<CallResult['logs']>[number],
                   logIndex: number,
                 ) => (
-                  <div key={logIndex} className="bg-muted p-3 rounded text-sm">
+                  <div
+                    key={`log-${logIndex}-${log.address}`}
+                    className="bg-muted p-3 rounded text-sm"
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-mono text-xs">{log.address}</span>
                       {log.decoded && (
@@ -271,7 +277,10 @@ function CallResultCard({ call }: CallResultCardProps) {
                                 },
                                 paramIndex: number,
                               ) => (
-                                <div key={paramIndex} className="text-xs">
+                                <div
+                                  key={`param-${paramIndex}-${param.name}`}
+                                  className="text-xs"
+                                >
                                   <span className="font-medium">
                                     {param.name}:
                                   </span>{' '}
