@@ -88,9 +88,15 @@ impl TryFrom<TransactionCall> for AlloyTransactionRequest {
         }
 
         if let Some(gas_str) = call.gas {
-            let gas = u64::from_str_radix(gas_str.trim_start_matches("0x"), 16)
-                .map_err(|e| anyhow!("Invalid 'gas' '{}': {}", gas_str, e))?;
-            tx_request.gas = Some(gas);
+            if gas_str.starts_with("0x") {
+                let gas = u64::from_str_radix(gas_str.trim_start_matches("0x"), 16)
+                    .map_err(|e| anyhow!("Invalid 'gas' '{}': {}", gas_str, e))?;
+                tx_request.gas = Some(gas);
+            } else {
+                let gas = u64::from_str(&gas_str)
+                    .map_err(|e| anyhow!("Invalid 'gas' '{}': {}", gas_str, e))?;
+                tx_request.gas = Some(gas);
+            }
         }
 
         if let Some(access_list) = call.access_list {
@@ -224,11 +230,11 @@ impl From<(usize, SimCallResult)> for CallResult {
             .into_iter()
             .map(|log| EnhancedLog {
                 address: format!("0x{:x}", log.address()),
-                block_hash: None,   // Simulation logs don't have block hash
-                block_number: None, // Will be filled in by response processor
+                block_hash: None,
+                block_number: None,
                 data: format!("0x{}", hex::encode(&log.data().data)),
                 log_index: Some(format!("0x{:x}", log.log_index.unwrap_or_default())),
-                transaction_hash: None, // Simulation logs don't have tx hash
+                transaction_hash: None,
                 transaction_index: None,
                 topics: log
                     .topics()
@@ -249,7 +255,7 @@ impl From<(usize, SimCallResult)> for CallResult {
                 _ => "unknown-error".to_string(),
             },
             message: Some(sim_error.message),
-            contract_address: None, // Could be extracted from context if needed
+            contract_address: None,
         });
 
         Self { call_index: index as u32, status, return_data, gas_used, logs, error }

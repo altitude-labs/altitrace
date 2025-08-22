@@ -5,6 +5,7 @@
 //! the raw RPC provider with business logic, validation, and response processing.
 
 use crate::{
+    error::{RpcError, ServiceError},
     handlers::{
         simulation::{dto::*, response::*},
         trace::*,
@@ -24,7 +25,6 @@ use alloy_rpc_types_eth::{
     simulate::{SimulatePayload, SimulatedBlock},
     TransactionRequest as AlloyTransactionRequest,
 };
-use anyhow::{anyhow, Result};
 use std::{str::FromStr, time::Instant};
 use tracing::{debug, error, trace};
 use uuid::Uuid;
@@ -90,7 +90,7 @@ impl HyperEvmService {
         &self,
         params: &T,
         context_id: &str,
-    ) -> Result<BlockContext> {
+    ) -> Result<BlockContext, ServiceError> {
         match (params.block_number(), params.block_tag()) {
             (Some(block_number), None) => {
                 trace!(
@@ -124,7 +124,9 @@ impl HyperEvmService {
                     context_id = %context_id,
                     "Both block_number and block_tag specified - this should be caught by validation"
                 );
-                Err(anyhow!("Cannot specify both block_number and block_tag"))
+                Err(ServiceError::invalid_block_context(
+                    "Cannot specify both block_number and block_tag",
+                ))
             }
         }
     }
@@ -133,7 +135,7 @@ impl HyperEvmService {
     pub async fn simulate_transaction(
         &self,
         request: SimulationRequest,
-    ) -> Result<SimulationResult> {
+    ) -> Result<SimulationResult, ServiceError> {
         let simulation_id = Uuid::new_v4().to_string();
         let start_time = Instant::now();
 
@@ -158,7 +160,7 @@ impl HyperEvmService {
                     error = ?e,
                     "Failed to convert request to Alloy format"
                 );
-                anyhow!("Request conversion failed: {}", e)
+                ServiceError::simulation_failed(format!("Request conversion failed: {}", e))
             })?;
 
         trace!(
@@ -197,12 +199,23 @@ impl HyperEvmService {
                     "Simulation RPC call failed"
                 );
 
-                // Extract error message
-                let error_msg = e.to_string();
+                // Convert to RPC error and get sanitized message
+                let rpc_error = RpcError::from(e);
+                let sanitized_reason = match &rpc_error {
+                    RpcError::Timeout { .. } => "RPC request timeout, check if RPC is running and \
+                                                 accepting connections"
+                        .to_string(),
+                    RpcError::ConnectionFailed { .. } => "RPC connection failed, check if RPC is \
+                                                          running and accepting connections"
+                        .to_string(),
+                    RpcError::ExecutionReverted { reason, .. } => reason.clone(),
+                    _ => rpc_error.to_string(),
+                };
+
                 let call_error = CallError {
-                    reason: error_msg.clone(),
-                    error_type: "simulation-failed".to_string(),
-                    message: Some(error_msg),
+                    reason: sanitized_reason.clone(),
+                    error_type: rpc_error.error_code().to_lowercase().replace('_', "-"),
+                    message: Some(sanitized_reason),
                     contract_address: None,
                 };
 
@@ -237,7 +250,7 @@ impl HyperEvmService {
                 simulation_id = %simulation_id,
                 "No simulation results returned from RPC"
             );
-            return Err(anyhow!("No simulation results returned"));
+            return Err(ServiceError::simulation_failed("No simulation results returned"));
         }
 
         // Process the first (and expected only) block result
@@ -296,7 +309,7 @@ impl HyperEvmService {
     pub async fn simulate_batch(
         &self,
         requests: Vec<SimulationRequest>,
-    ) -> Result<Vec<SimulationResult>> {
+    ) -> Result<Vec<SimulationResult>, ServiceError> {
         let batch_id = generate_batch_id();
 
         debug!(
@@ -307,7 +320,9 @@ impl HyperEvmService {
         );
 
         if requests.is_empty() {
-            return Err(anyhow!("Batch simulation requires at least one request"));
+            return Err(ServiceError::simulation_failed(
+                "Batch simulation requires at least one request",
+            ));
         }
 
         // Process simulations concurrently, collecting both successes and failures
@@ -334,6 +349,9 @@ impl HyperEvmService {
                             "Unexpected error in batch simulation"
                         );
 
+                        // Sanitize the error message
+                        let sanitized_reason = "Simulation service error occurred".to_string();
+
                         SimulationResult {
                             simulation_id,
                             status: SimulationStatus::Failed,
@@ -345,9 +363,9 @@ impl HyperEvmService {
                                 gas_used: "0x0".to_string(),
                                 logs: vec![],
                                 error: Some(CallError {
-                                    reason: e.to_string(),
+                                    reason: sanitized_reason.clone(),
                                     error_type: "simulation-error".to_string(),
-                                    message: Some(e.to_string()),
+                                    message: Some(sanitized_reason),
                                     contract_address: None,
                                 }),
                             }],
@@ -383,7 +401,7 @@ impl HyperEvmService {
     pub async fn create_access_list(
         &self,
         request: &AccessListRequest,
-    ) -> Result<AccessListResponse> {
+    ) -> Result<AccessListResponse, ServiceError> {
         let start_time = Instant::now();
         let request_id = generate_access_list_id();
         let access_list_request = request.clone();
@@ -394,21 +412,24 @@ impl HyperEvmService {
             "Processing access list request"
         );
 
-        let block_id = BlockId::from_str(&access_list_request.block).unwrap_or_default();
+        let block_id = BlockId::from_str(&access_list_request.block).map_err(|_| {
+            ServiceError::invalid_block_context(format!(
+                "Invalid block identifier: {}",
+                access_list_request.block
+            ))
+        })?;
 
-        let tx_request = match access_list_request.try_into_tx_request() {
-            Ok(tx_request) => tx_request,
-            Err(e) => {
-                return Err(anyhow!("Invalid transaction call: {}", e));
-            }
-        };
+        let tx_request = access_list_request.try_into_tx_request().map_err(|e| {
+            ServiceError::access_list_failed(format!("Invalid transaction call: {}", e))
+        })?;
 
         let access_list_response = self
             .provider
             .inner
             .create_access_list(&tx_request)
             .block_id(block_id)
-            .await?;
+            .await
+            .map_err(|e| ServiceError::NodeCommunication(RpcError::from(e)))?;
 
         let execution_time = start_time.elapsed();
         debug!(
@@ -424,10 +445,14 @@ impl HyperEvmService {
     pub async fn trace_transaction(
         &self,
         request: &TraceTransactionRequest,
-    ) -> Result<TraceResponse> {
+    ) -> Result<TraceResponse, ServiceError> {
         let trace_id = generate_trace_id();
-        let tx_hash = B256::from_str(&request.transaction_hash)
-            .map_err(|e| anyhow!("Invalid transaction hash: {}", e))?;
+        let tx_hash = B256::from_str(&request.transaction_hash).map_err(|_| {
+            ServiceError::trace_failed(format!(
+                "Invalid transaction hash: {}",
+                request.transaction_hash
+            ))
+        })?;
 
         let start_time = Instant::now();
 
@@ -455,8 +480,10 @@ impl HyperEvmService {
             self.provider.inner.get_transaction_receipt(tx_hash)
         );
 
-        let trace_result = trace_result?;
-        let receipt = receipt_result?.ok_or_else(|| anyhow!("No receipt found for transaction"))?;
+        let trace_result = trace_result.map_err(ServiceError::NodeCommunication)?;
+        let receipt = receipt_result
+            .map_err(|e| ServiceError::NodeCommunication(RpcError::from(e)))?
+            .ok_or_else(|| ServiceError::trace_failed("No receipt found for transaction"))?;
         let receipt = TransactionReceiptInfo::from(receipt);
 
         let elapsed_time = start_time.elapsed();
@@ -474,8 +501,16 @@ impl HyperEvmService {
         Ok(trace_response)
     }
 
-    pub async fn trace_call(&self, request: &TraceCallRequest) -> Result<TraceResponse> {
-        let block_id = BlockId::from_str(&request.block)?;
+    pub async fn trace_call(
+        &self,
+        request: &TraceCallRequest,
+    ) -> Result<TraceResponse, ServiceError> {
+        let block_id = BlockId::from_str(&request.block).map_err(|_| {
+            ServiceError::invalid_block_context(format!(
+                "Invalid block identifier: {}",
+                request.block
+            ))
+        })?;
 
         let start_time = Instant::now();
         let trace_id = generate_trace_id();
@@ -498,7 +533,8 @@ impl HyperEvmService {
                         .await
                 }
             })
-            .await?;
+            .await
+            .map_err(ServiceError::NodeCommunication)?;
 
         let elapsed_time = start_time.elapsed();
 
@@ -518,7 +554,7 @@ impl HyperEvmService {
     pub async fn trace_call_many(
         &self,
         request: &TraceCallManyRequest,
-    ) -> Result<Vec<TraceResponse>> {
+    ) -> Result<Vec<TraceResponse>, ServiceError> {
         let start_time = Instant::now();
         let trace_id = generate_trace_id();
 
@@ -540,7 +576,8 @@ impl HyperEvmService {
                         .await
                 }
             })
-            .await?;
+            .await
+            .map_err(ServiceError::NodeCommunication)?;
         let elapsed_time = start_time.elapsed();
 
         debug!(
