@@ -1005,6 +1005,7 @@ dependencies = [
  "actix-web",
  "actix-web-actors",
  "alloy-consensus",
+ "alloy-eip2930",
  "alloy-primitives",
  "alloy-provider",
  "alloy-rpc-client",

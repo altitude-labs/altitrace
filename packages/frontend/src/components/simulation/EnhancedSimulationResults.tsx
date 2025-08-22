@@ -7,6 +7,7 @@ import {
   CoinsIcon,
   FuelIcon,
   HashIcon,
+  KeyIcon,
   ListIcon,
   TreePineIcon,
   TrendingDownIcon,
@@ -32,6 +33,7 @@ import {
   TabsTrigger,
 } from '@/components/ui'
 import type { EnhancedSimulationResult } from '@/utils/trace-integration'
+import { AccessListView } from './AccessListView'
 import { EnhancedEventDisplay } from './EnhancedEventDisplay'
 import { EnhancedGasAnalysis } from './EnhancedGasAnalysis'
 
@@ -70,6 +72,15 @@ export function EnhancedSimulationResults({
         ? result.traceData?.getCallCount?.() || 0
         : null,
       disabled: !result.hasCallHierarchy,
+    },
+    {
+      id: 'accesslist',
+      label: result.hasGasComparison ? 'Gas Optimization' : 'Access List',
+      icon: KeyIcon,
+      count: result.hasAccessList
+        ? result.accessListData?.getAccountCount() || 0
+        : null,
+      disabled: !result.hasAccessList && !result.hasGasComparison,
     },
     {
       id: 'events',
@@ -112,7 +123,7 @@ export function EnhancedSimulationResults({
 
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               {tabConfig.map((tab) => (
                 <TabsTrigger
                   key={tab.id}
@@ -145,6 +156,17 @@ export function EnhancedSimulationResults({
                   <CallTraceTree traceData={result.traceData} />
                 ) : (
                   <CallTraceTreeFallback message="Call trace data is not available. This feature requires the trace API." />
+                )}
+              </TabsContent>
+
+              <TabsContent value="accesslist">
+                {result.hasAccessList && result.accessListData ? (
+                  <AccessListView
+                    accessListData={result.accessListData}
+                    gasComparison={result.gasComparison}
+                  />
+                ) : (
+                  <AccessListFallback />
                 )}
               </TabsContent>
 
@@ -681,6 +703,45 @@ function AssetChangesBreakdown({
           </CardContent>
         </Card>
       ))}
+    </div>
+  )
+}
+
+function AccessListFallback() {
+  return (
+    <div className="text-center py-12 text-muted-foreground space-y-4">
+      <KeyIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium text-foreground">
+          Gas Optimization Not Available
+        </h3>
+        <p className="text-sm max-w-md mx-auto">
+          Access list generation failed or is not supported for this
+          transaction. We couldn't perform gas optimization analysis to compare
+          simulations with and without access lists.
+        </p>
+      </div>
+      <div className="bg-muted/50 border rounded-lg max-w-lg mx-auto p-4 text-xs">
+        <p className="font-medium mb-2 text-foreground">
+          💡 About Gas Optimization with Access Lists (
+          <a
+            href="https://eips.ethereum.org/EIPS/eip-2930"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
+            EIP-2930
+          </a>
+          )
+        </p>
+        <ul className="text-left space-y-1 text-muted-foreground">
+          <li>• Pre-warm accounts and storage slots to reduce gas costs</li>
+          <li>• Compare gas usage with and without access lists</li>
+          <li>• Get recommendations on whether to use access lists</li>
+          <li>• See detailed gas savings analysis</li>
+          <li>• Particularly effective for complex contract interactions</li>
+        </ul>
+      </div>
     </div>
   )
 }
