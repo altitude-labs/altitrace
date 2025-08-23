@@ -5,11 +5,19 @@ export function createAltitraceClient(): InstanceType<typeof AltitraceClient> {
   const isProduction = process.env.NODE_ENV === 'production'
   
   if (isProduction) {
-    return new AltitraceClient({
-      baseUrl: '/api/altitrace',
-      debug: false,
-      timeout: 30000,
-    })
+    if (apiUrl) {
+      return new AltitraceClient({
+        baseUrl: `${apiUrl}/v1`,
+        debug: false,
+        timeout: 30000,
+      })
+    } else {
+      return new AltitraceClient({
+        baseUrl: '/api/altitrace',
+        debug: false,
+        timeout: 30000,
+      })
+    }
   }
   
   if (apiUrl) {
