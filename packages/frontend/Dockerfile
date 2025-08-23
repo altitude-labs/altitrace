@@ -31,9 +31,11 @@ COPY --from=sdk-builder /app/packages/sdk/package.json ./packages/sdk/package.js
 COPY packages/frontend ./packages/frontend
 WORKDIR /app/packages/frontend
 
-# Set environment variable for build time
+# Set environment variables for build time
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG INTERNAL_API_URL
+ENV INTERNAL_API_URL=$INTERNAL_API_URL
 
 RUN npm run build
 

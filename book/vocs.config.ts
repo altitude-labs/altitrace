@@ -33,7 +33,7 @@ export default defineConfig({
     {
       icon: 'telegram',
       link: 'https://t.me/reachaltitude',
-    }
+    },
   ],
   sponsors: [
     {

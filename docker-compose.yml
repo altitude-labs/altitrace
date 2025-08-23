@@ -24,6 +24,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - INTERNAL_API_URL=http://172.31.20.73:8080
     restart: unless-stopped
 
 volumes:
