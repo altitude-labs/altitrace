@@ -1,7 +1,11 @@
 import { BookOpenIcon, CodeIcon, PlayIcon } from 'lucide-react'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui'
+import { generateHomeMetadata } from '@/utils/metadata'
+
+export const metadata: Metadata = generateHomeMetadata()
 
 export default function Home() {
   return (
@@ -10,7 +14,7 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center space-y-8 mb-16">
           <div className="space-y-4">
-            <h1 className="text-5xl font-bold text-foreground">AltiTrace</h1>
+            <h1 className="text-5xl font-bold text-foreground">Altitrace</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Simulate, debug, and analyze EVM transactions within the HyperEVM
               network. Test your transactions before they hit the chain with
@@ -86,7 +90,7 @@ export default function Home() {
         <div className="bg-muted rounded-lg p-8 text-center">
           <h2 className="text-2xl font-semibold mb-4">Built for Developers</h2>
           <p className="text-muted-foreground mb-6 max-w-3xl mx-auto">
-            AltiTrace provides a comprehensive toolchain for HyperEVM
+            Altitrace provides a comprehensive toolchain for HyperEVM
             development with ABI import, function builders, and detailed error
             analysis to streamline your workflow.
           </p>
