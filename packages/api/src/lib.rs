@@ -5,8 +5,8 @@ pub mod services;
 pub mod types;
 pub mod utils;
 pub mod validation;
-#[allow(dead_code)]
 pub mod version;
+
 use alloy_transport_http::reqwest::Url;
 use chrono::{DateTime, Utc};
 pub use services::{service::HyperEvmService, RedisCache, RpcProvider};
@@ -35,6 +35,8 @@ use futures::Future;
 use middlewares::{auth::AuthMiddlewareFactory, cors::CorsMiddlewareFactory};
 use tracing_log::{init_tracing, LogFileConfig, LogFormat, LogsArgs};
 
+use crate::version::{LONG_VERSION, SHORT_VERSION};
+
 pub type CacheResult<T> = Result<T, CacheError>;
 
 /// The start time of the application, used for uptime calculations.
@@ -42,7 +44,7 @@ pub type CacheResult<T> = Result<T, CacheError>;
 pub static START_TIME: LazyLock<SystemTime> = LazyLock::new(SystemTime::now);
 
 #[derive(Parser)]
-#[command(author, about, long_about = None)]
+#[command(author, version = SHORT_VERSION, long_version = LONG_VERSION, about, long_about = None)]
 struct Args {
     #[command(flatten)]
     log_args: LogsArgs,
