@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/simulate/access-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get the access list for a transaction
+         * @description Get the access list for a transaction
+         */
+        post: operations["create_access_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/simulate/batch": {
         parameters: {
             query?: never;
@@ -71,13 +91,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Get a transaction trace from a call request
          * @description Get a transaction trace from a call request.
          */
-        get: operations["trace_call"];
+        post: operations["trace_call"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trace/call-many": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Trace multiple calls with state context
+         * @description Execute debug_trace_call_many to trace multiple calls sequentially with cumulative state changes.
+         */
+        post: operations["trace_call_many"];
         delete?: never;
         options?: never;
         head?: never;
@@ -91,13 +131,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Traces a single transaction execution
          * @description Traces a single transaction execution.
          */
-        get: operations["trace_transaction"];
-        put?: never;
-        post?: never;
+        post: operations["trace_transaction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -108,6 +148,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccessList: components["schemas"]["AccessListItem"][];
+        AccessListItem: {
+            /** @description Account address that would be loaded at the start of execution. */
+            address: string;
+            /** @description Storage slots that would be accessed by the account. */
+            storageKeys: string[];
+        };
+        /** @description Access list request. This will return the different account and slots that are accessed by the
+         *     transaction. */
+        AccessListRequest: {
+            /**
+             * @description The block number or tag.
+             * @example 10000000
+             */
+            block?: string;
+            /** @description The transaction parameters to simulate. */
+            params: components["schemas"]["TransactionCall"];
+        };
+        /** @description Access list response. */
+        AccessListResponse: {
+            /** @description Access list. */
+            accessList: components["schemas"]["AccessList"];
+            /** @description Error if the transaction failed. */
+            error?: string | null;
+            /**
+             * @description Gas used by the transaction.
+             * @example 1000000
+             */
+            gasUsed: string;
+        };
         /** @description Represents the state of an account. */
         AccountState: {
             /**
@@ -149,6 +219,33 @@ export interface components {
             suggestion?: string | null;
             /** @description Stack trace for debugging (only in debug builds). */
             trace?: string | null;
+        };
+        /** @description Standard API response wrapper for all simulation endpoints.
+         *
+         *     This provides a consistent response format across the API,
+         *     including success/failure indication, data payload, error information,
+         *     and request metadata for tracking and debugging. */
+        ApiResponse_AccessListResponse: {
+            /** @description Access list response. */
+            data?: {
+                /** @description Access list. */
+                accessList: components["schemas"]["AccessList"];
+                /** @description Error if the transaction failed. */
+                error?: string | null;
+                /**
+                 * @description Gas used by the transaction.
+                 * @example 1000000
+                 */
+                gasUsed: string;
+            };
+            error?: null | components["schemas"]["ApiError"];
+            /** @description Request metadata and timing information. */
+            metadata: components["schemas"]["ResponseMetadata"];
+            /**
+             * @description Indicates whether the request was processed successfully.
+             * @example true
+             */
+            success: boolean;
         };
         /** @description Standard API response wrapper for all simulation endpoints.
          *
@@ -295,6 +392,28 @@ export interface components {
              */
             success: boolean;
         };
+        /** @description Standard API response wrapper for all simulation endpoints.
+         *
+         *     This provides a consistent response format across the API,
+         *     including success/failure indication, data payload, error information,
+         *     and request metadata for tracking and debugging. */
+        ApiResponse_Vec_TracerResponse: {
+            data?: {
+                "4byteTracer"?: null | components["schemas"]["FourByteResponse"];
+                callTracer?: null | components["schemas"]["CallTraceResponse"];
+                prestateTracer?: null | components["schemas"]["PrestateTraceResponse"];
+                receipt?: null | components["schemas"]["TransactionReceiptInfo"];
+                structLogger?: null | components["schemas"]["StructLogResponse"];
+            }[];
+            error?: null | components["schemas"]["ApiError"];
+            /** @description Request metadata and timing information. */
+            metadata: components["schemas"]["ResponseMetadata"];
+            /**
+             * @description Indicates whether the request was processed successfully.
+             * @example true
+             */
+            success: boolean;
+        };
         /** @description Token balance change information. */
         AssetChange: {
             /** @description Token contract information. */
@@ -379,6 +498,11 @@ export interface components {
          * @enum {string}
          */
         BlockTag: "latest" | "earliest" | "safe" | "finalized";
+        Bundle: {
+            blockOverrides?: null | components["schemas"]["BlockOverrides"];
+            /** @description The transactions to execute in the bundle. */
+            transactions: components["schemas"]["TransactionCall"][];
+        };
         CacheHealth: {
             /** Format: int64 */
             latency_ms: number;
@@ -728,6 +852,10 @@ export interface components {
             /**
              * @description Enable tracking of ERC-20/ERC-721 token balance changes.
              *     Requires `account` parameter to be set.
+             *
+             *     NOTE: This is currently not supported
+             *
+             *     TODO: Viem logic <https://github.com/wevm/viem/blob/100156844c85989bb8c26ca587da7a62a282136b/src/actions/public/simulateCalls.ts#L166>
              * @example false
              */
             traceAssetChanges?: boolean;
@@ -790,6 +918,15 @@ export interface components {
          * @enum {string}
          */
         SimulationStatus: "success" | "reverted" | "failed";
+        StateContext: {
+            /**
+             * @description The block number or tag.
+             * @example 10000000
+             */
+            block?: string;
+            /** @description The transaction index in the block. */
+            txIndex?: components["schemas"]["TxIndex"];
+        };
         /** @description State override for simulation and tracing. */
         StateOverride: {
             /**
@@ -972,6 +1109,15 @@ export interface components {
              */
             symbol?: string | null;
         };
+        /** @description Request to trace many calls. */
+        TraceCallManyRequest: {
+            /** @description The bundle to trace. */
+            bundles: components["schemas"]["Bundle"][];
+            /** @description State context to trace against. */
+            stateContext?: components["schemas"]["StateContext"];
+            /** @description Tracer configuration. */
+            tracerConfig?: components["schemas"]["TraceConfig"];
+        };
         /** @description Request to trace a call simulation. */
         TraceCallRequest: {
             /**
@@ -986,7 +1132,7 @@ export interface components {
             stateOverrides?: {
                 [key: string]: components["schemas"]["StateOverride"];
             } | null;
-            /** @description Trace configuration options. */
+            /** @description Trace configuration options. This will used the `callTracer` by default. */
             tracerConfig?: components["schemas"]["TraceConfig"];
         };
         /**
@@ -1038,17 +1184,27 @@ export interface components {
             structLogger?: null | components["schemas"]["StructLogResponse"];
         };
         Tracers: {
-            /** @description The 4byteTracer collects the function selectors of every function executed in the lifetime
+            /**
+             * @description The 4byteTracer collects the function selectors of every function executed in the lifetime
              *     of a transaction, along with the size of the supplied call data. The result is a
              *     [`FourByteFrame`](alloy_rpc_types_trace::geth::four_byte::FourByteFrame) where the keys are
-             *     `SELECTOR-CALLDATASIZE` and the values are number of occurrences of this key. */
-            "4byteTracer"?: boolean;
-            callTracer?: null | components["schemas"]["CallTracerConfig"];
-            prestateTracer?: null | components["schemas"]["PrestateTracerConfig"];
-            structLogger?: null | components["schemas"]["StructLoggerConfig"];
+             *     `SELECTOR-CALLDATASIZE` and the values are number of occurrences of this key.
+             * @default false
+             */
+            "4byteTracer": boolean;
+            /** @default {
+             *       "onlyTopCall": false,
+             *       "withLogs": true
+             *     } */
+            callTracer: null | components["schemas"]["CallTracerConfig"];
+            /** @default null */
+            prestateTracer: null | components["schemas"]["PrestateTracerConfig"];
+            /** @default null */
+            structLogger: null | components["schemas"]["StructLoggerConfig"];
         };
         /** @description Represents a single transaction call within a simulation. */
         TransactionCall: {
+            accessList?: null | components["schemas"]["AccessList"];
             /**
              * @description The transaction data (calldata).
              *     For simple ETH transfers, this can be empty or "0x".
@@ -1134,6 +1290,10 @@ export interface components {
              */
             transactionType: number;
         };
+        TxIndex: "-1" | {
+            /** @description Transaction given index. */
+            Index: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -1163,6 +1323,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_SimulationResult"];
+                };
+            };
+            /** @description Invalid request parameters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+        };
+    };
+    create_access_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessListRequest"];
+            };
+        };
+        responses: {
+            /** @description Access list request completed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_AccessListResponse"];
                 };
             };
             /** @description Invalid request parameters */
@@ -1276,6 +1478,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_TracerResponse"];
+                };
+            };
+            /** @description Invalid request parameters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+        };
+    };
+    trace_call_many: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TraceCallManyRequest"];
+            };
+        };
+        responses: {
+            /** @description Trace completed (success or failure) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Vec_TracerResponse"];
                 };
             };
             /** @description Invalid request parameters */

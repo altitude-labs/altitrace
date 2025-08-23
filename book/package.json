@@ -1,0 +1,24 @@
+{
+  "name": "vocs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vocs dev",
+    "build": "vocs build && bun generate-redirects.ts",
+    "preview": "vocs preview",
+    "check-links": "bun check-links.ts",
+    "lint": "biome check . --write --unsafe && biome format . --write",
+    "generate-redirects": "bun generate-redirects.ts"
+  },
+  "dependencies": {
+    "react": "latest",
+    "react-dom": "latest",
+    "vocs": "latest"
+  },
+  "devDependencies": {
+    "@altitrace/sdk": "workspace:sdk",
+    "@types/react": "latest",
+    "typescript": "latest"
+  }
+}

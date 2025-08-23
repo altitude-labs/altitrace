@@ -1,11 +1,11 @@
 use crate::{
     define_routes,
+    error::{ApiError, ApiResult},
     handlers::{
-        common::{ApiError, ApiResponse, Handler},
+        common::{ApiResponse, Handler},
         simulation::{dto::*, response::*},
     },
     services::hyperevm::service::HyperEvmService,
-    ApiResult,
 };
 use actix_web::{web, HttpResponse};
 use std::time::Instant;
@@ -17,14 +17,18 @@ use uuid::Uuid;
 #[openapi(
     paths(
         simulate_transaction,
-        simulate_batch_transaction
+        simulate_batch_transaction,
+        create_access_list
     ),
     components(
         schemas(
             SimulationRequest,
             SimulationResult,
+            AccessListRequest,
             ApiResponse<SimulationResult>,
             ApiResponse<Vec<SimulationResult>>,
+            AccessListResponse,
+            ApiResponse<AccessListResponse>,
         ),
     ),
     tags(
@@ -78,6 +82,7 @@ async fn simulate_transaction(
         target: "altitrace::api::simulation",
         request_id = %request_id,
         calls_count = simulation_request.call_count(),
+        ?simulation_request,
         "Processing simulation request"
     );
 
@@ -108,11 +113,7 @@ async fn simulate_transaction(
                 "Simulation failed"
             );
 
-            let api_error = ApiError::new("SIMULATION_FAILED", e.to_string()).with_suggestion(
-                "Check transaction parameters and ensure the HyperEVM node is accessible",
-            );
-
-            Ok(ApiResponse::<SimulationResult>::error(api_error, request_id).into())
+            Err(ApiError::from(e))
         }
     }
 }
@@ -142,6 +143,7 @@ async fn simulate_batch_transaction(
         target: "altitrace::api::simulation",
         request_id = %request_id,
         batch_size = simulation_request.len(),
+        ?simulation_request,
         "Processing batch simulation request"
     );
 
@@ -167,11 +169,66 @@ async fn simulate_batch_transaction(
                 "Batch simulation failed"
             );
 
-            let api_error = ApiError::new("SIMULATION_FAILED", e.to_string()).with_suggestion(
-                "Check transaction parameters and ensure the HyperEVM node is accessible",
+            Err(ApiError::from(e))
+        }
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/simulate/access-list",
+    tag = "simulation",
+    summary = "Get the access list for a transaction",
+    description = "Get the access list for a transaction",
+    request_body = AccessListRequest,
+    responses(
+        (status = 200, description = "Access list request completed successfully", body = ApiResponse<AccessListResponse>),
+        (status = 400, description = "Invalid request parameters", body = ApiResponse<String>),
+        (status = 500, description = "Internal server error", body = ApiResponse<String>)
+    )
+)]
+async fn create_access_list(
+    handler: web::Data<SimulationHandler>,
+    request: web::Json<AccessListRequest>,
+) -> ApiResult<HttpResponse> {
+    let start_time = Instant::now();
+    let request_id = Uuid::new_v4().to_string();
+    let access_list_request = request.into_inner();
+
+    debug!(
+        target: "altitrace::api::simulation",
+        request_id = %request_id,
+        ?access_list_request,
+        "Processing access list request"
+    );
+
+    match handler
+        .service
+        .create_access_list(&access_list_request)
+        .await
+    {
+        Ok(result) => {
+            let execution_time = start_time.elapsed().as_millis() as u64;
+            debug!(
+                target: "altitrace::api::simulation",
+                request_id = %request_id,
+                ?execution_time,
+                "Access list request completed successfully"
             );
 
-            Ok(ApiResponse::<Vec<SimulationResult>>::error(api_error, request_id).into())
+            Ok(ApiResponse::success_with_timing(result, request_id, execution_time).into())
+        }
+        Err(e) => {
+            let execution_time = start_time.elapsed().as_millis() as u64;
+            debug!(
+                target: "altitrace::api::simulation",
+                request_id = %request_id,
+                execution_time_ms = execution_time,
+                error = ?e,
+                "Access list request failed"
+            );
+
+            Err(ApiError::from(e))
         }
     }
 }
@@ -188,5 +245,10 @@ define_routes!(
         method: post,
         handler: simulate_batch_transaction,
         params: { request: web::Json<Vec<SimulationRequest>> }
+    },
+    "/access-list" => {
+        method: post,
+        handler: create_access_list,
+        params: { request: web::Json<AccessListRequest> }
     }
 );

@@ -1,4 +1,16 @@
 // Re-export specific types to avoid barrel file issues
+export type {
+  AccessList,
+  AccessListComparisonBuilder,
+  AccessListComparisonResult,
+  AccessListExecutionOptions,
+  AccessListItem,
+  AccessListRequest,
+  AccessListRequestBuilder,
+  AccessListResponse,
+  AccessListSummary,
+  ExtendedAccessListResponse,
+} from './access-list'
 export type { BlockOverrides, BlockTag } from './block'
 export type {
   AltitraceClientConfig,
