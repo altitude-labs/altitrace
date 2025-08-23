@@ -47,11 +47,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy node_modules and built application
+
 COPY --from=frontend-builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=frontend-builder --chown=nextjs:nodejs /app/packages/frontend/.next ./.next
 COPY --from=frontend-builder --chown=nextjs:nodejs /app/packages/frontend/next.config.js ./next.config.js
 COPY --from=frontend-builder --chown=nextjs:nodejs /app/packages/frontend/package.json ./package.json
+
+COPY --from=frontend-builder --chown=nextjs:nodejs /app/packages/frontend/public ./public
 
 # Copy SDK dist (needed at runtime)
 COPY --from=sdk-builder --chown=nextjs:nodejs /app/packages/sdk/dist ../sdk/dist
