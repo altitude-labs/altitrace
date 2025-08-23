@@ -38,7 +38,7 @@ export default function ContractImportPage() {
         </div>
 
         <div className="mt-4">
-          <h1 className="text-2xl font-bold">Import Contract</h1>
+          <h1 className="text-lg sm:text-xl font-bold">Import Contract</h1>
           <p className="text-muted-foreground mt-1">
             Add contracts to your library from explorer APIs or manual ABI input
           </p>

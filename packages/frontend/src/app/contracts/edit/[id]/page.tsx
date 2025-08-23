@@ -258,7 +258,7 @@ export default function ContractEditPage({
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2">
                 <SaveIcon className="h-8 w-8" />
                 Edit Contract Source Code
               </h1>
