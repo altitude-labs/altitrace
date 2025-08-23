@@ -27,6 +27,11 @@ COPY --from=sdk-builder /app/packages/sdk/dist ./packages/sdk/dist
 COPY --from=sdk-builder /app/packages/sdk/package.json ./packages/sdk/package.json
 COPY packages/frontend ./packages/frontend
 WORKDIR /app/packages/frontend
+
+# Set environment variable for build time
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 RUN npm run build
 
 # Production image
