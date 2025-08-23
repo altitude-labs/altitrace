@@ -1,6 +1,19 @@
 'use client'
 
 import { AltitraceClient } from '@altitrace/sdk'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'New Simulation - AltiTrace',
+  description:
+    'Create a new HyperEVM transaction simulation. Import your ABI, configure parameters and test your smart contracts.',
+  openGraph: {
+    title: 'New Simulation - AltiTrace',
+    description: 'Create a new HyperEVM transaction simulation.',
+    images: ['/banner.png'],
+  },
+}
+
 import type {
   HexString as Hex,
   SimulationRequest as SdkSimulationRequest,
