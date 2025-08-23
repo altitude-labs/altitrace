@@ -18,6 +18,12 @@ import {
   type EnhancedSimulationResult,
   executeEnhancedSimulation,
 } from '@/utils/trace-integration'
+import {
+  executeBundleSimulation,
+  enhanceBundleSimulationResult,
+  type EnhancedBundleSimulationResult,
+} from '@/utils/bundle-execution'
+import { BundleSimulationResults } from '@/components/simulation/BundleSimulationResults'
 
 interface ResultsViewerProps {
   params: Promise<{
@@ -33,6 +39,8 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
   const [simulation, setSimulation] = useState<StoredSimulation | null>(null)
   const [simulationResult, setSimulationResult] =
     useState<EnhancedSimulationResult | null>(null)
+  const [bundleResult, setBundleResult] =
+    useState<EnhancedBundleSimulationResult | null>(null)
 
   const [loading, setLoading] = useState(true)
   const [executing, setExecuting] = useState(false)
@@ -62,30 +70,63 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         setSimulation(storedSimulation)
         setExecuting(true)
 
-        // Execute simulation with trace data on results page
-        console.log('🚀 [Results Page] Executing simulation...')
-        console.log('   Request params:', storedSimulation.request.params)
-        console.log('   Options:', storedSimulation.request.options)
-
         const client = createAltitraceClient()
 
-        const result = await executeEnhancedSimulation(
-          client,
-          storedSimulation.request,
-        )
+        // Check if this is a bundle simulation or single simulation
+        if (storedSimulation.request.type === 'bundle') {
+          console.log('🔗 [Results Page] Executing bundle simulation...')
+          console.log(
+            '   Bundle transactions:',
+            storedSimulation.request.bundleRequest.transactions.length,
+          )
 
-        console.log('📬 [Results Page] Simulation completed:')
-        console.log('   Success:', result.isSuccess())
-        console.log('   Status:', result.status)
-        if (result.isSuccess()) {
-          console.log('   Gas used:', result.getTotalGasUsed())
-          console.log('✅ [Results Page] Displaying successful results')
+          const bundleResult = await executeBundleSimulation(
+            client,
+            storedSimulation.request.bundleRequest,
+          )
+
+          const enhancedBundleResult =
+            enhanceBundleSimulationResult(bundleResult)
+
+          console.log('📬 [Bundle Results] Bundle simulation completed:')
+          console.log('   Bundle status:', enhancedBundleResult.bundleStatus)
+          console.log(
+            '   Success count:',
+            enhancedBundleResult.getSuccessCount(),
+          )
+          console.log(
+            '   Failure count:',
+            enhancedBundleResult.getFailureCount(),
+          )
+          console.log(
+            '   Total gas used:',
+            enhancedBundleResult.getTotalGasUsed(),
+          )
+
+          setBundleResult(enhancedBundleResult)
         } else {
-          console.log('   Errors:', result.getErrors())
-          console.log('❌ [Results Page] Displaying error results')
-        }
+          console.log('🚀 [Results Page] Executing single simulation...')
+          console.log('   Request params:', storedSimulation.request.params)
+          console.log('   Options:', storedSimulation.request.options)
 
-        setSimulationResult(result)
+          const result = await executeEnhancedSimulation(
+            client,
+            storedSimulation.request,
+          )
+
+          console.log('📬 [Results Page] Simulation completed:')
+          console.log('   Success:', result.isSuccess())
+          console.log('   Status:', result.status)
+          if (result.isSuccess()) {
+            console.log('   Gas used:', result.getTotalGasUsed())
+            console.log('✅ [Results Page] Displaying successful results')
+          } else {
+            console.log('   Errors:', result.getErrors())
+            console.log('❌ [Results Page] Displaying error results')
+          }
+
+          setSimulationResult(result)
+        }
 
         // Auto-switch to trace tab if we have call hierarchy
       } catch (err) {
@@ -171,7 +212,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
     )
   }
 
-  if (error || !simulation || !simulationResult) {
+  if (error || !simulation || (!simulationResult && !bundleResult)) {
     return (
       <div className="p-6">
         <div className="max-w-7xl mx-auto space-y-8">
@@ -237,12 +278,26 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 </div>
                 <div
                   className={`px-2 py-1 rounded-full text-xs ${
-                    simulationResult.isSuccess()
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
+                    bundleResult
+                      ? bundleResult.isSuccess()
+                        ? 'bg-green-100 text-green-800'
+                        : bundleResult.isPartialSuccess()
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      : simulationResult?.isSuccess()
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
                   }`}
                 >
-                  {simulationResult.isSuccess() ? 'Success' : 'Failed'}
+                  {bundleResult
+                    ? bundleResult.isSuccess()
+                      ? 'Bundle Success'
+                      : bundleResult.isPartialSuccess()
+                        ? 'Partial Success'
+                        : 'Bundle Failed'
+                    : simulationResult?.isSuccess()
+                      ? 'Success'
+                      : 'Failed'}
                 </div>
               </div>
             </div>
@@ -264,8 +319,12 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
           </div>
         </div>
 
-        {/* Enhanced Simulation Results */}
-        <EnhancedSimulationResults result={simulationResult} />
+        {/* Results Display - Conditional based on simulation type */}
+        {bundleResult ? (
+          <BundleSimulationResults result={bundleResult} />
+        ) : simulationResult ? (
+          <EnhancedSimulationResults result={simulationResult} />
+        ) : null}
       </div>
     </div>
   )

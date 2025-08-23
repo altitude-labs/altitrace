@@ -35,7 +35,7 @@ export function AccessListView({
   gasComparison,
 }: AccessListViewProps) {
   const [isCopied, setIsCopied] = useState(false)
-  
+
   const displayData: AccessListDisplayData = {
     accountCount: accessListData.getAccountCount(),
     totalStorageSlots: accessListData.getStorageSlotCount(),
@@ -214,15 +214,18 @@ export function AccessListView({
                 type="button"
                 onClick={async () => {
                   try {
-                    const accessListJson = JSON.stringify(accessListData.accessList, null, 2)
+                    const accessListJson = JSON.stringify(
+                      accessListData.accessList,
+                      null,
+                      2,
+                    )
                     await navigator.clipboard.writeText(accessListJson)
                     setIsCopied(true)
                     setTimeout(() => setIsCopied(false), 2000)
-                  } catch {
-                  }
+                  } catch {}
                 }}
                 className="p-2 hover:bg-muted rounded transition-colors"
-                title={isCopied ? "Copied!" : "Copy to clipboard"}
+                title={isCopied ? 'Copied!' : 'Copy to clipboard'}
               >
                 {isCopied ? (
                   <CheckCircleIcon className="h-4 w-4 text-green-600" />

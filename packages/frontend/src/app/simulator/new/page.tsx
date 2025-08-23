@@ -4,21 +4,36 @@ import type {
   HexString as Hex,
   SimulationRequest as SdkSimulationRequest,
 } from '@altitrace/sdk/types'
-import { ArrowLeftIcon } from 'lucide-react'
+import { ArrowLeftIcon, Layers3Icon, SendIcon } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { ContractManager } from '@/components/forms/ContractManager'
 import { TransactionForm } from '@/components/forms/TransactionForm'
-// Removed unused imports
-import { Alert, AlertDescription, Button } from '@/components/ui'
+import { BundleTransactionForm } from '@/components/forms/BundleTransactionForm'
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui'
 import type { ParsedAbi } from '@/types/api'
+import type { BundleSimulationRequest, BundleFormData } from '@/types/bundle'
 import {
   createContractStateOverride,
   createContractStateOverrideForSimulation,
   requiresStateOverride,
 } from '@/utils/contract-state-override'
 import type { StoredContract } from '@/utils/contract-storage'
-import { getRequest, store } from '@/utils/storage'
+import {
+  getRequest,
+  store,
+  retrieveById,
+  type SingleSimulationRequest,
+  type BundleSimulationRequestStorage,
+} from '@/utils/storage'
 
 const generateSimulationId = () => crypto.randomUUID()
 
@@ -45,7 +60,7 @@ function NewSimulationPageContent() {
     parameters: Record<string, string>
   } | null>(null)
 
-  // Form state for pre-filling
+  // Form state for pre-filling (single simulations)
   const [formData, setFormData] = useState<{
     to: string
     from: string
@@ -66,47 +81,124 @@ function NewSimulationPageContent() {
     validation: true,
   })
 
+  // Bundle form state for pre-filling (bundle simulations)
+  const [bundleFormData, setBundleFormData] =
+    useState<Partial<BundleFormData> | null>(null)
+
   // Simulation State
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [simulationMode, setSimulationMode] = useState<'single' | 'bundle'>(
+    'single',
+  )
 
   // Load pre-fill data from URL params (re-run functionality)
   useEffect(() => {
     const rerunId = searchParams.get('rerun')
     if (rerunId && !isPreFilled) {
-      const storedRequest = getRequest(rerunId)
-      if (storedRequest) {
-        // Pre-fill form with stored request data
-        console.log('Pre-filling form with:', storedRequest)
+      const storedSimulation = retrieveById(rerunId)
+      if (storedSimulation) {
+        // Pre-fill form with stored simulation data
+        console.log('Pre-filling form with:', storedSimulation)
 
-        // Extract data from stored request
-        const call = storedRequest.params.calls[0]
-        if (call) {
-          // Set basic transaction data
-          setFormData((prev) => ({
-            ...prev,
-            to: call.to || '',
-            from: call.from || '',
-            data: call.data || '',
-            value: call.value || '0x0',
-            gas: call.gas || '',
-          }))
+        // Handle different stored request formats
+        if (
+          storedSimulation.request &&
+          'type' in storedSimulation.request &&
+          storedSimulation.request.type === 'single'
+        ) {
+          // Extract data from single simulation request
+          const singleRequest =
+            storedSimulation.request as SingleSimulationRequest
+          const call = singleRequest.params.calls[0]
+          if (call) {
+            // Set basic transaction data
+            setFormData((prev) => ({
+              ...prev,
+              to: call.to || '',
+              from: call.from || '',
+              data: call.data || '',
+              value: call.value || '0x0',
+              gas: call.gas || '',
+            }))
 
-          // Set simulation options
-          setFormData((prev) => ({
-            ...prev,
-            validation: storedRequest.params.validation ?? true,
-            blockTag:
-              (storedRequest.params.blockTag as
-                | 'latest'
-                | 'earliest'
-                | 'safe'
-                | 'finalized') || 'latest',
-            blockNumber: storedRequest.params.blockNumber || '',
-          }))
+            // Set simulation options
+            setFormData((prev) => ({
+              ...prev,
+              validation: singleRequest.params.validation ?? true,
+              blockTag:
+                (singleRequest.params.blockTag as
+                  | 'latest'
+                  | 'earliest'
+                  | 'safe'
+                  | 'finalized') || 'latest',
+              blockNumber: singleRequest.params.blockNumber || '',
+            }))
+          }
+        } else if (
+          storedSimulation.request &&
+          'type' in storedSimulation.request &&
+          storedSimulation.request.type === 'bundle'
+        ) {
+          // For bundle simulations, switch to bundle mode and pre-fill bundle data
+          setSimulationMode('bundle')
 
-          // TODO: Pre-fill ABI and function data if available
-          // This would require storing additional metadata about the original function call
+          const bundleRequest =
+            storedSimulation.request as BundleSimulationRequestStorage
+          const bundleData: BundleFormData = {
+            transactions: bundleRequest.bundleRequest.transactions.map(
+              (tx) => ({
+                ...tx,
+                // Ensure all required properties are present
+                id: tx.id || crypto.randomUUID(),
+                enabled: tx.enabled !== undefined ? tx.enabled : true,
+                continueOnFailure:
+                  tx.continueOnFailure !== undefined
+                    ? tx.continueOnFailure
+                    : false,
+                label: tx.label || '',
+              }),
+            ),
+            blockTag: bundleRequest.bundleRequest.blockTag || 'latest',
+            blockNumber: bundleRequest.bundleRequest.blockNumber || '',
+            validation: bundleRequest.bundleRequest.validation ?? true,
+            account: bundleRequest.bundleRequest.account,
+          }
+
+          setBundleFormData(bundleData)
+          console.log(
+            '🔗 [Bundle Pre-fill] Loaded bundle with',
+            bundleData.transactions.length,
+            'transactions',
+          )
+        } else {
+          // Handle legacy format (backward compatibility) - pre-bundle implementation
+          const legacyRequest = storedSimulation.request as any
+          if (legacyRequest && legacyRequest.params?.calls) {
+            const call = legacyRequest.params.calls[0]
+            if (call) {
+              setFormData((prev) => ({
+                ...prev,
+                to: call.to || '',
+                from: call.from || '',
+                data: call.data || '',
+                value: call.value || '0x0',
+                gas: call.gas || '',
+                validation: legacyRequest.params.validation ?? true,
+                blockTag: legacyRequest.params.blockTag || 'latest',
+                blockNumber: legacyRequest.params.blockNumber || '',
+              }))
+            }
+          } else {
+            // If we can't parse the stored format, show an error but don't crash
+            console.warn(
+              'Unable to parse stored simulation format:',
+              storedSimulation,
+            )
+            setError(
+              'Stored simulation format is incompatible. Please start a new simulation.',
+            )
+          }
         }
 
         setIsPreFilled(true)
@@ -191,6 +283,44 @@ function NewSimulationPageContent() {
   const handleManualDataChange = () => {
     // Clear function data when user manually edits data
     setFunctionData(null)
+  }
+
+  const handleBundleSimulation = async (request: BundleSimulationRequest) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      console.log('\n🔗 [Bundle Simulation Setup] Preparing bundle request...')
+      console.log('📦 Bundle transactions:', request.transactions.length)
+
+      // Store bundle simulation parameters for execution on results page
+      const simulationId = generateSimulationId()
+
+      // Convert bundle request to storage format
+      const bundleRequest = {
+        type: 'bundle' as const,
+        bundleRequest: request,
+      }
+
+      store(simulationId, bundleRequest, {
+        title: `Bundle Simulation (${request.transactions.length} txs)`,
+        tags: ['recent', 'bundle'],
+      })
+
+      console.log(
+        `📋 [Storage] Saved bundle parameters with ID: ${simulationId}`,
+      )
+      console.log(
+        '🚀 [Navigation] Navigating to bundle results page for execution...',
+      )
+
+      // Navigate to results page for bundle execution
+      router.push(`/simulator/${simulationId}`)
+    } catch (err) {
+      setError(`Failed to prepare bundle simulation: ${err}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSimulation = async (request: {
@@ -365,13 +495,38 @@ function NewSimulationPageContent() {
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">New Transaction Simulation</h1>
+              <h1 className="text-3xl font-bold">
+                {simulationMode === 'bundle'
+                  ? 'New Bundle Simulation'
+                  : 'New Transaction Simulation'}
+              </h1>
               <p className="text-muted-foreground mt-1">
-                Build and simulate HyperEVM transactions with detailed tracing
-                and gas analysis
+                {simulationMode === 'bundle'
+                  ? 'Build and simulate sequential transaction bundles with state dependencies'
+                  : 'Build and simulate HyperEVM transactions with detailed tracing and gas analysis'}
               </p>
             </div>
           </div>
+
+          {/* Mode Selector */}
+          <Tabs
+            value={simulationMode}
+            onValueChange={(value) =>
+              setSimulationMode(value as 'single' | 'bundle')
+            }
+            className="w-full max-w-md"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="single" className="flex items-center gap-2">
+                <SendIcon className="h-4 w-4" />
+                Single Transaction
+              </TabsTrigger>
+              <TabsTrigger value="bundle" className="flex items-center gap-2">
+                <Layers3Icon className="h-4 w-4" />
+                Bundle Transactions
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Error Display */}
@@ -398,16 +553,28 @@ function NewSimulationPageContent() {
               />
             </div>
 
-            {/* Transaction Form */}
-            <TransactionForm
-              onSubmit={handleSimulation}
-              loading={loading}
-              abi={abi}
-              functionData={functionData}
-              initialData={isPreFilled ? formData : undefined}
-              compact={true}
-              onManualDataChange={handleManualDataChange}
-            />
+            {/* Transaction Form - Conditional based on mode */}
+            {simulationMode === 'single' ? (
+              <TransactionForm
+                onSubmit={handleSimulation}
+                loading={loading}
+                abi={abi}
+                functionData={functionData}
+                initialData={isPreFilled ? formData : undefined}
+                compact={true}
+                onManualDataChange={handleManualDataChange}
+              />
+            ) : (
+              <BundleTransactionForm
+                onSubmit={handleBundleSimulation}
+                loading={loading}
+                abi={abi}
+                functionData={functionData}
+                initialData={bundleFormData || undefined}
+                compact={true}
+                onManualDataChange={handleManualDataChange}
+              />
+            )}
           </div>
 
           {/* Right Column - Compact Sidebar */}

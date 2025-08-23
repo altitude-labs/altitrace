@@ -66,10 +66,10 @@ export default function SimulatorDashboard() {
   }
 
   const handleTitleUpdated = (newTitle: string) => {
-    const updatedSimulations = simulations.map(sim => 
-      sim.id === editingTitleId 
+    const updatedSimulations = simulations.map((sim) =>
+      sim.id === editingTitleId
         ? { ...sim, metadata: { ...sim.metadata, title: newTitle } }
-        : sim
+        : sim,
     )
     setSimulations(updatedSimulations)
     setEditingTitleId(null)
@@ -94,16 +94,45 @@ export default function SimulatorDashboard() {
   }
 
   const getSimulationType = (request: StoredSimulation['request']) => {
-    const callsCount = request.params.calls?.length || 0
-    const hasValue = request.params.calls?.some(
-      (call) => call.value && call.value !== '0x0',
-    )
+    // Handle bundle simulations
+    if (request.type === 'bundle') {
+      const transactionCount = request.bundleRequest.transactions.length
+      return {
+        label: `Bundle (${transactionCount})`,
+        color: 'bg-orange-100 text-orange-800',
+      }
+    }
 
-    if (callsCount > 1)
-      return { label: 'Batch', color: 'bg-purple-100 text-purple-800' }
-    if (hasValue)
-      return { label: 'Transfer', color: 'bg-blue-100 text-blue-800' }
-    return { label: 'Call', color: 'bg-green-100 text-green-800' }
+    // Handle single simulations (new format)
+    if (request.type === 'single') {
+      const callsCount = request.params.calls?.length || 0
+      const hasValue = request.params.calls?.some(
+        (call) => call.value && call.value !== '0x0',
+      )
+
+      if (callsCount > 1)
+        return { label: 'Batch', color: 'bg-purple-100 text-purple-800' }
+      if (hasValue)
+        return { label: 'Transfer', color: 'bg-blue-100 text-blue-800' }
+      return { label: 'Call', color: 'bg-green-100 text-green-800' }
+    }
+
+    // Handle legacy format (backward compatibility)
+    const legacyRequest = request as any
+    if (legacyRequest.params?.calls) {
+      const callsCount = legacyRequest.params.calls?.length || 0
+      const hasValue = legacyRequest.params.calls?.some(
+        (call: any) => call.value && call.value !== '0x0',
+      )
+
+      if (callsCount > 1)
+        return { label: 'Batch', color: 'bg-purple-100 text-purple-800' }
+      if (hasValue)
+        return { label: 'Transfer', color: 'bg-blue-100 text-blue-800' }
+      return { label: 'Call', color: 'bg-green-100 text-green-800' }
+    }
+
+    return { label: 'Unknown', color: 'bg-gray-100 text-gray-800' }
   }
 
   return (
@@ -149,7 +178,9 @@ export default function SimulatorDashboard() {
                   <Spinner size="lg" className="text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold">Loading simulations...</h3>
+                  <h3 className="text-xl font-semibold">
+                    Loading simulations...
+                  </h3>
                   <p className="text-muted-foreground mt-2">
                     Retrieving your saved simulations
                   </p>
@@ -191,14 +222,18 @@ export default function SimulatorDashboard() {
                           {editingTitleId === simulation.id ? (
                             <InlineTitleEditor
                               simulationId={simulation.id}
-                              currentTitle={simulation.metadata?.title || 'Untitled Simulation'}
+                              currentTitle={
+                                simulation.metadata?.title ||
+                                'Untitled Simulation'
+                              }
                               onTitleUpdated={handleTitleUpdated}
                               onCancel={handleCancelEdit}
                             />
                           ) : (
                             <>
                               <h3 className="font-medium truncate">
-                                {simulation.metadata?.title || 'Untitled Simulation'}
+                                {simulation.metadata?.title ||
+                                  'Untitled Simulation'}
                               </h3>
                               <button
                                 type="button"
@@ -224,23 +259,34 @@ export default function SimulatorDashboard() {
                           {formatTimestamp(simulation.timestamp)}
                         </div>
                         <div>
-                          Calls: {simulation.request.params.calls?.length || 0}
+                          {simulation.request.type === 'bundle'
+                            ? `Transactions: ${simulation.request.bundleRequest.transactions.length}`
+                            : simulation.request.type === 'single'
+                              ? `Calls: ${simulation.request.params.calls?.length || 0}`
+                              : `Calls: ${(simulation.request as any).params?.calls?.length || 0}`}
                         </div>
-                        {simulation.request.params.blockNumber && (
-                          <div>
-                            Block:{' '}
-                            {typeof simulation.request.params.blockNumber ===
-                              'string' &&
-                            simulation.request.params.blockNumber.startsWith(
-                              '0x',
-                            )
-                              ? Number.parseInt(
-                                  simulation.request.params.blockNumber,
-                                  16,
-                                ).toLocaleString()
-                              : simulation.request.params.blockNumber}
-                          </div>
-                        )}
+                        {(() => {
+                          const blockNumber =
+                            simulation.request.type === 'bundle'
+                              ? simulation.request.bundleRequest.blockNumber
+                              : simulation.request.type === 'single'
+                                ? simulation.request.params.blockNumber
+                                : (simulation.request as any).params
+                                    ?.blockNumber
+
+                          return blockNumber ? (
+                            <div>
+                              Block:{' '}
+                              {typeof blockNumber === 'string' &&
+                              blockNumber.startsWith('0x')
+                                ? Number.parseInt(
+                                    blockNumber,
+                                    16,
+                                  ).toLocaleString()
+                                : blockNumber}
+                            </div>
+                          ) : null
+                        })()}
                       </div>
                     </div>
 

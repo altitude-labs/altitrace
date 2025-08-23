@@ -1,5 +1,30 @@
 import type { SimulationRequest } from '@altitrace/sdk/types'
+import type { BundleSimulationRequest } from '@/types/bundle'
 import type { EnhancedSimulationResult } from './trace-integration'
+
+/**
+ * Single simulation request storage
+ */
+export interface SingleSimulationRequest {
+  type: 'single'
+  params: SimulationRequest['params']
+  options?: SimulationRequest['options']
+}
+
+/**
+ * Bundle simulation request storage
+ */
+export interface BundleSimulationRequestStorage {
+  type: 'bundle'
+  bundleRequest: BundleSimulationRequest
+}
+
+/**
+ * Union type for all simulation requests
+ */
+type StoredSimulationRequest =
+  | SingleSimulationRequest
+  | BundleSimulationRequestStorage
 
 /**
  * Storage schema for persisting simulation data
@@ -7,10 +32,7 @@ import type { EnhancedSimulationResult } from './trace-integration'
 export interface StoredSimulation {
   id: string
   timestamp: Date
-  request: {
-    params: SimulationRequest['params']
-    options?: SimulationRequest['options']
-  }
+  request: StoredSimulationRequest
   metadata: {
     title?: string
     tags?: string[]
@@ -24,10 +46,7 @@ export interface StoredSimulation {
 interface SerializedStoredSimulation {
   id: string
   timestamp: string
-  request: {
-    params: SimulationRequest['params']
-    options?: SimulationRequest['options']
-  }
+  request: StoredSimulationRequest
   metadata: {
     title?: string
     tags?: string[]
@@ -43,17 +62,25 @@ const MAX_STORED_SIMULATIONS = 50
  */
 export function store(
   id: string,
-  request: {
-    params: SimulationRequest['params']
-    options?: SimulationRequest['options']
-  },
+  request:
+    | StoredSimulationRequest
+    | {
+        params: SimulationRequest['params']
+        options?: SimulationRequest['options']
+      },
   metadata: StoredSimulation['metadata'] = {},
 ): void {
   try {
+    // Normalize request to new format if it's the old format
+    const normalizedRequest: StoredSimulationRequest =
+      'type' in request
+        ? request
+        : { type: 'single', params: request.params, options: request.options }
+
     const storedSimulation: StoredSimulation = {
       id,
       timestamp: new Date(),
-      request,
+      request: normalizedRequest,
       metadata,
     }
 
@@ -109,14 +136,31 @@ export function retrieveById(id: string): StoredSimulation | null {
 }
 
 /**
- * Get just the request parameters for a simulation
+ * Get just the request parameters for a simulation (legacy function)
+ * Note: This function is deprecated for new code. Use retrieveById instead.
  */
 export function getRequest(id: string): {
   params: SimulationRequest['params']
   options?: SimulationRequest['options']
 } | null {
   const simulation = retrieveById(id)
-  return simulation?.request || null
+  if (!simulation?.request) return null
+
+  // Handle different request types
+  if ('type' in simulation.request && simulation.request.type === 'single') {
+    return {
+      params: simulation.request.params,
+      options: simulation.request.options,
+    }
+  }
+
+  // For bundle requests or legacy format, try to extract if it looks like old format
+  const legacyRequest = simulation.request as any
+  if (legacyRequest.params) {
+    return legacyRequest
+  }
+
+  return null
 }
 
 /**
@@ -212,8 +256,33 @@ export async function exportSimulation(
   if (!simulation) return null
 
   try {
+    // Convert new format to old format for the execution function
+    let requestForExecution: {
+      params: SimulationRequest['params']
+      options?: SimulationRequest['options']
+    }
+
+    if ('type' in simulation.request && simulation.request.type === 'single') {
+      requestForExecution = {
+        params: simulation.request.params,
+        options: simulation.request.options,
+      }
+    } else {
+      // For bundle or legacy format, try to extract compatible format
+      const legacyRequest = simulation.request as any
+      if (legacyRequest.params) {
+        requestForExecution = legacyRequest
+      } else {
+        // Cannot export bundle simulations with single simulation executor
+        console.warn(
+          'Cannot export bundle simulation with single simulation executor',
+        )
+        return null
+      }
+    }
+
     // Execute fresh simulation for complete data
-    const result = await executeSimulation(simulation.request)
+    const result = await executeSimulation(requestForExecution)
 
     const exportData = {
       request: simulation.request,

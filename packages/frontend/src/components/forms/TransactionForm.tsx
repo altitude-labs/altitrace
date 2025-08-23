@@ -228,7 +228,13 @@ export function TransactionForm({
     }
 
     try {
-      validateValue(formData.value, 'value')
+      // Ensure value has a default and isn't empty
+      const value = formData.value || '0x0'
+      if (value.trim() === '') {
+        validateValue('0x0', 'value')
+      } else {
+        validateValue(value, 'value')
+      }
     } catch (error) {
       if (error instanceof ValidationError) {
         newErrors.value = error.message
