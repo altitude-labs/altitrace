@@ -1,0 +1,171 @@
+# Tracing
+
+Analyze transaction execution with detailed traces. Use different tracers to understand call hierarchies, state changes, and opcode-level execution.
+
+## Basic Call Trace
+
+```typescript
+const trace = await client.trace({
+  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+  data: '0xa9059cbb...'
+})
+
+console.log('Call type:', trace.type)
+console.log('Gas used:', trace.gasUsed)
+console.log('Sub-calls:', trace.calls?.length || 0)
+```
+
+## Advanced Tracing with Builder
+
+```typescript
+// Multi-tracer analysis
+const trace = await client.trace()
+  .call({
+    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+    data: '0xa9059cbb...'
+  })
+  .withCallTracer({ onlyTopCall: false, withLogs: true })
+  .withPrestateTracer({ diffMode: true })
+  .with4ByteTracer()
+  .atBlock('latest')
+  .execute()
+
+// Access different trace results
+console.log('Call hierarchy:', trace.callTracer)
+console.log('State changes:', trace.prestateTracer)
+console.log('Function calls:', trace['4byteTracer'])
+```
+
+## Trace Types
+
+```typescript
+// Call tracer - function call hierarchy
+const callTrace = await client.trace(transaction, { tracer: 'callTracer' })
+
+// Prestate tracer - account state changes
+const prestateTrace = await client.trace(transaction, { tracer: 'prestateTracer' })
+
+// Struct logger - opcode-level execution
+const structTrace = await client.trace(transaction, { tracer: 'structLogger' })
+
+// 4byte tracer - function signatures
+const fourByteTrace = await client.trace(transaction, { tracer: '4byteTracer' })
+```
+
+## Trace by Transaction Hash
+
+```typescript
+const trace = await client.traceTransaction('0x1234...abcd')
+console.log('Transaction trace:', trace)
+```
+
+## Batch Tracing
+
+```typescript
+const traces = await client.traceCallMany([
+  {
+    transaction: { from: '0x...', to: '0x...', data: '0x...' },
+    blockTag: 'latest'
+  },
+  {
+    transaction: { from: '0x...', to: '0x...', data: '0x...' },
+    blockTag: 'latest'
+  }
+])
+
+traces.forEach((trace, i) => {
+  console.log(`Trace ${i}:`, trace.gasUsed)
+})
+```
+
+## Tracer Options
+
+```typescript
+// Call tracer options
+const callTrace = await client.trace(transaction, {
+  tracer: 'callTracer',
+  tracerConfig: {
+    onlyTopCall: false,  // Include sub-calls
+    withLogs: true       // Include event logs
+  }
+})
+
+// Prestate tracer options
+const prestateTrace = await client.trace(transaction, {
+  tracer: 'prestateTracer',
+  tracerConfig: {
+    diffMode: true,        // Show before/after states
+    disableStorage: false  // Include storage changes
+  }
+})
+
+// Struct logger options
+const structTrace = await client.trace(transaction, {
+  tracer: 'structLogger',
+  tracerConfig: {
+    disableStack: false,   // Include EVM stack
+    disableMemory: true,   // Exclude memory
+    disableStorage: false  // Include storage
+  }
+})
+```
+
+## Call Trace Structure
+
+```typescript
+interface CallFrame {
+  type: 'CALL' | 'DELEGATECALL' | 'STATICCALL' | 'CREATE'
+  from: string
+  to?: string
+  value: string
+  gas: string
+  gasUsed: string
+  input: string
+  output: string
+  calls?: CallFrame[]  // Nested calls
+  error?: string
+}
+```
+
+## State Changes
+
+```typescript
+// Prestate trace shows account changes
+interface AccountState {
+  balance?: string
+  nonce?: number
+  code?: string
+  storage?: { [slot: string]: string }
+}
+
+// Access state changes
+const prestateTrace = await client.trace(transaction, { tracer: 'prestateTracer' })
+Object.entries(prestateTrace).forEach(([address, state]) => {
+  console.log(`Account ${address}:`)
+  console.log(`  Balance: ${state.balance}`)
+  console.log(`  Nonce: ${state.nonce}`)
+})
+```
+
+## Opcode Execution
+
+```typescript
+// Struct logger shows opcode-level execution
+interface StructLog {
+  pc: number        // Program counter
+  op: string        // Opcode (SSTORE, SLOAD, etc.)
+  gas: number       // Remaining gas
+  gasCost: number   // Cost of this operation
+  depth: number     // Call depth
+  stack?: string[]  // EVM stack state
+  memory?: string[] // EVM memory
+  storage?: { [slot: string]: string }
+}
+
+const structTrace = await client.trace(transaction, { tracer: 'structLogger' })
+structTrace.structLogs?.forEach((step, i) => {
+  console.log(`Step ${i}: ${step.op} (gas: ${step.gas})`)
+})
+```

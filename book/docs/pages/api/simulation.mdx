@@ -1,0 +1,179 @@
+# Simulation Endpoints
+
+The simulation endpoints provide core transaction simulation capabilities for HyperEVM, enabling developers to test transactions, analyze gas usage, and debug execution flows before on-chain execution.
+
+## Single Transaction Simulation
+
+### `POST /simulate`
+
+Simulates a single transaction against the current or specified HyperEVM state with detailed execution analysis.
+
+**Request:**
+```json
+{
+  "params": {
+    "calls": [{
+      "from": "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B",
+      "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "data": "0xa9059cbb...",
+      "gas": "0x7a120"
+    }],
+    "blockTag": "latest",
+    "validation": true
+  },
+  "options": {
+    "stateOverrides": [{
+      "address": "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B",
+      "balance": "0x1bc16d674ec80000"
+    }]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "simulationId": "sim_01234567-89ab-cdef-0123-456789abcdef",
+    "status": "success",
+    "gasUsed": "0x5208",
+    "calls": [{
+      "callIndex": 0,
+      "status": "success",
+      "returnData": "0x01",
+      "gasUsed": "0x5208",
+      "logs": [{
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "topics": ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"],
+        "data": "0x0000000000000000000000000000000000000000000000000000000000989680",
+        "decoded": {
+          "name": "Transfer",
+          "summary": "Transfer 10.0 USDC from 0x742d... to 0x742d..."
+        }
+      }]
+    }]
+  }
+}
+```
+
+## Batch Transaction Simulation
+
+### `POST /simulate/batch`
+
+Simulates multiple independent transactions in parallel, each receiving separate analysis.
+
+**Request:**
+```json
+[
+  {
+    "params": {
+      "calls": [{"from": "0x742d...", "to": "0xA0b8...", "data": "0xa905..."}],
+      "blockTag": "latest"
+    }
+  },
+  {
+    "params": {
+      "calls": [{"from": "0x8ba1...", "to": "0x1f98...", "data": "0x70a0..."}],
+      "blockNumber": "0x123abc"
+    }
+  }
+]
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {"simulationId": "sim_123...", "status": "success", "gasUsed": "0x5208"},
+    {"simulationId": "sim_456...", "status": "success", "gasUsed": "0x7530"}
+  ]
+}
+```
+
+## State and Block Overrides
+
+Modify account states and block environment for testing different scenarios.
+
+### State Overrides
+
+```json
+{
+  "options": {
+    "stateOverrides": [{
+      "address": "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B",
+      "balance": "0x1bc16d674ec80000",
+      "storage": {"0x0": "0x1"},
+      "code": "0x608060405234801561001057600080fd5b50"
+    }]
+  }
+}
+```
+
+### Block Overrides
+
+```json
+{
+  "options": {
+    "blockOverrides": {
+      "number": "0x123456",
+      "time": 1700000000,
+      "baseFee": "0x3b9aca00",
+      "gasLimit": 30000000
+    }
+  }
+}
+```
+
+## Advanced Features
+
+### Asset Change Tracking
+
+Track ERC-20/ERC-721 token balance changes:
+
+```json
+{
+  "params": {
+    "calls": [...],
+    "account": "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B",
+    "traceAssetChanges": true,
+    "traceTransfers": true
+  }
+}
+```
+
+### Validation Control
+
+```json
+{
+  "params": {
+    "validation": false  // Disable validation for relaxed execution
+  }
+}
+```
+
+## SDK Integration
+
+```typescript
+import { createClient } from '@altitrace/sdk'
+
+const client = createClient.local()
+
+// Single simulation
+const result = await client.simulation.simulate({
+  params: {
+    calls: [{
+      from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+      to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      data: '0xa9059cbb...'
+    }]
+  }
+})
+
+// Batch simulation
+const batchResults = await client.simulation.simulateBatch([
+  { params: { calls: [...] } },
+  { params: { calls: [...] } }
+])
+```
