@@ -1,7 +1,11 @@
 import { BookOpenIcon, CodeIcon, PlayIcon } from 'lucide-react'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui'
+import { generateHomeMetadata } from '@/utils/metadata'
+
+export const metadata: Metadata = generateHomeMetadata()
 
 export default function Home() {
   return (

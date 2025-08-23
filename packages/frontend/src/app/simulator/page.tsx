@@ -7,6 +7,19 @@ import {
   ShareIcon,
   TrashIcon,
 } from 'lucide-react'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Simulator - AltiTrace',
+  description:
+    'Manage and execute your HyperEVM transaction simulations. Create, share and analyze your smart contract tests.',
+  openGraph: {
+    title: 'Transaction Simulator - AltiTrace',
+    description: 'Manage and execute your HyperEVM transaction simulations.',
+    images: ['/banner.png'],
+  },
+}
+
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Layout } from '@/components/layout'
