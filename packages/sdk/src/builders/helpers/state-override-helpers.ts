@@ -35,9 +35,16 @@ export const StateOverrideHelpers = {
    * Create a state override to replace contract code.
    */
   setCode(address: string, code: string): Record<string, StateOverride> {
-    return {
+    console.log(`🔧 [SDK StateOverride] Setting code override for ${address}`)
+    console.log(`   📄 Code length: ${code.length} characters`)
+    console.log(`   📄 Code preview: ${code.substring(0, 50)}...`)
+
+    const override = {
       [address]: { code },
     }
+
+    console.log(`   ✅ Code override created for address ${address}`)
+    return override
   },
 
   /**

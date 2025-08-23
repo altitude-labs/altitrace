@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Layout } from '@/components/layout'
 import { EnhancedSimulationResults } from '@/components/simulation/EnhancedSimulationResults'
 import { Alert, AlertDescription, Button } from '@/components/ui'
 import { createAltitraceClient } from '@/utils/client'
@@ -63,13 +62,29 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         setSimulation(storedSimulation)
         setExecuting(true)
 
-        // Execute fresh simulation with trace data
+        // Execute simulation with trace data on results page
+        console.log('🚀 [Results Page] Executing simulation...')
+        console.log('   Request params:', storedSimulation.request.params)
+        console.log('   Options:', storedSimulation.request.options)
+
         const client = createAltitraceClient()
 
         const result = await executeEnhancedSimulation(
           client,
           storedSimulation.request,
         )
+
+        console.log('📬 [Results Page] Simulation completed:')
+        console.log('   Success:', result.isSuccess())
+        console.log('   Status:', result.status)
+        if (result.isSuccess()) {
+          console.log('   Gas used:', result.getTotalGasUsed())
+          console.log('✅ [Results Page] Displaying successful results')
+        } else {
+          console.log('   Errors:', result.getErrors())
+          console.log('❌ [Results Page] Displaying error results')
+        }
+
         setSimulationResult(result)
 
         // Auto-switch to trace tab if we have call hierarchy
@@ -134,7 +149,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
 
   if (loading) {
     return (
-      <Layout>
+      <div className="p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center space-y-4">
@@ -152,13 +167,13 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             </div>
           </div>
         </div>
-      </Layout>
+      </div>
     )
   }
 
   if (error || !simulation || !simulationResult) {
     return (
-      <Layout>
+      <div className="p-6">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex items-center gap-4">
             <Button
@@ -183,12 +198,12 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             </Button>
           </div>
         </div>
-      </Layout>
+      </div>
     )
   }
 
   return (
-    <Layout>
+    <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header with Navigation and Actions */}
         <div className="space-y-4">
@@ -243,7 +258,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
               </Button>
               <Button variant="outline" size="sm" onClick={handleRerun}>
                 <EditIcon className="w-4 h-4 mr-1" />
-                Edit & Re-run
+                Edit
               </Button>
             </div>
           </div>
@@ -252,6 +267,6 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         {/* Enhanced Simulation Results */}
         <EnhancedSimulationResults result={simulationResult} />
       </div>
-    </Layout>
+    </div>
   )
 }

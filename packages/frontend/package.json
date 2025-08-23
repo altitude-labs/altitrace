@@ -12,20 +12,25 @@
     "lint": "biome check . --write --unsafe && biome format . --write",
     "lint:check": "biome check .",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf .next dist"
+    "clean": "rm -rf .next dist",
+    "setup-solc": "node scripts/setup-solc.js",
+    "postinstall": "npm run setup-solc"
   },
   "dependencies": {
     "@altitrace/sdk": "workspace:sdk",
     "@headlessui/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",
+    "@monaco-editor/react": "^4.7.0",
     "clsx": "^2.1.1",
     "lru-cache": "^11.1.0",
     "lucide-react": "^0.454.0",
+    "monaco-editor": "^0.52.2",
     "next": "^15.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.0",
     "recharts": "^2.15.0",
+    "solc": "^0.8.30",
     "viem": "^2.33.3",
     "zod": "^4.0.17",
     "zustand": "^5.0.3"
