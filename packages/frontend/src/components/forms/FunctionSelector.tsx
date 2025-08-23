@@ -122,9 +122,18 @@ export function FunctionSelector({
   }
 
   const handleGenerateData = async () => {
-    if (!selectedFunc || !rawAbi) return
+    console.log('handleGenerateData called', {
+      selectedFunc: !!selectedFunc,
+      rawAbi: rawAbi ? 'has rawAbi' : 'NO rawAbi',
+    })
+
+    if (!selectedFunc || !rawAbi) {
+      console.log('Early return: selectedFunc or rawAbi missing')
+      return
+    }
 
     if (!validateAllParameters()) {
+      console.log('Validation failed')
       return
     }
 
@@ -136,6 +145,7 @@ export function FunctionSelector({
         parameters,
       )
 
+      console.log('Generated function data:', data)
       setGeneratedData(data)
       onFunctionDataGenerated(data, selectedFunctionName, parameters)
     } catch (error) {

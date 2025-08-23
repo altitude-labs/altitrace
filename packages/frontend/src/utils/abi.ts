@@ -280,6 +280,6 @@ export function parseEtherValue(ether: string): string {
   try {
     return parseUnits(ether, 18).toString()
   } catch {
-    throw new Error('Invalid HYPE value')
+    throw new Error('Invalid ether value')
   }
 }

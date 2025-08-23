@@ -7,19 +7,19 @@ import type {
 import { ArrowLeftIcon } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
-import { AbiImport } from '@/components/forms/AbiImport'
-import { FunctionSelector } from '@/components/forms/FunctionSelector'
+import { ContractManager } from '@/components/forms/ContractManager'
 import { TransactionForm } from '@/components/forms/TransactionForm'
-import { Layout } from '@/components/layout'
 // Removed unused imports
 import { Alert, AlertDescription, Button } from '@/components/ui'
+import { useContractStorage } from '@/hooks/useContractStorage'
 import type { ParsedAbi } from '@/types/api'
-import { createAltitraceClient } from '@/utils/client'
-import { getRequest, store } from '@/utils/storage'
 import {
-  type EnhancedSimulationResult,
-  executeEnhancedSimulation,
-} from '@/utils/trace-integration'
+  createContractStateOverride,
+  createContractStateOverrideForSimulation,
+  requiresStateOverride,
+} from '@/utils/contract-state-override'
+import type { StoredContract } from '@/utils/contract-storage'
+import { getRequest, store } from '@/utils/storage'
 
 const generateSimulationId = () => crypto.randomUUID()
 
@@ -29,8 +29,15 @@ function NewSimulationPageContent() {
 
   // ABI State
   const [abi, setAbi] = useState<ParsedAbi | null>(null)
-  const [rawAbi, setRawAbi] = useState<string>('')
   const [isPreFilled, setIsPreFilled] = useState(false)
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(
+    null,
+  )
+  const [selectedContract, setSelectedContract] =
+    useState<StoredContract | null>(null)
+
+  // Contract storage hook - unused for now
+  // const {} = useContractStorage()
 
   // Function Data State
   const [functionData, setFunctionData] = useState<{
@@ -61,8 +68,6 @@ function NewSimulationPageContent() {
   })
 
   // Simulation State
-  const [simulationResult, setSimulationResult] =
-    useState<EnhancedSimulationResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -111,17 +116,82 @@ function NewSimulationPageContent() {
   }, [searchParams, isPreFilled])
 
   const handleAbiImport = (parsedAbi: ParsedAbi, rawAbiJson: string) => {
+    console.log('📝 [ABI Import] New ABI imported:', {
+      functionsCount: parsedAbi.functions?.length || 0,
+      eventsCount: parsedAbi.events?.length || 0,
+      firstFunctionName: parsedAbi.functions?.[0]?.name || 'none',
+      rawAbiSize: rawAbiJson.length,
+    })
     setAbi(parsedAbi)
-    setRawAbi(rawAbiJson)
     setFunctionData(null) // Clear previous function data
+    console.log('🔄 [ABI State Updated] New ABI set in simulator state')
+    console.log('🔄 [Function Data] Cleared due to ABI change')
+
+    // Log current vs new ABI differences for debugging
+    console.log(
+      '📋 [ABI Functions List]:',
+      parsedAbi.functions?.map(
+        (f) => `${f.name}(${f.inputs?.map((i) => i.type).join(',')})`,
+      ) || [],
+    )
   }
 
-  const handleFunctionDataGenerated = (
-    data: Hex,
-    functionName: string,
-    parameters: Record<string, string>,
+  const handleContractSelect = (contract: any) => {
+    console.log('📋 [Contract Selection] Contract selected:', {
+      id: contract.id,
+      name: contract.metadata?.title || contract.contractData?.name,
+      address: contract.contractData?.address,
+      hasBytecode: !!contract.contractData?.bytecode,
+      status: contract.status,
+      compilationStatus: contract.metadata?.compilationStatus,
+      sourceCodeVerified: contract.metadata?.sourceCodeVerified,
+    })
+    setSelectedContractId(contract.id)
+    setSelectedContract(contract)
+    console.log(
+      '✅ [Contract Selection] State updated - selectedContractId:',
+      contract.id,
+    )
+
+    // Also update the "to" address if the contract has an address
+    if (contract.contractData?.address) {
+      setFormData((prev) => ({
+        ...prev,
+        to: contract.contractData.address,
+      }))
+      console.log(
+        '📍 [Address Update] Transaction "to" address set to:',
+        contract.contractData.address,
+      )
+    }
+  }
+
+  const handleFunctionSelect = (
+    _func: any,
+    _parameters: Record<string, string>,
+    functionData?: {
+      data: string
+      functionName: string
+      parameters: Record<string, string>
+    },
   ) => {
-    setFunctionData({ data, functionName, parameters })
+    if (functionData) {
+      setFunctionData({
+        data: functionData.data as Hex,
+        functionName: functionData.functionName,
+        parameters: functionData.parameters,
+      })
+      // Also update the transaction form data
+      setFormData((prev) => ({
+        ...prev,
+        data: functionData.data,
+      }))
+    }
+  }
+
+  const handleManualDataChange = () => {
+    // Clear function data when user manually edits data
+    setFunctionData(null)
   }
 
   const handleSimulation = async (request: {
@@ -130,48 +200,160 @@ function NewSimulationPageContent() {
   }) => {
     setLoading(true)
     setError(null)
-    setSimulationResult(null)
 
     try {
-      const client = createAltitraceClient()
+      console.log('\n🚀 [Simulation Setup] Preparing simulation request...')
+      console.log(
+        '📦 Selected Contract:',
+        selectedContract?.metadata?.title ||
+          selectedContract?.contractData?.name ||
+          'None',
+      )
 
-      // Use enhanced simulation with trace data
-      const result = await executeEnhancedSimulation(client, {
-        params: request.params,
-        options: request.options,
-      })
+      const finalOptions = { ...request.options }
 
-      // Store simulation result with UUID using proper storage system
+      if (selectedContract) {
+        console.log(
+          '🔍 [Smart State Override Detection] Checking if contract needs bytecode override...',
+        )
+
+        try {
+          const stateOverride = await createContractStateOverrideForSimulation(
+            selectedContract,
+            request.params,
+          )
+
+          if (stateOverride.requiresOverride && stateOverride.stateOverride) {
+            console.log(
+              '⚡ [SDK Call Preparation] Converting state override for API...',
+            )
+
+            // Convert to array format expected by API
+            const stateOverrideArray = Object.entries(
+              stateOverride.stateOverride,
+            ).map(([address, overrides]) => ({
+              address,
+              ...overrides,
+            }))
+
+            console.log('📋 [State Override Array]:', stateOverrideArray)
+
+            // Merge with existing state overrides if any
+            const existingOverrides = finalOptions.stateOverrides || []
+            finalOptions.stateOverrides = [
+              ...existingOverrides,
+              ...stateOverrideArray,
+            ]
+
+            console.log(
+              '✅ [Final Options] State overrides applied to simulation:',
+            )
+            console.log(
+              '   Total overrides:',
+              finalOptions.stateOverrides.length,
+            )
+            console.log(
+              '   Overriding addresses:',
+              finalOptions.stateOverrides.map((o) => o.address),
+            )
+            console.log('   Full final options:', finalOptions)
+
+            // Show comparison results to user
+            if (stateOverride.bytecodeComparison) {
+              const { isIdentical, localSize, deployedSize } =
+                stateOverride.bytecodeComparison
+              console.log(
+                `   🔍 Bytecode Analysis: ${isIdentical ? 'IDENTICAL' : 'DIFFERENT'} (Local: ${localSize}b, Deployed: ${deployedSize}b)`,
+              )
+            }
+          } else {
+            const reason = stateOverride.bytecodeComparison?.isIdentical
+              ? 'bytecode is identical to deployed version'
+              : 'contract does not require override'
+            console.log(
+              `ℹ️ [State Override] No bytecode override needed: ${reason}`,
+            )
+
+            // Show helpful info about the comparison
+            if (stateOverride.bytecodeComparison) {
+              const { localSize, deployedSize } =
+                stateOverride.bytecodeComparison
+              console.log(
+                `   📊 Comparison: Local ${localSize} bytes, Deployed ${deployedSize} bytes`,
+              )
+            }
+          }
+        } catch (error) {
+          console.warn(
+            '⚠️ [State Override] Failed to perform smart comparison, falling back to simple logic:',
+            error,
+          )
+
+          // Fallback to simple logic if async comparison fails
+          const stateOverride = createContractStateOverride(selectedContract)
+          if (stateOverride.requiresOverride && stateOverride.stateOverride) {
+            const stateOverrideArray = Object.entries(
+              stateOverride.stateOverride,
+            ).map(([address, overrides]) => ({
+              address,
+              ...overrides,
+            }))
+
+            const existingOverrides = finalOptions.stateOverrides || []
+            finalOptions.stateOverrides = [
+              ...existingOverrides,
+              ...stateOverrideArray,
+            ]
+            console.log(
+              '✅ [Fallback] Applied state override using simple logic',
+            )
+          }
+        }
+      } else {
+        console.log(
+          '❌ [State Override] selectedContract is null/undefined - no state overrides will be applied',
+        )
+        console.log('🔍 [Debug] Possible reasons:')
+        console.log('   1. No contract was selected in the ContractManager')
+        console.log('   2. Contract was not properly loaded/stored')
+        console.log(
+          '   3. selectedContractId does not match any stored contract',
+        )
+        console.log('   4. Contract selection state was reset')
+      }
+
+      // Store simulation parameters for execution on results page
       const simulationId = generateSimulationId()
 
       store(
         simulationId,
-        { params: request.params, options: request.options },
+        { params: request.params, options: finalOptions },
         {
           title: `${functionData?.functionName || 'Transaction'} Simulation`,
           tags: ['recent'],
         },
       )
 
-      setSimulationResult(result)
-      // Results will be shown on dedicated page
+      console.log(
+        `📋 [Storage] Saved simulation parameters with ID: ${simulationId}`,
+      )
+      console.log('🚀 [Navigation] Navigating to results page for execution...')
 
-      // Navigate to dedicated results page
+      // Navigate immediately to results page - execution happens there
       router.push(`/simulator/${simulationId}`)
     } catch (err) {
-      setError(`An unexpected error occurred: ${err}`)
+      setError(`Failed to prepare simulation: ${err}`)
     } finally {
       setLoading(false)
     }
   }
 
   const resetSimulation = () => {
-    setSimulationResult(null)
     setError(null)
   }
 
   return (
-    <Layout>
+    <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header with Navigation */}
         <div className="space-y-4">
@@ -195,14 +377,6 @@ function NewSimulationPageContent() {
                 and gas analysis
               </p>
             </div>
-            {simulationResult && (
-              <button
-                onClick={resetSimulation}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                Reset Form
-              </button>
-            )}
           </div>
         </div>
 
@@ -216,18 +390,19 @@ function NewSimulationPageContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Input Forms */}
           <div className="space-y-6">
-            {/* ABI Import */}
-            <div data-section="abi-import">
-              <AbiImport onAbiImport={handleAbiImport} currentAbi={abi} />
+            {/* Contract Management */}
+            <div data-section="contract-management">
+              <ContractManager
+                onContractSelect={handleContractSelect}
+                onAbiImport={handleAbiImport}
+                onFunctionSelect={handleFunctionSelect}
+                selectedContractId={selectedContractId || undefined}
+                currentAbi={abi}
+                mode="compact"
+                showFunctionBuilder={true}
+                prefilledAddress={formData.to}
+              />
             </div>
-
-            {/* Function Selector */}
-            <FunctionSelector
-              abi={abi}
-              rawAbi={rawAbi}
-              onFunctionDataGenerated={handleFunctionDataGenerated}
-              compact={true}
-            />
 
             {/* Transaction Form */}
             <TransactionForm
@@ -237,15 +412,32 @@ function NewSimulationPageContent() {
               functionData={functionData}
               initialData={isPreFilled ? formData : undefined}
               compact={true}
+              onManualDataChange={handleManualDataChange}
             />
           </div>
 
           {/* Right Column - Compact Sidebar */}
           <div className="space-y-4">
             {/* Status Card - Only show when there's meaningful status */}
-            {(loading || simulationResult) && (
+            {(loading ||
+              (selectedContract &&
+                requiresStateOverride(selectedContract))) && (
               <div className="bg-card border rounded-lg p-4">
                 <h3 className="text-sm font-medium mb-3">Status</h3>
+
+                {/* State Override Warning */}
+                {selectedContract &&
+                  requiresStateOverride(selectedContract) && (
+                    <div className="mb-3 p-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded text-xs">
+                      <div className="font-medium text-orange-700 dark:text-orange-300 mb-1">
+                        🔄 State Override Active
+                      </div>
+                      <div className="text-orange-600 dark:text-orange-400">
+                        Contract has modified bytecode - using state override
+                        for simulation
+                      </div>
+                    </div>
+                  )}
                 {loading && (
                   <div className="text-center py-3">
                     <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -259,41 +451,6 @@ function NewSimulationPageContent() {
                         <div>• Creating access list optimization</div>
                         <div>• Comparing gas efficiency</div>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {simulationResult && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium">Result</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded ${
-                          simulationResult.isSuccess()
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {simulationResult.isSuccess()
-                          ? '✓ Success'
-                          : '✗ Failed'}
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>
-                        Gas: {simulationResult.getTotalGasUsed().toString()}
-                      </div>
-                      <div>Calls: {simulationResult.calls?.length || 0}</div>
-                      {simulationResult.hasGasComparison && (
-                        <div className="text-xs text-green-600 font-medium">
-                          ⚡ Gas optimization available
-                        </div>
-                      )}
-                      {simulationResult.hasCallHierarchy && (
-                        <div className="text-xs text-blue-600">
-                          🔍 Call trace enhanced
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -316,14 +473,14 @@ function NewSimulationPageContent() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const abiSection = document.querySelector(
-                        '[data-section="abi-import"]',
+                      const contractSection = document.querySelector(
+                        '[data-section="contract-management"]',
                       )
-                      abiSection?.scrollIntoView({ behavior: 'smooth' })
+                      contractSection?.scrollIntoView({ behavior: 'smooth' })
                     }}
                     className="w-full justify-start text-xs h-8"
                   >
-                    📝 Import ABI (optional)
+                    📝 Import Contract & ABI
                   </Button>
                 )}
 
@@ -371,22 +528,22 @@ function NewSimulationPageContent() {
               <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
                 {!formData.to ? (
                   <>
-                    <p>• Enter a contract address first</p>
-                    <p>• Import ABI for easy function calls</p>
-                    <p>• Or use raw call data directly</p>
+                    <p>• Enter contract address to auto-fetch ABI</p>
+                    <p>• Import from saved contracts library</p>
+                    <p>• Or paste ABI manually for any contract</p>
                   </>
                 ) : !abi ? (
                   <>
-                    <p>• Import ABI to select functions easily</p>
-                    <p>• Use "from" for account simulation</p>
-                    <p>• Raw call data works without ABI</p>
+                    <p>• Contract Manager auto-fetches from HyperScan</p>
+                    <p>• Saved contracts available in library</p>
+                    <p>• Use "from" field for account impersonation</p>
                   </>
                 ) : (
                   <>
-                    <p>• Select function from dropdown</p>
-                    <p>• Parameters auto-validate types</p>
-                    <p>• Leave gas empty for estimation</p>
-                    <p>• Results include full call tree</p>
+                    <p>• Contract saved automatically for reuse</p>
+                    <p>• Function builder validates parameter types</p>
+                    <p>• Leave gas empty for automatic estimation</p>
+                    <p>• Results include enhanced call traces</p>
                   </>
                 )}
               </div>
@@ -394,7 +551,7 @@ function NewSimulationPageContent() {
           </div>
         </div>
       </div>
-    </Layout>
+    </div>
   )
 }
 

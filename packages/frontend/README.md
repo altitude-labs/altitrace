@@ -4,7 +4,7 @@ The web frontend for Altitrace - an interactive playground to build, simulate, a
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 with App Router
+- **Framework**: Next.js 15 with App Router
 - **Styling**: Tailwind CSS with custom design system
 - **State Management**: Zustand
 - **UI Components**: Headless UI + custom components

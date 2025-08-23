@@ -2,6 +2,7 @@
 
 import {
   ClockIcon,
+  EditIcon,
   PlayIcon,
   PlusIcon,
   ShareIcon,
@@ -10,7 +11,6 @@ import {
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Layout } from '@/components/layout'
 import { Button, Card } from '@/components/ui'
 import {
   deleteSimulation,
@@ -52,6 +52,10 @@ export default function SimulatorDashboard() {
     } catch (_e) {}
   }
 
+  const handleEditSimulation = (id: string) => {
+    router.push(`/simulator/new?rerun=${id}`)
+  }
+
   const formatTimestamp = (timestamp: Date) => {
     const now = new Date()
     const diffMs = now.getTime() - timestamp.getTime()
@@ -80,7 +84,7 @@ export default function SimulatorDashboard() {
   }
 
   return (
-    <Layout>
+    <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -189,13 +193,23 @@ export default function SimulatorDashboard() {
                         onClick={() =>
                           router.push(`/simulator/${simulation.id}`)
                         }
+                        title="View results"
                       >
                         <PlayIcon className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleEditSimulation(simulation.id)}
+                        title="Edit parameters"
+                      >
+                        <EditIcon className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleShareSimulation(simulation.id)}
+                        title="Share simulation"
                       >
                         <ShareIcon className="w-4 h-4" />
                       </Button>
@@ -204,6 +218,7 @@ export default function SimulatorDashboard() {
                         size="sm"
                         onClick={() => handleDeleteSimulation(simulation.id)}
                         className="text-destructive hover:text-destructive"
+                        title="Delete simulation"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </Button>
@@ -228,6 +243,6 @@ export default function SimulatorDashboard() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   )
 }
