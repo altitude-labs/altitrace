@@ -24,7 +24,7 @@ pub(crate) struct LogsArgs {
     #[arg(long = "log.file.dir", default_value = "./logs", env = "LOG_DIR")]
     pub logs_file_dir: PathBuf,
     /// The base name for log files
-    #[arg(long = "log.file.name", default_value = "altindexer.log", env = "LOG_FILE_NAME")]
+    #[arg(long = "log.file.name", default_value = "altitrace.log", env = "LOG_FILE_NAME")]
     pub logs_file_name: String,
     /// Maximum size of a single log file in megabytes (MB)
     #[arg(long = "log.file.max-size-mb", default_value_t = 100, env = "MAX_LOG_SIZE_MB")]
