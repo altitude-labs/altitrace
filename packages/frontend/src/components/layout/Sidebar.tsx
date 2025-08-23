@@ -11,8 +11,9 @@ import {
   SettingsIcon,
   ZapIcon,
 } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui'
 import { useContractStorage } from '@/hooks/useContractStorage'
@@ -20,9 +21,10 @@ import { useContractStorage } from '@/hooks/useContractStorage'
 interface SidebarProps {
   isCollapsed?: boolean
   onToggle?: () => void
+  isMobile?: boolean
 }
 
-export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
+export function Sidebar({ isCollapsed = false, onToggle, isMobile = false }: SidebarProps) {
   const pathname = usePathname()
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['simulator', 'contracts']),
@@ -68,14 +70,14 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
   }) => (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
         isActive(href)
-          ? 'bg-primary text-primary-foreground'
-          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+          ? 'bg-brand-dark-1 text-brand-light-1 border border-brand-light-3/20 shadow-sm'
+          : 'text-muted-foreground hover:text-brand-light-2 hover:bg-brand-dark-2/50 hover:border hover:border-brand-light-3/10'
       } ${isSubItem ? 'ml-4' : ''} ${isCollapsed && !isSubItem ? 'justify-center' : ''}`}
     >
       <Icon className="h-4 w-4 flex-shrink-0" />
-      {!isCollapsed && (
+      {(!isCollapsed || isMobile) && (
         <>
           <span className="font-medium text-sm">{label}</span>
           {badge && (
@@ -93,24 +95,45 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
     label,
     sectionKey,
     children,
+    defaultHref,
+    childPaths,
   }: {
     icon: any
     label: string
     sectionKey: string
     children: React.ReactNode
+    defaultHref?: string
+    childPaths?: string[]
   }) => {
     const isExpanded = expandedSections.has(sectionKey)
+    const router = useRouter()
+    
+    // Check if any child path is active
+    const isActiveSection = childPaths?.some(path => isActive(path)) || false
+
+    const handleClick = () => {
+      if (isCollapsed && !isMobile && defaultHref) {
+        // When collapsed, navigate to the default href
+        router.push(defaultHref)
+      } else {
+        // When expanded, toggle the section
+        toggleSection(sectionKey)
+      }
+    }
 
     return (
       <div>
         <button
-          onClick={() => toggleSection(sectionKey)}
-          className={`flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50 ${
-            isCollapsed ? 'justify-center' : ''
-          }`}
+          onClick={handleClick}
+          className={`flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg transition-all duration-200 ${
+            isActiveSection
+              ? 'bg-brand-dark-1 text-brand-light-1 border border-brand-light-3/20 shadow-sm'
+              : 'text-muted-foreground hover:text-brand-light-2 hover:bg-brand-dark-2/50 hover:border hover:border-brand-light-3/10'
+          } ${isCollapsed ? 'justify-center' : ''}`}
+          title={isCollapsed ? label : undefined}
         >
           <Icon className="h-4 w-4 flex-shrink-0" />
-          {!isCollapsed && (
+          {(!isCollapsed || isMobile) && (
             <>
               <span className="font-medium text-sm">{label}</span>
               {isExpanded ? (
@@ -121,7 +144,9 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
             </>
           )}
         </button>
-        {!isCollapsed && isExpanded && (
+        
+        {/* Regular expanded view */}
+        {(!isCollapsed || isMobile) && isExpanded && (
           <div className="mt-1 space-y-1">{children}</div>
         )}
       </div>
@@ -130,22 +155,24 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
 
   return (
     <div
-      className={`flex flex-col bg-card border-r transition-all duration-200 ${
-        isCollapsed ? 'w-16' : 'w-64'
+      className={`flex flex-col h-full border-r transition-all duration-200 ${
+        isMobile 
+          ? 'w-64 bg-background' 
+          : isCollapsed 
+            ? 'w-16 bg-card' 
+            : 'w-64 bg-card'
       }`}
     >
       {/* Header */}
-      <div className="p-4 border-b">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <ZapIcon className="h-5 w-5 text-primary-foreground" />
-          </div>
-          {!isCollapsed && (
-            <div>
-              <h1 className="font-bold text-lg">AltiTrace</h1>
-              <p className="text-xs text-muted-foreground">
-                HyperEVM Simulator
-              </p>
+      <div className="p-4 border-b h-[72px] flex items-center">
+        <div className="flex items-center justify-center w-full">
+          {(!isCollapsed || isMobile) ? (
+            <div className="flex items-center justify-center">
+              <Image src="/altitrace.svg" alt="Altitrace" width={160} height={32} className="h-8 w-auto max-w-[160px]" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 flex items-center justify-center">
+              <Image src="/logo.svg" alt="Logo" width={32} height={32} className="w-8 h-8" />
             </div>
           )}
         </div>
@@ -157,7 +184,13 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
         <NavItem href="/" icon={HomeIcon} label="Dashboard" />
 
         {/* Simulator Section */}
-        <SectionHeader icon={ZapIcon} label="Simulator" sectionKey="simulator">
+        <SectionHeader 
+          icon={ZapIcon} 
+          label="Simulator" 
+          sectionKey="simulator"
+          defaultHref="/simulator/new"
+          childPaths={['/simulator', '/simulator/new']}
+        >
           <NavItem
             href="/simulator/new"
             icon={PlusIcon}
@@ -177,6 +210,8 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
           icon={BookOpenIcon}
           label="Contracts"
           sectionKey="contracts"
+          defaultHref="/contracts"
+          childPaths={['/contracts', '/contracts/import', '/contracts/edit']}
         >
           <NavItem
             href="/contracts"
@@ -213,7 +248,11 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
                 isCollapsed ? 'rotate-0' : 'rotate-180'
               }`}
             />
-            {!isCollapsed && <span className="ml-2">Collapse</span>}
+            {(!isCollapsed || isMobile) && (
+              <span className="ml-2">
+                {isMobile ? 'Close' : 'Collapse'}
+              </span>
+            )}
           </Button>
         </div>
       )}

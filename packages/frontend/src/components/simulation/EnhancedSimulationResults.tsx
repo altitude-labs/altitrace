@@ -46,6 +46,21 @@ export function EnhancedSimulationResults({
 }: EnhancedSimulationResultsProps) {
   const [activeTab, setActiveTab] = useState('overview')
 
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId)
+    // Scroll to the content section after tab change
+    setTimeout(() => {
+      const contentElement = document.querySelector('[data-tab-content]')
+      if (contentElement) {
+        contentElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        })
+      }
+    }, 100) // Small delay to ensure tab content is rendered
+  }
+
   // Use SDK helper methods
   const isSuccess = result.isSuccess()
   const logCount = result.getLogCount()
@@ -122,19 +137,51 @@ export function EnhancedSimulationResults({
         </CardHeader>
 
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            {/* Mobile: Vertical list, Desktop: Horizontal tabs */}
+            <div className="sm:hidden">
+              <div className="space-y-1">
+                {tabConfig.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    disabled={tab.disabled}
+                    className={`w-full flex items-center justify-between p-3 text-left rounded-lg border transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card hover:bg-muted border-border'
+                    } ${tab.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <tab.icon className="h-4 w-4 flex-shrink-0" />
+                      <span className="font-medium">{tab.label}</span>
+                    </div>
+                    {tab.count !== null && (
+                      <Badge 
+                        variant={activeTab === tab.id ? "secondary" : "outline"} 
+                        className="text-xs"
+                      >
+                        {tab.count}
+                      </Badge>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Desktop: Horizontal tabs */}
+            <TabsList className="hidden sm:grid w-full grid-cols-6 gap-1">
               {tabConfig.map((tab) => (
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
                   disabled={tab.disabled}
-                  className="flex items-center gap-1 text-xs"
+                  className="flex items-center gap-1 text-xs p-2"
                 >
-                  <tab.icon className="h-3 w-3" />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <tab.icon className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{tab.label}</span>
                   {tab.count !== null && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
+                    <Badge variant="secondary" className="text-xs min-w-[1.25rem] h-4 px-1">
                       {tab.count}
                     </Badge>
                   )}
@@ -142,7 +189,7 @@ export function EnhancedSimulationResults({
               ))}
             </TabsList>
 
-            <div className="mt-6">
+            <div className="mt-6" data-tab-content>
               <TabsContent value="overview">
                 <SimulationOverview result={result} />
               </TabsContent>
@@ -206,21 +253,21 @@ function SimulationQuickStats({
     ) || 0
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       <Card
-        className={`${result.isSuccess() ? 'border-green-200' : 'border-red-200'}`}
+        className={`${result.isSuccess() ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}
       >
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Status</p>
-              <div className="flex items-center gap-2">
+        <CardContent className="p-3 sm:p-4 h-full">
+          <div className="flex items-center justify-between h-full">
+            <div className="min-w-0 flex flex-col justify-center">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">Status</p>
+              <div className="flex items-center gap-1.5">
                 {result.isSuccess() ? (
-                  <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                  <CheckCircleIcon className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
                 ) : (
-                  <XCircleIcon className="h-4 w-4 text-red-500" />
+                  <XCircleIcon className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
                 )}
-                <p className="text-lg font-bold">{result.status}</p>
+                <p className="text-sm sm:text-lg font-bold truncate">{result.status}</p>
               </div>
             </div>
           </div>
@@ -228,51 +275,51 @@ function SimulationQuickStats({
       </Card>
 
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Gas Used</p>
-              <p className="text-xl font-bold">
+        <CardContent className="p-3 sm:p-4 h-full">
+          <div className="flex items-center justify-between h-full">
+            <div className="min-w-0 flex flex-col justify-center">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">Gas Used</p>
+              <p className="text-sm sm:text-xl font-bold truncate">
                 {gasUsedDecimal.toLocaleString()}
               </p>
             </div>
-            <FuelIcon className="h-6 w-6 text-muted-foreground" />
+            <FuelIcon className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0" />
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">
+        <CardContent className="p-3 sm:p-4 h-full">
+          <div className="flex items-center justify-between h-full">
+            <div className="min-w-0 flex flex-col justify-center">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1 truncate">
                 {result.hasCallHierarchy
                   ? 'Total Calls (Trace)'
                   : 'Transaction Calls'}
               </p>
-              <p className="text-xl font-bold">{callCount}</p>
+              <p className="text-sm sm:text-xl font-bold">{callCount}</p>
               {result.hasCallHierarchy && (
                 <Badge variant="secondary" className="text-xs mt-1">
                   Enhanced
                 </Badge>
               )}
             </div>
-            <TreePineIcon className="h-6 w-6 text-muted-foreground" />
+            <TreePineIcon className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0" />
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Events</p>
-              <p className="text-xl font-bold">{eventCount}</p>
-              <p className="text-xs text-muted-foreground">
+        <CardContent className="p-3 sm:p-4 h-full">
+          <div className="flex items-center justify-between h-full">
+            <div className="min-w-0 flex flex-col justify-center">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">Events</p>
+              <p className="text-sm sm:text-xl font-bold">{eventCount}</p>
+              <p className="text-xs text-muted-foreground truncate">
                 Block #{blockNumberDecimal.toLocaleString()}
               </p>
             </div>
-            <ListIcon className="h-6 w-6 text-muted-foreground" />
+            <ListIcon className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0" />
           </div>
         </CardContent>
       </Card>
@@ -464,23 +511,24 @@ function CallCard({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2">
             {isSuccess ? (
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
+              <CheckCircleIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
             ) : (
-              <XCircleIcon className="h-4 w-4 text-red-500" />
+              <XCircleIcon className="h-4 w-4 text-red-500 flex-shrink-0" />
             )}
-            <span>Call #{callIndex + 1}</span>
+            <span className="text-sm sm:text-base">Call #{callIndex + 1}</span>
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant={isSuccess ? 'default' : 'destructive'}>
+            <Badge variant={isSuccess ? 'default' : 'destructive'} className="text-xs">
               {call.status}
             </Badge>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs"
             >
               {isExpanded ? 'Collapse' : 'Expand'}
             </Button>
@@ -489,7 +537,7 @@ function CallCard({
       </CardHeader>
 
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
           <div>
             <label
               htmlFor="gas-used"

@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  CheckCircleIcon,
   ClockIcon,
   EditIcon,
   PencilIcon,
@@ -8,6 +9,9 @@ import {
   PlusIcon,
   ShareIcon,
   TrashIcon,
+  XCircleIcon,
+  AlertTriangleIcon,
+  CircleIcon,
 } from 'lucide-react'
 
 import { useRouter } from 'next/navigation'
@@ -100,41 +104,87 @@ export default function SimulatorDashboard() {
     )
 
     if (callsCount > 1)
-      return { label: 'Batch', color: 'bg-purple-100 text-purple-800' }
+      return { label: 'Batch', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' }
     if (hasValue)
-      return { label: 'Transfer', color: 'bg-blue-100 text-blue-800' }
-    return { label: 'Call', color: 'bg-green-100 text-green-800' }
+      return { label: 'Transfer', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' }
+    return { label: 'Call', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' }
+  }
+
+  const getStatusIcon = (result?: StoredSimulation['result']) => {
+    if (!result) {
+      return {
+        icon: CircleIcon,
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted/10',
+        tooltip: 'Pending execution'
+      }
+    }
+
+    switch (result.status) {
+      case 'success':
+        return {
+          icon: CheckCircleIcon,
+          color: 'text-green-600 dark:text-green-400',
+          bgColor: 'bg-green-100 dark:bg-green-900/20',
+          tooltip: 'Execution successful'
+        }
+      case 'reverted':
+        return {
+          icon: AlertTriangleIcon,
+          color: 'text-yellow-600 dark:text-yellow-400',
+          bgColor: 'bg-yellow-100 dark:bg-yellow-900/20',
+          tooltip: 'Transaction reverted'
+        }
+      case 'failed':
+        return {
+          icon: XCircleIcon,
+          color: 'text-red-600 dark:text-red-400',
+          bgColor: 'bg-red-100 dark:bg-red-900/20',
+          tooltip: 'Execution failed'
+        }
+      default:
+        return {
+          icon: CircleIcon,
+          color: 'text-muted-foreground',
+          bgColor: 'bg-muted/10',
+          tooltip: 'Unknown status'
+        }
+    }
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Transaction Simulator</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-lg sm:text-xl font-bold">
+              <span className="hidden sm:inline">Transaction Simulator</span>
+              <span className="sm:hidden">Simulator</span>
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
               Build, simulate, and analyze HyperEVM transactions with
               professional tooling
             </p>
           </div>
-          <Button onClick={() => router.push('/simulator/new')}>
+          <Button onClick={() => router.push('/simulator/new')} className="w-full sm:w-auto">
             <PlusIcon className="w-4 h-4 mr-2" />
-            New Simulation
+            <span className="hidden sm:inline">New Simulation</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
 
         {/* Quick Stats */}
         {!isLoading && stats.total > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card className="p-4">
-              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="text-xl font-bold">{stats.total}</div>
               <div className="text-sm text-muted-foreground">
                 Total Simulations
               </div>
             </Card>
             <Card className="p-4">
-              <div className="text-2xl font-bold">{stats.today}</div>
+              <div className="text-xl font-bold">{stats.today}</div>
               <div className="text-sm text-muted-foreground">Created Today</div>
             </Card>
           </div>
@@ -184,9 +234,21 @@ export default function SimulatorDashboard() {
                   key={simulation.id}
                   className="p-4 hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0 w-full sm:w-auto">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                        {(() => {
+                          const status = getStatusIcon(simulation.result)
+                          const StatusIcon = status.icon
+                          return (
+                            <div 
+                              className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${status.bgColor}`}
+                              title={status.tooltip}
+                            >
+                              <StatusIcon className={`w-4 h-4 ${status.color}`} />
+                            </div>
+                          )
+                        })()}
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           {editingTitleId === simulation.id ? (
                             <InlineTitleEditor
@@ -197,7 +259,7 @@ export default function SimulatorDashboard() {
                             />
                           ) : (
                             <>
-                              <h3 className="font-medium truncate">
+                              <h3 className="font-medium truncate text-sm sm:text-base">
                                 {simulation.metadata?.title || 'Untitled Simulation'}
                               </h3>
                               <button
@@ -212,13 +274,13 @@ export default function SimulatorDashboard() {
                           )}
                         </div>
                         <span
-                          className={`text-xs px-2 py-1 rounded-full ${getSimulationType(simulation.request).color}`}
+                          className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${getSimulationType(simulation.request).color}`}
                         >
                           {getSimulationType(simulation.request).label}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <ClockIcon className="w-3 h-3" />
                           {formatTimestamp(simulation.timestamp)}
@@ -226,8 +288,13 @@ export default function SimulatorDashboard() {
                         <div>
                           Calls: {simulation.request.params.calls?.length || 0}
                         </div>
+                        {simulation.result?.gasUsed && (
+                          <div className="hidden sm:block">
+                            Gas: {simulation.result.gasUsed.toLocaleString()}
+                          </div>
+                        )}
                         {simulation.request.params.blockNumber && (
-                          <div>
+                          <div className="hidden md:block">
                             Block:{' '}
                             {typeof simulation.request.params.blockNumber ===
                               'string' &&
@@ -244,7 +311,7 @@ export default function SimulatorDashboard() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="flex items-center gap-2 self-start sm:self-center">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -252,6 +319,7 @@ export default function SimulatorDashboard() {
                           router.push(`/simulator/${simulation.id}`)
                         }
                         title="View results"
+                        className="h-9 w-9 p-0 hover:bg-primary/10"
                       >
                         <PlayIcon className="w-4 h-4" />
                       </Button>
@@ -260,6 +328,7 @@ export default function SimulatorDashboard() {
                         size="sm"
                         onClick={() => handleEditSimulation(simulation.id)}
                         title="Edit parameters"
+                        className="h-9 w-9 p-0 hover:bg-blue-500/10"
                       >
                         <EditIcon className="w-4 h-4" />
                       </Button>
@@ -268,6 +337,7 @@ export default function SimulatorDashboard() {
                         size="sm"
                         onClick={() => handleShareSimulation(simulation.id)}
                         title="Share simulation"
+                        className="h-9 w-9 p-0 hover:bg-green-500/10"
                       >
                         <ShareIcon className="w-4 h-4" />
                       </Button>
@@ -275,7 +345,7 @@ export default function SimulatorDashboard() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteSimulation(simulation.id)}
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
                         title="Delete simulation"
                       >
                         <TrashIcon className="w-4 h-4" />

@@ -4,40 +4,59 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 47.4% 11.2%;
-    --radius: 0.5rem;
+    /* Dark theme as default - professional and modern */
+    --background: 217 85% 7%; /* #020921 - darkest brand color */
+    --foreground: 217 100% 90%; /* #CFDAFF - lightest brand color */
+    --card: 217 86% 11%; /* #050F2F - slightly lighter than background */
+    --card-foreground: 217 100% 90%;
+    --popover: 217 86% 11%;
+    --popover-foreground: 217 100% 90%;
+    --primary: 217 95% 72%; /* #7795FA - bright accent */
+    --primary-foreground: 217 85% 7%;
+    --secondary: 217 84% 18%; /* #0D1C50 */
+    --secondary-foreground: 217 100% 90%;
+    --muted: 217 84% 18%;
+    --muted-foreground: 217 98% 85%; /* #B9C9FE */
+    --accent: 217 84% 25%;
+    --accent-foreground: 217 100% 90%;
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 0 85.7% 97.3%;
+    --border: 217 84% 18%;
+    --input: 217 84% 18%;
+    --ring: 217 95% 72%;
+    --radius: 0.75rem;
+    
+    /* Brand colors mapped to HSL */
+    --brand-primary: 217 69% 35%; /* #2944A3 */
+    --brand-dark-1: 217 84% 18%; /* #0D1C50 */
+    --brand-dark-2: 217 86% 11%; /* #050F2F */
+    --brand-dark-3: 217 85% 7%; /* #020921 */
+    --brand-light-1: 217 100% 90%; /* #CFDAFF */
+    --brand-light-2: 217 98% 85%; /* #B9C9FE */
+    --brand-light-3: 217 95% 72%; /* #7795FA */
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+  .light {
+    /* Light theme fallback */
+    --background: 0 0% 100%;
+    --foreground: 217 69% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 69% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 69% 15%;
+    --primary: 217 69% 35%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 100% 97%;
+    --secondary-foreground: 217 69% 25%;
+    --muted: 217 35% 96%;
+    --muted-foreground: 217 25% 55%;
+    --accent: 217 77% 85%;
+    --accent-foreground: 217 69% 25%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217 25% 90%;
+    --input: 217 25% 90%;
+    --ring: 217 69% 35%;
   }
 }
 
@@ -47,7 +66,85 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
   }
+}
+
+@layer components {
+  /* Dark theme gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--brand-light-3)) 0%, hsl(var(--brand-primary)) 100%);
+  }
+  
+  .gradient-subtle {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
+  }
+  
+  .gradient-hero {
+    background: linear-gradient(135deg, 
+      hsl(var(--brand-dark-3)) 0%,
+      hsl(var(--brand-dark-2)) 50%,
+      hsl(var(--brand-dark-1)) 100%);
+  }
+  
+  /* Enhanced shadows for dark theme */
+  .shadow-brand {
+    box-shadow: 
+      0 4px 6px -1px hsl(var(--brand-light-3) / 0.1), 
+      0 2px 4px -1px hsl(var(--brand-light-3) / 0.06),
+      0 0 0 1px hsl(var(--border));
+  }
+  
+  .shadow-brand-lg {
+    box-shadow: 
+      0 10px 15px -3px hsl(var(--brand-light-3) / 0.2), 
+      0 4px 6px -2px hsl(var(--brand-light-3) / 0.1),
+      0 0 0 1px hsl(var(--border));
+  }
+  
+  /* Clean card styling for dark theme */
+  .card-enhanced {
+    background: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.8) 100%);
+    border: 1px solid hsl(var(--border) / 0.5);
+    border-radius: calc(var(--radius) - 2px);
+    box-shadow: 0 1px 3px 0 hsl(var(--foreground) / 0.1);
+    backdrop-filter: blur(8px);
+  }
+  
+  .card-enhanced:hover {
+    box-shadow: 
+      0 4px 6px -1px hsl(var(--brand-light-3) / 0.1), 
+      0 2px 4px -1px hsl(var(--brand-light-3) / 0.06),
+      0 0 0 1px hsl(var(--border));
+    border-color: hsl(var(--brand-light-3) / 0.3);
+    transform: translateY(-1px);
+    transition: all 0.2s ease-in-out;
+  }
+  
+  /* Glowing effects for interactive elements */
+  .glow-brand {
+    box-shadow: 0 0 20px hsl(var(--brand-light-3) / 0.3);
+  }
+  
+  .glow-brand:hover {
+    box-shadow: 0 0 30px hsl(var(--brand-light-3) / 0.5);
+  }
+}
+
+@layer utilities {
+  /* Brand color utilities */
+  .text-brand-primary { color: hsl(var(--brand-primary)); }
+  .text-brand-light-1 { color: hsl(var(--brand-light-1)); }
+  .text-brand-light-2 { color: hsl(var(--brand-light-2)); }
+  .text-brand-light-3 { color: hsl(var(--brand-light-3)); }
+  
+  .bg-brand-primary { background-color: hsl(var(--brand-primary)); }
+  .bg-brand-light-1 { background-color: hsl(var(--brand-light-1)); }
+  .bg-brand-light-2 { background-color: hsl(var(--brand-light-2)); }
+  .bg-brand-light-3 { background-color: hsl(var(--brand-light-3)); }
+  
+  .border-brand-primary { border-color: hsl(var(--brand-primary)); }
+  .border-brand-light-1 { border-color: hsl(var(--brand-light-1)); }
 }
 
 /* Custom styles for code and pre elements */

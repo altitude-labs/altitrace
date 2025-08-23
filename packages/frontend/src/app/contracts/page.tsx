@@ -77,126 +77,133 @@ export default function ContractsPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b bg-card">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-6 border-b bg-card">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Contract Library</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-lg sm:text-xl font-bold">Contract Library</h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
               Manage your smart contract ABIs and implementations
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={handleExportAll}
               disabled={contracts.length === 0}
+              className="text-xs sm:text-sm"
             >
-              Export All
+              <span className="hidden sm:inline">Export All</span>
+              <span className="sm:hidden">Export</span>
             </Button>
-            <Button onClick={() => setShowImportDialog(true)}>
+            <Button onClick={() => setShowImportDialog(true)} className="text-xs sm:text-sm">
               <PlusIcon className="h-4 w-4 mr-2" />
-              Import Contract
+              <span className="hidden sm:inline">Import Contract</span>
+              <span className="sm:hidden">Import</span>
             </Button>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mt-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6">
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <div className="text-sm text-muted-foreground">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-lg sm:text-xl font-bold">{stats.total}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">
                 Total Contracts
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-lg sm:text-xl font-bold text-green-600">
                 {stats.byStatus.imported}
               </div>
-              <div className="text-sm text-muted-foreground">Imported</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Imported</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-lg sm:text-xl font-bold text-blue-600">
                 {Object.values(stats.bySource).reduce(
                   (acc, count) => acc + (count || 0),
                   0,
                 )}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-xs sm:text-sm text-muted-foreground">
                 From Explorers
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-600">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-lg sm:text-xl font-bold text-purple-600">
                 {allTags.length}
               </div>
-              <div className="text-sm text-muted-foreground">Tags</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Tags</div>
             </CardContent>
           </Card>
         </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="p-6 border-b bg-muted/30">
-        <div className="flex gap-4 items-center">
+      <div className="p-4 sm:p-6 border-b bg-muted/30">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
           <div className="flex-1">
             <div className="relative">
               <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search contracts by name, address, or description..."
+                placeholder="Search contracts by name, address..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 text-sm"
               />
             </div>
           </div>
 
-          {allTags.length > 0 && (
-            <div className="flex items-center gap-2">
-              <TagIcon className="h-4 w-4 text-muted-foreground" />
-              <select
-                value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value)}
-                className="px-3 py-2 border rounded-lg bg-background"
-              >
-                <option value="">All Tags</option>
-                {allTags.map((tag) => (
-                  <option key={tag} value={tag}>
-                    {tag}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {allTags.length > 0 && (
+              <div className="flex items-center gap-2">
+                <TagIcon className="h-4 w-4 text-muted-foreground" />
+                <select
+                  value={selectedTag}
+                  onChange={(e) => setSelectedTag(e.target.value)}
+                  className="px-3 py-2 border rounded-lg bg-background text-sm"
+                >
+                  <option value="">All Tags</option>
+                  {allTags.map((tag) => (
+                    <option key={tag} value={tag}>
+                      {tag}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-          <div className="flex gap-1 border rounded-lg p-1">
-            <Button
-              variant={viewMode === 'list' ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-            >
-              List
-            </Button>
-            <Button
-              variant={viewMode === 'grid' ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-            >
-              Grid
-            </Button>
+            <div className="flex gap-1 border rounded-lg p-1">
+              <Button
+                variant={viewMode === 'list' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="text-xs"
+              >
+                List
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="text-xs"
+              >
+                Grid
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Contract List */}
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 p-4 sm:p-6 overflow-auto">
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
