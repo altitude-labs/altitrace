@@ -4,18 +4,18 @@ export function createAltitraceClient(): InstanceType<typeof AltitraceClient> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
   const isProduction = process.env.NODE_ENV === 'production'
   
-  if (apiUrl) {
-    return new AltitraceClient({
-      baseUrl: `${apiUrl}/v1`,
-      debug: !isProduction,
-      timeout: 30000,
-    })
-  }
-  
   if (isProduction) {
     return new AltitraceClient({
       baseUrl: '/api/altitrace',
       debug: false,
+      timeout: 30000,
+    })
+  }
+  
+  if (apiUrl) {
+    return new AltitraceClient({
+      baseUrl: `${apiUrl}/v1`,
+      debug: true,
       timeout: 30000,
     })
   }
