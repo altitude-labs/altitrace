@@ -3,6 +3,7 @@
 import {
   ClockIcon,
   EditIcon,
+  PencilIcon,
   PlayIcon,
   PlusIcon,
   ShareIcon,
@@ -11,7 +12,8 @@ import {
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Button, Card } from '@/components/ui'
+import { InlineTitleEditor } from '@/components/simulation/InlineTitleEditor'
+import { Button, Card, Spinner } from '@/components/ui'
 import {
   deleteSimulation,
   getStats,
@@ -23,6 +25,8 @@ export default function SimulatorDashboard() {
   const router = useRouter()
   const [simulations, setSimulations] = useState<StoredSimulation[]>([])
   const [stats, setStats] = useState({ total: 0, today: 0 })
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     // Load simulations and stats using proper storage system
@@ -31,6 +35,7 @@ export default function SimulatorDashboard() {
 
     setSimulations(loadedSimulations)
     setStats(loadedStats)
+    setIsLoading(false)
   }, [])
 
   const handleDeleteSimulation = (id: string) => {
@@ -54,6 +59,24 @@ export default function SimulatorDashboard() {
 
   const handleEditSimulation = (id: string) => {
     router.push(`/simulator/new?rerun=${id}`)
+  }
+
+  const handleEditTitle = (id: string) => {
+    setEditingTitleId(id)
+  }
+
+  const handleTitleUpdated = (newTitle: string) => {
+    const updatedSimulations = simulations.map(sim => 
+      sim.id === editingTitleId 
+        ? { ...sim, metadata: { ...sim.metadata, title: newTitle } }
+        : sim
+    )
+    setSimulations(updatedSimulations)
+    setEditingTitleId(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTitleId(null)
   }
 
   const formatTimestamp = (timestamp: Date) => {
@@ -102,7 +125,7 @@ export default function SimulatorDashboard() {
         </div>
 
         {/* Quick Stats */}
-        {stats.total > 0 && (
+        {!isLoading && stats.total > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="p-4">
               <div className="text-2xl font-bold">{stats.total}</div>
@@ -119,7 +142,21 @@ export default function SimulatorDashboard() {
 
         {/* Simulations List */}
         <div className="space-y-4">
-          {simulations.length === 0 ? (
+          {isLoading ? (
+            <Card className="p-12">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <Spinner size="lg" className="text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Loading simulations...</h3>
+                  <p className="text-muted-foreground mt-2">
+                    Retrieving your saved simulations
+                  </p>
+                </div>
+              </div>
+            </Card>
+          ) : simulations.length === 0 ? (
             <Card className="p-12">
               <div className="text-center space-y-4">
                 <div className="text-6xl">🚀</div>
@@ -150,9 +187,30 @@ export default function SimulatorDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-medium truncate">
-                          {simulation.metadata?.title || 'Untitled Simulation'}
-                        </h3>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {editingTitleId === simulation.id ? (
+                            <InlineTitleEditor
+                              simulationId={simulation.id}
+                              currentTitle={simulation.metadata?.title || 'Untitled Simulation'}
+                              onTitleUpdated={handleTitleUpdated}
+                              onCancel={handleCancelEdit}
+                            />
+                          ) : (
+                            <>
+                              <h3 className="font-medium truncate">
+                                {simulation.metadata?.title || 'Untitled Simulation'}
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() => handleEditTitle(simulation.id)}
+                                className="p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
+                                title="Edit title"
+                              >
+                                <PencilIcon className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                         <span
                           className={`text-xs px-2 py-1 rounded-full ${getSimulationType(simulation.request).color}`}
                         >
@@ -243,6 +301,8 @@ export default function SimulatorDashboard() {
           </div>
         )}
       </div>
+
+      {/* Inline editing is now handled directly in the simulation cards */}
     </div>
   )
 }

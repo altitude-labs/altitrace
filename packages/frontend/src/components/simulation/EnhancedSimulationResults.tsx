@@ -75,7 +75,7 @@ export function EnhancedSimulationResults({
     },
     {
       id: 'accesslist',
-      label: result.hasGasComparison ? 'Gas Optimization' : 'Access List',
+      label: 'Access List',
       icon: KeyIcon,
       count: result.hasAccessList
         ? result.accessListData?.getAccountCount() || 0
