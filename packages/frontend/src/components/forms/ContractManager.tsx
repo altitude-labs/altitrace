@@ -351,7 +351,10 @@ export function ContractManager({
               {/* Address Input Mode */}
               {contractSource === 'address' && (
                 <div>
-                  <label className="text-sm font-medium mb-2 block">
+                  <label
+                    htmlFor="contract-address"
+                    className="text-sm font-medium mb-2 block"
+                  >
                     Contract Address
                   </label>
                   <ContractAddressInput
@@ -370,7 +373,10 @@ export function ContractManager({
               {/* Saved Contract Selection Mode */}
               {contractSource === 'saved' && contracts.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium mb-2 block">
+                  <label
+                    htmlFor="contract-select"
+                    className="text-sm font-medium mb-2 block"
+                  >
                     Select Saved Contract
                   </label>
                   <Select

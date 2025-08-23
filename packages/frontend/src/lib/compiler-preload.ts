@@ -143,11 +143,8 @@ export async function preloadCompilers(): Promise<void> {
           compilerCache.set(fullVersion, { compiler, usedFallback: false })
           console.log(`✅ Cached compiler ${fullVersion}`)
         } else {
-          console.warn(`❌ Failed to load compiler ${fullVersion}`)
         }
-      } catch (error) {
-        console.error(`💥 Error preloading ${version}:`, error)
-      }
+      } catch (_error) {}
     })
 
     await Promise.allSettled(loadPromises)
@@ -202,7 +199,7 @@ export function getCachedCompiler(
 export function setCachedCompiler(
   version: string,
   compiler: any,
-  usedFallback: boolean = false,
+  usedFallback = false,
   error?: string,
 ) {
   compilerCache.set(version, { compiler, usedFallback, error })

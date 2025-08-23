@@ -20,7 +20,7 @@ import {
   viemBatchToTransactionCalls,
   viemToTransactionCall,
   WeiUtils,
-} from '@sdk/utils/viem-integration'
+} from '@sdk/utils/viem'
 
 describe('Viem Integration', () => {
   describe('viemToTransactionCall', () => {

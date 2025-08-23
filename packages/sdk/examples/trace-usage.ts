@@ -268,11 +268,11 @@ async function main() {
     const scenarios = [
       BundleHelpers.singleTransaction({
         to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        data: '0x18160ddd', // totalSupply()
+        data: '0x18160ddd',
       }),
       BundleHelpers.singleTransaction({
-        to: '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT
-        data: '0x18160ddd', // totalSupply()
+        to: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+        data: '0x18160ddd',
       }),
     ]
 
@@ -300,7 +300,7 @@ async function main() {
       {
         transactions: [
           {
-            to: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // UNI
+            to: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984',
             data: '0x18160ddd',
           },
         ],
@@ -308,7 +308,7 @@ async function main() {
       {
         transactions: [
           {
-            to: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', // AAVE
+            to: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
             data: '0x18160ddd',
           },
         ],

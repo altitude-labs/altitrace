@@ -1,142 +1,308 @@
-# Simulation
+# simulateCall
 
-Simulate transactions against HyperEVM state without executing them on-chain. Use direct methods for simple simulations or builders for complex scenarios with state overrides and asset tracking.
+Simulates a new message call without creating a transaction on the blockchain.
 
-## Basic Simulation
+## Usage
 
-```typescript
-const result = await client.simulate({
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-  data: '0xa9059cbb000000000000000000000000742d35cc6634c0532925a3b8d86c4f5e573f7d5b0000000000000000000000000000000000000000000000000de0b6b3a7640000',
-  gas: '0x5208'
+:::code-group
+
+```typescript [example.ts]
+import { client } from './config'
+
+const result = await client.simulateCall({ // [!code focus:7]
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a',
+  gas: '0xD6D8'
 })
-
-console.log('Gas used:', result.gasUsed)
-console.log('Status:', result.status)
 ```
 
-## Advanced Simulation with Builder
+```typescript [config.ts]
+import { AltitraceClient } from '@altitrace/sdk'
+
+export const client = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1'
+})
+```
+
+:::
+
+### Checking Balances
 
 ```typescript
-// Complex simulation with asset tracking
+const result = await client.simulateCall({
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+  data: '0x70a08231000000000000000000000000742d35cc6634c0532925a3b844bc9e7595f06e8c' // balanceOf
+})
+
+if (result.isSuccess()) {
+  const balance = BigInt(result.calls[0].returnData)
+  console.log('USDC Balance:', (Number(balance) / 1e6).toFixed(6))
+}
+```
+
+### Simulating Transfers
+
+```typescript
+const result = await client.simulateCall({
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+  data: '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a' // transfer 10 USDC
+})
+
+console.log('Transfer simulation:', result.isSuccess() ? 'Success' : 'Failed')
+console.log('Gas estimate:', result.getTotalGasUsed())
+```
+
+## Builder Pattern
+
+For more complex simulations, use the builder pattern.
+
+```typescript
 const result = await client.simulate()
   .call({
-    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-    data: '0xa9059cbb...'
+    from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a'
   })
-  .forAccount('0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B') // track changes for this account
+  .forAccount('0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c')
   .withAssetChanges(true)
   .withValidation(true)
+  .atBlock('latest')
   .execute()
 
+// Asset changes tracking
 if (result.assetChanges) {
-  result.assetChanges.forEach(change => {
-    console.log(`${change.asset}: ${change.diff}`)
+  const summary = result.getAssetChangesSummary()
+  summary.forEach(change => {
+    console.log(`${change.symbol}: ${change.netChange} (${change.type})`)
   })
 }
 ```
 
-## Transaction Parameters
+## Returns
+
+`ExtendedSimulationResult`
+
+The simulation result with helper methods.
+
+## Parameters
+
+### call
+
+- **Type:** `TransactionCall`
+
+The transaction call to simulate.
 
 ```typescript
-interface TransactionCall {
-  from: string      // Sender address
-  to?: string       // Recipient (null for contract creation)
-  value?: string    // ETH value in hex
-  data?: string     // Transaction data
-  gas?: string      // Gas limit in hex
-}
+const result = await client.simulateCall({
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c', // [!code focus]
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0x095ea7b3...'
+})
 ```
 
-## Batch Simulation
+### options.blockTag (optional)
+
+- **Type:** `'latest' | 'earliest' | 'pending' | 'safe' | 'finalized'`
+- **Default:** `'latest'`
+
+The block tag to simulate against.
 
 ```typescript
-const batchResult = await client.simulateBatch([
-  {
-    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-    data: '0xa9059cbb...'
-  },
-  {
-    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-    to: '0xB1c86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-    data: '0x70a08231...'
-  }
-])
+const result = await client.simulateCall(
+  { /* transaction */ },
+  { blockTag: 'safe' } // [!code focus]
+)
+```
 
-batchResult.calls.forEach((call, index) => {
-  console.log(`Call ${index}: ${call.status}, gas: ${call.gasUsed}`)
-})
+### options.validation (optional)
+
+- **Type:** `boolean`
+- **Default:** `true`
+
+Enable or disable EVM validation.
+
+```typescript
+const result = await client.simulateCall(
+  { /* transaction */ },
+  { validation: false } // [!code focus]
+)
+```
+
+### options.traceAssetChanges (optional)
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+Track token balance changes. Requires `account` parameter.
+
+```typescript
+const result = await client.simulateCall(
+  { /* transaction */ },
+  {
+    account: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    traceAssetChanges: true // [!code focus]
+  }
+)
 ```
 
 ## State Overrides
 
+Modify account states before simulation.
+
 ```typescript
-const result = await client.simulate({
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-  data: '0xa9059cbb...'
-}, {
-  stateOverrides: {
-    '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B': {
-      balance: '0x1bc16d674ec80000' // Give 2 ETH
-    },
-    '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c': {
-      code: '0x608060405...', // Override contract code
-      storage: {
-        '0x0': '0x1234' // Set storage slot 0
-      }
+const result = await client.simulate()
+  .call({
+    from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0xa9059cbb...'
+  })
+  .withStateOverrides([{
+    address: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    balance: '0x1bc16d674ec80000', // 2 ETH
+    nonce: 10
+  }, {
+    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    code: '0x608060405...', // Override bytecode
+    storage: {
+      '0x0': '0x1234' // Set storage slot
     }
-  }
-})
+  }])
+  .execute()
 ```
 
-## Block Context
+## Block Overrides
+
+Modify block parameters for simulation.
 
 ```typescript
-const result = await client.simulate(transaction, {
-  blockTag: 'latest', // or specific block number
-  blockOverrides: {
-    timestamp: Math.floor(Date.now() / 1000) + 3600, // 1 hour future
-    baseFee: '0x3b9aca00', // 1 Gwei
-    gasLimit: 30000000
-  }
-})
+const result = await client.simulate()
+  .call({ /* transaction */ })
+  .withBlockOverrides({
+    timestamp: Math.floor(Date.now() / 1000) + 3600,
+    number: '0x1234567',
+    baseFeePerGas: '0x3b9aca00',
+    gasLimit: '0x1c9c380' // 30M gas
+  })
+  .execute()
 ```
 
-## Result Structure
+## Batch Simulations
+
+### Sequential Batch
 
 ```typescript
-interface SimulationResult {
-  status: 'success' | 'reverted' | 'failed'
-  gasUsed: string           // Total gas used
-  blockGasUsed: string      // Gas used in block
-  calls: CallResult[]       // Individual call results
-  logs: LogEntry[]          // Event logs
+const config = {
+  simulations: [
+    {
+      params: {
+        calls: [{
+          from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+          to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+          data: '0x70a08231...'
+        }]
+      },
+      options: null
+    },
+    {
+      params: {
+        calls: [{
+          from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+          to: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+          data: '0x70a08231...'
+        }]
+      },
+      options: null
+    }
+  ],
+  stopOnFailure: true
 }
 
-interface CallResult {
-  status: 'success' | 'reverted'
-  gasUsed: string
-  returnData: string
-  error?: string
-}
+const batch = await client.simulateBatch(config)
+console.log(`Success: ${batch.successCount}/${batch.results.length}`)
+```
+
+### Batch API
+
+```typescript
+const results = await client.simulateBatchAPI([
+  {
+    params: {
+      calls: [{ /* transaction 1 */ }],
+      blockNumber: '0x1234567'
+    },
+    options: null
+  },
+  {
+    params: {
+      calls: [{ /* transaction 2 */ }],
+      blockNumber: '0x1234567'
+    },
+    options: null
+  }
+])
+
+results.forEach((result, i) => {
+  console.log(`Simulation ${i + 1}:`, result.isSuccess() ? 'Success' : 'Failed')
+})
 ```
 
 ## Error Handling
 
 ```typescript
+import { AltitraceApiError, ValidationError } from '@altitrace/sdk'
+
 try {
-  const result = await client.simulate(transaction)
+  const result = await client.simulateCall({
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0xa9059cbb...'
+  })
   
-  if (result.status === 'reverted') {
-    console.log('Transaction reverted:', result.calls[0].error)
-  } else {
-    console.log('Success! Gas used:', result.gasUsed)
+  if (result.isFailed()) {
+    const errors = result.getErrors()
+    errors.forEach(error => {
+      console.error(`Error: ${error.reason} (${error.errorType})`)
+    })
   }
 } catch (error) {
-  console.error('Simulation failed:', error.message)
+  if (error instanceof ValidationError) {
+    console.error('Invalid input:', error.message)
+  } else if (error instanceof AltitraceApiError) {
+    console.error('API error:', error.code, error.message)
+  }
+}
+```
+
+## Types
+
+```typescript
+interface TransactionCall {
+  from?: string | null
+  to?: string | null
+  data?: string | null
+  value?: string | null
+  gas?: string | null
+  accessList?: AccessList | null
+}
+
+interface ExtendedSimulationResult {
+  simulationId: string
+  status: 'success' | 'reverted' | 'failed'
+  blockNumber: string
+  gasUsed: string
+  blockGasUsed: string
+  calls: CallResult[]
+  assetChanges?: AssetChange[] | null
+  
+  // Helper methods
+  isSuccess(): boolean
+  isFailed(): boolean
+  getTotalGasUsed(): bigint
+  getCallGasUsed(callIndex: number): bigint
+  getErrors(): CallError[]
+  getAssetChangesSummary(): AssetChangeSummary[]
+  getDecodedEvents(): DecodedEvent[]
+  getLogCount(): number
 }
 ```
