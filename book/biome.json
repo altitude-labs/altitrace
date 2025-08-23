@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["../biome.json"],
+  "linter": {
+    "enabled": false
+  },
+  "assist": {
+    "enabled": false
+  },
+  "files": {
+    "includes": ["**/*.ts", "**/*.tsx", "!node_modules", "!examples"]
+  }
+}

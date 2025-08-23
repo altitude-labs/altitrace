@@ -1,0 +1,263 @@
+# Configuration
+
+## Environment Variables
+
+```bash
+# .env file
+HYPEREVM_RPC_URL=http://localhost:8545
+HYPEREVM_CHAIN_ID=1337
+
+# API Configuration
+API_PORT=8080
+API_HOST=0.0.0.0
+API_CORS_ORIGINS=*
+
+# Redis Configuration
+REDIS_URL=redis://localhost:6379
+REDIS_DB=0
+
+# Logging
+RUST_LOG=info
+DEBUG=altitrace:*
+
+# Performance
+MAX_CONCURRENT_REQUESTS=100
+REQUEST_TIMEOUT=30000
+```
+
+## API Configuration
+
+```toml
+# packages/api/config/default.toml
+[server]
+host = "0.0.0.0"
+port = 8080
+cors_origins = ["*"]
+
+[hyperevm]
+rpc_url = "http://localhost:8545"
+chain_id = 1337
+gas_limit = 30000000
+
+[redis]
+url = "redis://localhost:6379"
+db = 0
+max_connections = 10
+
+[tracing]
+level = "info"
+format = "json"
+```
+
+## SDK Configuration
+
+```typescript
+import { AltitraceClient } from '@altitrace/sdk'
+
+const client = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1',
+  timeout: 30000,
+  retries: 3,
+  retryDelay: 1000,
+  
+  // Authentication
+  apiKey: process.env.ALTITRACE_API_KEY,
+  
+  // Debug options
+  debug: process.env.NODE_ENV === 'development',
+  validateResponses: true,
+  
+  // Custom headers
+  headers: {
+    'User-Agent': 'MyApp/1.0.0'
+  }
+})
+```
+
+## Frontend Configuration
+
+```typescript
+// packages/frontend/next.config.js
+const nextConfig = {
+  env: {
+    ALTITRACE_API_URL: process.env.ALTITRACE_API_URL || 'http://localhost:8080',
+    HYPEREVM_RPC_URL: process.env.HYPEREVM_RPC_URL || 'http://localhost:8545',
+  },
+  
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.ALTITRACE_API_URL}/:path*`
+      }
+    ]
+  }
+}
+```
+
+## Production Configuration
+
+### Docker Environment
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  api:
+    environment:
+      - HYPEREVM_RPC_URL=https://rpc.hyperevm.org
+      - REDIS_URL=redis://redis:6379
+      - RUST_LOG=warn
+      - API_PORT=8080
+      
+  frontend:
+    environment:
+      - ALTITRACE_API_URL=http://api:8080
+      - NODE_ENV=production
+```
+
+### Systemd Service
+
+```ini
+# /etc/systemd/system/altitrace-api.service
+[Unit]
+Description=Altitrace API Server
+After=network.target
+
+[Service]
+Type=simple
+User=altitrace
+WorkingDirectory=/opt/altitrace/packages/api
+ExecStart=/usr/local/bin/altitrace-api
+Restart=always
+RestartSec=5
+
+Environment=HYPEREVM_RPC_URL=https://rpc.hyperevm.org
+Environment=REDIS_URL=redis://localhost:6379
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## Performance Tuning
+
+### API Server
+
+```toml
+[performance]
+max_concurrent_requests = 200
+request_timeout = 60000
+worker_threads = 4
+
+[cache]
+simulation_ttl = 300  # 5 minutes
+trace_ttl = 1800     # 30 minutes
+access_list_ttl = 600 # 10 minutes
+```
+
+### Redis Optimization
+
+```bash
+# redis.conf
+maxmemory 2gb
+maxmemory-policy allkeys-lru
+tcp-keepalive 60
+timeout 300
+```
+
+### Database Connection Pool
+
+```toml
+[database]
+max_connections = 20
+min_connections = 5
+connection_timeout = 5000
+idle_timeout = 600000
+```
+
+## Security Configuration
+
+### CORS Settings
+
+```toml
+[cors]
+origins = ["https://app.altitrace.com", "https://docs.altitrace.com"]
+methods = ["GET", "POST", "PUT", "DELETE"]
+headers = ["Content-Type", "Authorization"]
+credentials = true
+```
+
+### Rate Limiting
+
+```toml
+[rate_limit]
+requests_per_minute = 60
+burst_size = 10
+whitelist = ["127.0.0.1", "10.0.0.0/8"]
+```
+
+### Authentication
+
+```toml
+[auth]
+jwt_secret = "your-secret-key"
+token_expiry = 3600
+require_api_key = true
+```
+
+## Monitoring
+
+### Logging Configuration
+
+```toml
+[logging]
+level = "info"
+format = "json"
+output = "stdout"
+
+[logging.fields]
+timestamp = true
+request_id = true
+user_agent = true
+ip_address = true
+```
+
+### Metrics Export
+
+```toml
+[metrics]
+enabled = true
+endpoint = "/metrics"
+interval = 30
+
+[tracing.jaeger]
+enabled = true
+endpoint = "http://jaeger:14268"
+service_name = "altitrace-api"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+```bash
+# Check configuration
+altitrace-api --check-config
+
+# Validate environment
+altitrace-api --validate-env
+
+# Test connections
+curl http://localhost:8080/v1/status/healthcheck
+```
+
+### Debug Mode
+
+```bash
+# Enable debug logging
+RUST_LOG=debug altitrace-api
+
+# SDK debug mode
+DEBUG=altitrace:* npm start
+```

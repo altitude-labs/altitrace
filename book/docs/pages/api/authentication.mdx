@@ -1,0 +1,134 @@
+# Authentication
+
+The Altitrace API implements a flexible authentication system through TOML configuration files, supporting both development and production deployment scenarios.
+
+## Configuration
+
+Authentication is managed through environment-specific TOML configuration files in `packages/api/config/`:
+
+**Development (`dev.toml`)** - typically runs without authentication:
+```toml
+[api]
+auth_token = ""  # Empty string disables authentication
+rate_limit_requests = 100
+rate_limit_duration = 60
+```
+
+**Production (`prod.toml`)** - should always configure authentication:
+```toml
+[api]
+auth_token = "your_secure_production_token_here"
+rate_limit_requests = 1000
+rate_limit_duration = 60
+```
+
+**Test (`test.toml`)** - uses predefined tokens for automated testing:
+```toml
+[api]
+auth_token = "test_token_for_automated_testing"
+rate_limit_requests = 100
+rate_limit_duration = 60
+```
+
+## Authentication Methods
+
+When authentication is enabled, the API supports two header formats:
+
+### Bearer Token
+```http
+Authorization: Bearer your_api_token_here
+```
+
+### API Key
+```http
+X-API-Key: your_api_token_here
+```
+
+## Request Examples
+
+**With Bearer Token:**
+```bash
+curl -X POST "http://localhost:8080/v1/simulate" \
+  -H "Authorization: Bearer your_api_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{"params": {"calls": [...]}}'
+```
+
+**With API Key:**
+```bash
+curl -X POST "http://localhost:8080/v1/simulate" \
+  -H "X-API-Key: your_api_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{"params": {"calls": [...]}}'
+```
+
+## SDK Integration
+
+```typescript
+import { AltitraceClient } from '@altitrace/sdk'
+
+// Bearer token authentication
+const client = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1',
+  headers: {
+    'Authorization': 'Bearer your_api_token_here'
+  }
+})
+
+// API key authentication
+const clientWithApiKey = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1',
+  headers: {
+    'X-API-Key': 'your_api_token_here'
+  }
+})
+```
+
+## Error Responses
+
+**Missing Authentication:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTHENTICATION_REQUIRED",
+    "message": "Authentication token required for this endpoint",
+    "suggestion": "Include 'Authorization: Bearer <token>' or 'X-API-Key: <token>' header"
+  }
+}
+```
+
+**Invalid Authentication:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTHENTICATION_INVALID",
+    "message": "Invalid or expired authentication token",
+    "suggestion": "Verify your API token and ensure it matches the server configuration"
+  }
+}
+```
+
+## Rate Limiting
+
+Authentication integrates with rate limiting. Configured limits apply per environment:
+
+```toml
+[api]
+rate_limit_requests = 1000  # Requests per duration window
+rate_limit_duration = 60    # Duration window in seconds
+```
+
+## CORS Configuration
+
+Cross-origin resource sharing is configurable per environment:
+
+```toml
+[api.cors]
+allowed_origins = ["https://altitrace.com"]
+allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+allowed_headers = ["accept", "content-type", "authorization", "x-api-key"]
+allow_credentials = true
+max_age = 86400
+```

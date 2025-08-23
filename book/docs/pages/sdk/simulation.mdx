@@ -1,0 +1,142 @@
+# Simulation
+
+Simulate transactions against HyperEVM state without executing them on-chain. Use direct methods for simple simulations or builders for complex scenarios with state overrides and asset tracking.
+
+## Basic Simulation
+
+```typescript
+const result = await client.simulate({
+  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+  data: '0xa9059cbb000000000000000000000000742d35cc6634c0532925a3b8d86c4f5e573f7d5b0000000000000000000000000000000000000000000000000de0b6b3a7640000',
+  gas: '0x5208'
+})
+
+console.log('Gas used:', result.gasUsed)
+console.log('Status:', result.status)
+```
+
+## Advanced Simulation with Builder
+
+```typescript
+// Complex simulation with asset tracking
+const result = await client.simulate()
+  .call({
+    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+    data: '0xa9059cbb...'
+  })
+  .forAccount('0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B') // track changes for this account
+  .withAssetChanges(true)
+  .withValidation(true)
+  .execute()
+
+if (result.assetChanges) {
+  result.assetChanges.forEach(change => {
+    console.log(`${change.asset}: ${change.diff}`)
+  })
+}
+```
+
+## Transaction Parameters
+
+```typescript
+interface TransactionCall {
+  from: string      // Sender address
+  to?: string       // Recipient (null for contract creation)
+  value?: string    // ETH value in hex
+  data?: string     // Transaction data
+  gas?: string      // Gas limit in hex
+}
+```
+
+## Batch Simulation
+
+```typescript
+const batchResult = await client.simulateBatch([
+  {
+    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+    data: '0xa9059cbb...'
+  },
+  {
+    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+    to: '0xB1c86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+    data: '0x70a08231...'
+  }
+])
+
+batchResult.calls.forEach((call, index) => {
+  console.log(`Call ${index}: ${call.status}, gas: ${call.gasUsed}`)
+})
+```
+
+## State Overrides
+
+```typescript
+const result = await client.simulate({
+  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+  data: '0xa9059cbb...'
+}, {
+  stateOverrides: {
+    '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B': {
+      balance: '0x1bc16d674ec80000' // Give 2 ETH
+    },
+    '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c': {
+      code: '0x608060405...', // Override contract code
+      storage: {
+        '0x0': '0x1234' // Set storage slot 0
+      }
+    }
+  }
+})
+```
+
+## Block Context
+
+```typescript
+const result = await client.simulate(transaction, {
+  blockTag: 'latest', // or specific block number
+  blockOverrides: {
+    timestamp: Math.floor(Date.now() / 1000) + 3600, // 1 hour future
+    baseFee: '0x3b9aca00', // 1 Gwei
+    gasLimit: 30000000
+  }
+})
+```
+
+## Result Structure
+
+```typescript
+interface SimulationResult {
+  status: 'success' | 'reverted' | 'failed'
+  gasUsed: string           // Total gas used
+  blockGasUsed: string      // Gas used in block
+  calls: CallResult[]       // Individual call results
+  logs: LogEntry[]          // Event logs
+}
+
+interface CallResult {
+  status: 'success' | 'reverted'
+  gasUsed: string
+  returnData: string
+  error?: string
+}
+```
+
+## Error Handling
+
+```typescript
+try {
+  const result = await client.simulate(transaction)
+  
+  if (result.status === 'reverted') {
+    console.log('Transaction reverted:', result.calls[0].error)
+  } else {
+    console.log('Success! Gas used:', result.gasUsed)
+  }
+} catch (error) {
+  console.error('Simulation failed:', error.message)
+}
+```
