@@ -1,7 +1,9 @@
 'use client'
 
 import {
+  AlertTriangleIcon,
   CheckCircleIcon,
+  CircleIcon,
   ClockIcon,
   EditIcon,
   PencilIcon,
@@ -10,8 +12,6 @@ import {
   ShareIcon,
   TrashIcon,
   XCircleIcon,
-  AlertTriangleIcon,
-  CircleIcon,
 } from 'lucide-react'
 
 import { useRouter } from 'next/navigation'
@@ -70,10 +70,10 @@ export default function SimulatorDashboard() {
   }
 
   const handleTitleUpdated = (newTitle: string) => {
-    const updatedSimulations = simulations.map(sim => 
-      sim.id === editingTitleId 
+    const updatedSimulations = simulations.map((sim) =>
+      sim.id === editingTitleId
         ? { ...sim, metadata: { ...sim.metadata, title: newTitle } }
-        : sim
+        : sim,
     )
     setSimulations(updatedSimulations)
     setEditingTitleId(null)
@@ -104,10 +104,22 @@ export default function SimulatorDashboard() {
     )
 
     if (callsCount > 1)
-      return { label: 'Batch', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' }
+      return {
+        label: 'Batch',
+        color:
+          'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+      }
     if (hasValue)
-      return { label: 'Transfer', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' }
-    return { label: 'Call', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' }
+      return {
+        label: 'Transfer',
+        color:
+          'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+      }
+    return {
+      label: 'Call',
+      color:
+        'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+    }
   }
 
   const getStatusIcon = (result?: StoredSimulation['result']) => {
@@ -116,7 +128,7 @@ export default function SimulatorDashboard() {
         icon: CircleIcon,
         color: 'text-muted-foreground',
         bgColor: 'bg-muted/10',
-        tooltip: 'Pending execution'
+        tooltip: 'Pending execution',
       }
     }
 
@@ -126,28 +138,28 @@ export default function SimulatorDashboard() {
           icon: CheckCircleIcon,
           color: 'text-green-600 dark:text-green-400',
           bgColor: 'bg-green-100 dark:bg-green-900/20',
-          tooltip: 'Execution successful'
+          tooltip: 'Execution successful',
         }
       case 'reverted':
         return {
           icon: AlertTriangleIcon,
           color: 'text-yellow-600 dark:text-yellow-400',
           bgColor: 'bg-yellow-100 dark:bg-yellow-900/20',
-          tooltip: 'Transaction reverted'
+          tooltip: 'Transaction reverted',
         }
       case 'failed':
         return {
           icon: XCircleIcon,
           color: 'text-red-600 dark:text-red-400',
           bgColor: 'bg-red-100 dark:bg-red-900/20',
-          tooltip: 'Execution failed'
+          tooltip: 'Execution failed',
         }
       default:
         return {
           icon: CircleIcon,
           color: 'text-muted-foreground',
           bgColor: 'bg-muted/10',
-          tooltip: 'Unknown status'
+          tooltip: 'Unknown status',
         }
     }
   }
@@ -167,7 +179,10 @@ export default function SimulatorDashboard() {
               professional tooling
             </p>
           </div>
-          <Button onClick={() => router.push('/simulator/new')} className="w-full sm:w-auto">
+          <Button
+            onClick={() => router.push('/simulator/new')}
+            className="w-full sm:w-auto"
+          >
             <PlusIcon className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">New Simulation</span>
             <span className="sm:hidden">New</span>
@@ -199,7 +214,9 @@ export default function SimulatorDashboard() {
                   <Spinner size="lg" className="text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold">Loading simulations...</h3>
+                  <h3 className="text-xl font-semibold">
+                    Loading simulations...
+                  </h3>
                   <p className="text-muted-foreground mt-2">
                     Retrieving your saved simulations
                   </p>
@@ -241,11 +258,13 @@ export default function SimulatorDashboard() {
                           const status = getStatusIcon(simulation.result)
                           const StatusIcon = status.icon
                           return (
-                            <div 
+                            <div
                               className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${status.bgColor}`}
                               title={status.tooltip}
                             >
-                              <StatusIcon className={`w-4 h-4 ${status.color}`} />
+                              <StatusIcon
+                                className={`w-4 h-4 ${status.color}`}
+                              />
                             </div>
                           )
                         })()}
@@ -253,14 +272,18 @@ export default function SimulatorDashboard() {
                           {editingTitleId === simulation.id ? (
                             <InlineTitleEditor
                               simulationId={simulation.id}
-                              currentTitle={simulation.metadata?.title || 'Untitled Simulation'}
+                              currentTitle={
+                                simulation.metadata?.title ||
+                                'Untitled Simulation'
+                              }
                               onTitleUpdated={handleTitleUpdated}
                               onCancel={handleCancelEdit}
                             />
                           ) : (
                             <>
                               <h3 className="font-medium truncate text-sm sm:text-base">
-                                {simulation.metadata?.title || 'Untitled Simulation'}
+                                {simulation.metadata?.title ||
+                                  'Untitled Simulation'}
                               </h3>
                               <button
                                 type="button"

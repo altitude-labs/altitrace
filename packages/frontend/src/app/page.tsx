@@ -16,7 +16,7 @@ export default function Home() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-brand-light-1 tracking-tight">
               Altitrace
             </h1>
-            <div className="w-24 h-1 bg-gradient-primary mx-auto rounded-full"></div>
+            <div className="w-24 h-1 bg-gradient-primary mx-auto rounded-full" />
             <p className="text-lg sm:text-xl text-brand-light-2 max-w-2xl mx-auto px-4 sm:px-0 leading-relaxed">
               Simulate, debug, and analyze EVM transactions within the HyperEVM
               network. Test your transactions before they hit the chain with
@@ -26,13 +26,20 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4 sm:px-0 pt-4">
             <Link href="/simulator/new" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 glow-brand shadow-brand-lg font-medium">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 glow-brand shadow-brand-lg font-medium"
+              >
                 <PlayIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Start Simulating
               </Button>
             </Link>
             <Link href="/simulator" className="w-full sm:w-auto">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 border-brand-light-3/30 text-brand-light-2 hover:bg-brand-light-3/10 font-medium">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 border-brand-light-3/30 text-brand-light-2 hover:bg-brand-light-3/10 font-medium"
+              >
                 <CodeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 View Simulator
               </Button>
@@ -44,7 +51,9 @@ export default function Home() {
               disabled
             >
               <BookOpenIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Documentation (Coming Soon)</span>
+              <span className="hidden sm:inline">
+                Documentation (Coming Soon)
+              </span>
               <span className="sm:hidden">Docs (Soon)</span>
             </Button>
           </div>
@@ -53,8 +62,12 @@ export default function Home() {
         {/* Features Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-16">
           <div className="card-enhanced p-4 sm:p-6 text-center group">
-            <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 transition-transform group-hover:scale-110">🔍</div>
-            <h3 className="font-semibold mb-2 text-sm sm:text-base text-brand-light-1">Transaction Simulation</h3>
+            <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 transition-transform group-hover:scale-110">
+              🔍
+            </div>
+            <h3 className="font-semibold mb-2 text-sm sm:text-base text-brand-light-1">
+              Transaction Simulation
+            </h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
               Execute transactions against live or historical HyperEVM states
               with full validation
@@ -62,8 +75,12 @@ export default function Home() {
           </div>
 
           <div className="card-enhanced p-4 sm:p-6 text-center group">
-            <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 transition-transform group-hover:scale-110">📊</div>
-            <h3 className="font-semibold mb-2 text-sm sm:text-base text-brand-light-1">Detailed Analytics</h3>
+            <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 transition-transform group-hover:scale-110">
+              📊
+            </div>
+            <h3 className="font-semibold mb-2 text-sm sm:text-base text-brand-light-1">
+              Detailed Analytics
+            </h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
               Gas breakdowns, event logs, asset flows, and execution traces with
               visual charts
@@ -71,8 +88,12 @@ export default function Home() {
           </div>
 
           <div className="card-enhanced p-4 sm:p-6 text-center group">
-            <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 transition-transform group-hover:scale-110">⚙️</div>
-            <h3 className="font-semibold mb-2 text-sm sm:text-base text-brand-light-1">State Control</h3>
+            <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 transition-transform group-hover:scale-110">
+              ⚙️
+            </div>
+            <h3 className="font-semibold mb-2 text-sm sm:text-base text-brand-light-1">
+              State Control
+            </h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
               Override state values, impersonate accounts, and modify contract
               code for testing
@@ -80,8 +101,12 @@ export default function Home() {
           </div>
 
           <div className="card-enhanced p-4 sm:p-6 text-center group">
-            <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 transition-transform group-hover:scale-110">🔗</div>
-            <h3 className="font-semibold mb-2 text-sm sm:text-base text-brand-light-1">Bundle Support</h3>
+            <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 transition-transform group-hover:scale-110">
+              🔗
+            </div>
+            <h3 className="font-semibold mb-2 text-sm sm:text-base text-brand-light-1">
+              Bundle Support
+            </h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
               Simulate complex transaction bundles with dependency analysis and
               state persistence
@@ -91,7 +116,9 @@ export default function Home() {
 
         {/* Developer Features */}
         <div className="gradient-subtle rounded-xl p-6 sm:p-8 text-center border border-brand-light-3/20 shadow-brand-lg">
-          <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-brand-light-1">Built for Developers</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-brand-light-1">
+            Built for Developers
+          </h2>
           <p className="text-sm sm:text-base text-muted-foreground mb-8 max-w-3xl mx-auto">
             Altitrace provides a comprehensive toolchain for HyperEVM
             development with ABI import, function builders, and detailed error

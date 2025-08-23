@@ -367,7 +367,9 @@ function NewSimulationPageContent() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-lg sm:text-xl font-bold">
-                <span className="hidden sm:inline">New Transaction Simulation</span>
+                <span className="hidden sm:inline">
+                  New Transaction Simulation
+                </span>
                 <span className="sm:hidden">New Simulation</span>
               </h1>
               <p className="text-muted-foreground mt-1 text-sm sm:text-base">

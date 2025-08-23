@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 interface UseCopyToClipboardReturn {
   copied: boolean
@@ -23,7 +23,7 @@ export function useCopyToClipboard(): UseCopyToClipboardReturn {
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
-      
+
       setTimeout(() => {
         setCopied(false)
       }, 1000)
@@ -46,9 +46,12 @@ export function useMultipleCopyToClipboard(): UseMultipleCopyToClipboardReturn {
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({})
   const timeoutRefs = useRef<Record<string, NodeJS.Timeout>>({})
 
-  const getCopyState = useCallback((key: string) => {
-    return copiedStates[key] || false
-  }, [copiedStates])
+  const getCopyState = useCallback(
+    (key: string) => {
+      return copiedStates[key] || false
+    },
+    [copiedStates],
+  )
 
   const copyToClipboard = useCallback(async (key: string, text: string) => {
     // Clear any existing timeout for this key
@@ -58,16 +61,16 @@ export function useMultipleCopyToClipboard(): UseMultipleCopyToClipboardReturn {
 
     try {
       await navigator.clipboard.writeText(text)
-      setCopiedStates(prev => ({ ...prev, [key]: true }))
-      
+      setCopiedStates((prev) => ({ ...prev, [key]: true }))
+
       timeoutRefs.current[key] = setTimeout(() => {
-        setCopiedStates(prev => ({ ...prev, [key]: false }))
+        setCopiedStates((prev) => ({ ...prev, [key]: false }))
         delete timeoutRefs.current[key]
       }, 1000)
     } catch {
-      setCopiedStates(prev => ({ ...prev, [key]: true }))
+      setCopiedStates((prev) => ({ ...prev, [key]: true }))
       timeoutRefs.current[key] = setTimeout(() => {
-        setCopiedStates(prev => ({ ...prev, [key]: false }))
+        setCopiedStates((prev) => ({ ...prev, [key]: false }))
         delete timeoutRefs.current[key]
       }, 1000)
     }

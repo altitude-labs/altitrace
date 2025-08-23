@@ -1,11 +1,18 @@
 'use client'
 
 import type { CallResult } from '@altitrace/sdk/types'
-import { AlertTriangleIcon, CheckIcon, CopyIcon, ExternalLinkIcon, Loader2Icon, TagIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  CheckIcon,
+  CopyIcon,
+  ExternalLinkIcon,
+  Loader2Icon,
+  TagIcon,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Badge, Card, CardContent, Select } from '@/components/ui'
-import { useEventSignature } from '@/hooks/useEventSignature'
 import { useMultipleCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { useEventSignature } from '@/hooks/useEventSignature'
 
 interface EnhancedEventDisplayProps {
   call: CallResult
@@ -155,7 +162,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
     return `${explorerUrl}/address/${address}`
   }
 
-  const handleAddressClick = (address: string) => {
+  const _handleAddressClick = (address: string) => {
     window.open(getExplorerUrl(address), '_blank', 'noopener,noreferrer')
   }
 
@@ -253,7 +260,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
           <div>
             <span className="text-sm font-medium">Address</span>
             <div className="flex items-center gap-2 mt-1">
-              <a 
+              <a
                 href={getExplorerUrl(log.address)}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -273,7 +280,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                   <CopyIcon className="h-3 w-3 text-muted-foreground" />
                 )}
               </button>
-              <a 
+              <a
                 href={getExplorerUrl(log.address)}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -386,7 +393,9 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                       isValidAddress(formatValue(topic, currentFormat)) ? (
                         <div className="flex items-center gap-1 flex-1">
                           <a
-                            href={getExplorerUrl(formatValue(topic, currentFormat))}
+                            href={getExplorerUrl(
+                              formatValue(topic, currentFormat),
+                            )}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="bg-background px-2 py-1 rounded text-xs font-mono flex-1 text-left text-blue-600 hover:text-blue-800 hover:bg-muted transition-colors break-all"
@@ -395,7 +404,12 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                             {formatValue(topic, currentFormat)}
                           </a>
                           <button
-                            onClick={() => copyToClipboard(`topic-${topicIndex}`, formatValue(topic, currentFormat))}
+                            onClick={() =>
+                              copyToClipboard(
+                                `topic-${topicIndex}`,
+                                formatValue(topic, currentFormat),
+                              )
+                            }
                             className="p-1 hover:bg-muted rounded transition-colors"
                             title="Copy address"
                           >
@@ -405,8 +419,10 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                               <CopyIcon className="h-3 w-3 text-muted-foreground" />
                             )}
                           </button>
-                          <a 
-                            href={getExplorerUrl(formatValue(topic, currentFormat))}
+                          <a
+                            href={getExplorerUrl(
+                              formatValue(topic, currentFormat),
+                            )}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1 hover:bg-muted rounded transition-colors"
@@ -465,7 +481,12 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                         {formatValue(log.data, dataFormat)}
                       </a>
                       <button
-                        onClick={() => copyToClipboard('data-address', formatValue(log.data, dataFormat))}
+                        onClick={() =>
+                          copyToClipboard(
+                            'data-address',
+                            formatValue(log.data, dataFormat),
+                          )
+                        }
                         className="p-1 hover:bg-muted rounded transition-colors"
                         title="Copy address"
                       >
@@ -475,7 +496,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                           <CopyIcon className="h-3 w-3 text-muted-foreground" />
                         )}
                       </button>
-                      <a 
+                      <a
                         href={getExplorerUrl(formatValue(log.data, dataFormat))}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -504,7 +525,12 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                     {formatValue(log.data, dataFormat)}
                   </a>
                   <button
-                    onClick={() => copyToClipboard('data-address-simple', formatValue(log.data, dataFormat))}
+                    onClick={() =>
+                      copyToClipboard(
+                        'data-address-simple',
+                        formatValue(log.data, dataFormat),
+                      )
+                    }
                     className="p-1 hover:bg-muted rounded transition-colors"
                     title="Copy address"
                   >
@@ -514,7 +540,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                       <CopyIcon className="h-3 w-3 text-muted-foreground" />
                     )}
                   </button>
-                  <a 
+                  <a
                     href={getExplorerUrl(formatValue(log.data, dataFormat))}
                     target="_blank"
                     rel="noopener noreferrer"

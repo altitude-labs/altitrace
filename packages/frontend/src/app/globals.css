@@ -25,7 +25,7 @@
     --input: 217 84% 18%;
     --ring: 217 95% 72%;
     --radius: 0.75rem;
-    
+
     /* Brand colors mapped to HSL */
     --brand-primary: 217 69% 35%; /* #2944A3 */
     --brand-dark-1: 217 84% 18%; /* #0D1C50 */
@@ -73,59 +73,73 @@
 @layer components {
   /* Dark theme gradient backgrounds */
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--brand-light-3)) 0%, hsl(var(--brand-primary)) 100%);
+    background: linear-gradient(
+      135deg,
+      hsl(var(--brand-light-3)) 0%,
+      hsl(var(--brand-primary)) 100%
+    );
   }
-  
+
   .gradient-subtle {
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
+    background: linear-gradient(
+      135deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--background)) 100%
+    );
   }
-  
+
   .gradient-hero {
-    background: linear-gradient(135deg, 
+    background: linear-gradient(
+      135deg,
       hsl(var(--brand-dark-3)) 0%,
       hsl(var(--brand-dark-2)) 50%,
-      hsl(var(--brand-dark-1)) 100%);
+      hsl(var(--brand-dark-1)) 100%
+    );
   }
-  
+
   /* Enhanced shadows for dark theme */
   .shadow-brand {
-    box-shadow: 
-      0 4px 6px -1px hsl(var(--brand-light-3) / 0.1), 
+    box-shadow:
+      0 4px 6px -1px hsl(var(--brand-light-3) / 0.1),
       0 2px 4px -1px hsl(var(--brand-light-3) / 0.06),
       0 0 0 1px hsl(var(--border));
   }
-  
+
   .shadow-brand-lg {
-    box-shadow: 
-      0 10px 15px -3px hsl(var(--brand-light-3) / 0.2), 
+    box-shadow:
+      0 10px 15px -3px hsl(var(--brand-light-3) / 0.2),
       0 4px 6px -2px hsl(var(--brand-light-3) / 0.1),
       0 0 0 1px hsl(var(--border));
   }
-  
+
   /* Clean card styling for dark theme */
   .card-enhanced {
-    background: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.8) 100%);
+    background: linear-gradient(
+      145deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--card) / 0.8) 100%
+    );
     border: 1px solid hsl(var(--border) / 0.5);
     border-radius: calc(var(--radius) - 2px);
     box-shadow: 0 1px 3px 0 hsl(var(--foreground) / 0.1);
     backdrop-filter: blur(8px);
   }
-  
+
   .card-enhanced:hover {
-    box-shadow: 
-      0 4px 6px -1px hsl(var(--brand-light-3) / 0.1), 
+    box-shadow:
+      0 4px 6px -1px hsl(var(--brand-light-3) / 0.1),
       0 2px 4px -1px hsl(var(--brand-light-3) / 0.06),
       0 0 0 1px hsl(var(--border));
     border-color: hsl(var(--brand-light-3) / 0.3);
     transform: translateY(-1px);
     transition: all 0.2s ease-in-out;
   }
-  
+
   /* Glowing effects for interactive elements */
   .glow-brand {
     box-shadow: 0 0 20px hsl(var(--brand-light-3) / 0.3);
   }
-  
+
   .glow-brand:hover {
     box-shadow: 0 0 30px hsl(var(--brand-light-3) / 0.5);
   }
@@ -133,18 +147,38 @@
 
 @layer utilities {
   /* Brand color utilities */
-  .text-brand-primary { color: hsl(var(--brand-primary)); }
-  .text-brand-light-1 { color: hsl(var(--brand-light-1)); }
-  .text-brand-light-2 { color: hsl(var(--brand-light-2)); }
-  .text-brand-light-3 { color: hsl(var(--brand-light-3)); }
-  
-  .bg-brand-primary { background-color: hsl(var(--brand-primary)); }
-  .bg-brand-light-1 { background-color: hsl(var(--brand-light-1)); }
-  .bg-brand-light-2 { background-color: hsl(var(--brand-light-2)); }
-  .bg-brand-light-3 { background-color: hsl(var(--brand-light-3)); }
-  
-  .border-brand-primary { border-color: hsl(var(--brand-primary)); }
-  .border-brand-light-1 { border-color: hsl(var(--brand-light-1)); }
+  .text-brand-primary {
+    color: hsl(var(--brand-primary));
+  }
+  .text-brand-light-1 {
+    color: hsl(var(--brand-light-1));
+  }
+  .text-brand-light-2 {
+    color: hsl(var(--brand-light-2));
+  }
+  .text-brand-light-3 {
+    color: hsl(var(--brand-light-3));
+  }
+
+  .bg-brand-primary {
+    background-color: hsl(var(--brand-primary));
+  }
+  .bg-brand-light-1 {
+    background-color: hsl(var(--brand-light-1));
+  }
+  .bg-brand-light-2 {
+    background-color: hsl(var(--brand-light-2));
+  }
+  .bg-brand-light-3 {
+    background-color: hsl(var(--brand-light-3));
+  }
+
+  .border-brand-primary {
+    border-color: hsl(var(--brand-primary));
+  }
+  .border-brand-light-1 {
+    border-color: hsl(var(--brand-light-1));
+  }
 }
 
 /* Custom styles for code and pre elements */

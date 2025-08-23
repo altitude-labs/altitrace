@@ -24,7 +24,11 @@ interface SidebarProps {
   isMobile?: boolean
 }
 
-export function Sidebar({ isCollapsed = false, onToggle, isMobile = false }: SidebarProps) {
+export function Sidebar({
+  isCollapsed = false,
+  onToggle,
+  isMobile = false,
+}: SidebarProps) {
   const pathname = usePathname()
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['simulator', 'contracts']),
@@ -107,9 +111,9 @@ export function Sidebar({ isCollapsed = false, onToggle, isMobile = false }: Sid
   }) => {
     const isExpanded = expandedSections.has(sectionKey)
     const router = useRouter()
-    
+
     // Check if any child path is active
-    const isActiveSection = childPaths?.some(path => isActive(path)) || false
+    const isActiveSection = childPaths?.some((path) => isActive(path)) || false
 
     const handleClick = () => {
       if (isCollapsed && !isMobile && defaultHref) {
@@ -144,7 +148,7 @@ export function Sidebar({ isCollapsed = false, onToggle, isMobile = false }: Sid
             </>
           )}
         </button>
-        
+
         {/* Regular expanded view */}
         {(!isCollapsed || isMobile) && isExpanded && (
           <div className="mt-1 space-y-1">{children}</div>
@@ -156,23 +160,35 @@ export function Sidebar({ isCollapsed = false, onToggle, isMobile = false }: Sid
   return (
     <div
       className={`flex flex-col h-full border-r transition-all duration-200 ${
-        isMobile 
-          ? 'w-64 bg-background' 
-          : isCollapsed 
-            ? 'w-16 bg-card' 
+        isMobile
+          ? 'w-64 bg-background'
+          : isCollapsed
+            ? 'w-16 bg-card'
             : 'w-64 bg-card'
       }`}
     >
       {/* Header */}
       <div className="p-4 border-b h-[72px] flex items-center">
         <div className="flex items-center justify-center w-full">
-          {(!isCollapsed || isMobile) ? (
+          {!isCollapsed || isMobile ? (
             <div className="flex items-center justify-center">
-              <Image src="/altitrace.svg" alt="Altitrace" width={160} height={32} className="h-8 w-auto max-w-[160px]" />
+              <Image
+                src="/altitrace.svg"
+                alt="Altitrace"
+                width={160}
+                height={32}
+                className="h-8 w-auto max-w-[160px]"
+              />
             </div>
           ) : (
             <div className="w-8 h-8 flex items-center justify-center">
-              <Image src="/logo.svg" alt="Logo" width={32} height={32} className="w-8 h-8" />
+              <Image
+                src="/logo.svg"
+                alt="Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8"
+              />
             </div>
           )}
         </div>
@@ -184,9 +200,9 @@ export function Sidebar({ isCollapsed = false, onToggle, isMobile = false }: Sid
         <NavItem href="/" icon={HomeIcon} label="Dashboard" />
 
         {/* Simulator Section */}
-        <SectionHeader 
-          icon={ZapIcon} 
-          label="Simulator" 
+        <SectionHeader
+          icon={ZapIcon}
+          label="Simulator"
           sectionKey="simulator"
           defaultHref="/simulator/new"
           childPaths={['/simulator', '/simulator/new']}
@@ -249,9 +265,7 @@ export function Sidebar({ isCollapsed = false, onToggle, isMobile = false }: Sid
               }`}
             />
             {(!isCollapsed || isMobile) && (
-              <span className="ml-2">
-                {isMobile ? 'Close' : 'Collapse'}
-              </span>
+              <span className="ml-2">{isMobile ? 'Close' : 'Collapse'}</span>
             )}
           </Button>
         </div>

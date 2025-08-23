@@ -92,7 +92,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
           status: result.status,
           gasUsed: result.getTotalGasUsed(),
           callsCount: result.calls?.length || 0,
-          hasErrors: result.isFailed()
+          hasErrors: result.isFailed(),
         }
         updateResult(resolvedParams.id, resultData)
 
@@ -238,7 +238,9 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm">{formatTimestamp(simulation.timestamp)}</span>
+                  <span className="text-xs sm:text-sm">
+                    {formatTimestamp(simulation.timestamp)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs sm:text-sm">ID:</span>
@@ -259,15 +261,30 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-              <Button variant="outline" size="sm" onClick={handleShare} className="flex-1 sm:flex-none">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="flex-1 sm:flex-none"
+              >
                 <ShareIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <span className="hidden sm:inline">Share</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={handleExport} className="flex-1 sm:flex-none">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                className="flex-1 sm:flex-none"
+              >
                 <DownloadIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <span className="hidden sm:inline">Export</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={handleRerun} className="flex-1 sm:flex-none">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRerun}
+                className="flex-1 sm:flex-none"
+              >
                 <EditIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <span className="hidden sm:inline">Edit</span>
               </Button>
