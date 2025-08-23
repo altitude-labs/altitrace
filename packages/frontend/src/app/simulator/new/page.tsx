@@ -11,7 +11,6 @@ import { ContractManager } from '@/components/forms/ContractManager'
 import { TransactionForm } from '@/components/forms/TransactionForm'
 // Removed unused imports
 import { Alert, AlertDescription, Button } from '@/components/ui'
-import { useContractStorage } from '@/hooks/useContractStorage'
 import type { ParsedAbi } from '@/types/api'
 import {
   createContractStateOverride,
@@ -283,12 +282,7 @@ function NewSimulationPageContent() {
               )
             }
           }
-        } catch (error) {
-          console.warn(
-            '⚠️ [State Override] Failed to perform smart comparison, falling back to simple logic:',
-            error,
-          )
-
+        } catch (_error) {
           // Fallback to simple logic if async comparison fails
           const stateOverride = createContractStateOverride(selectedContract)
           if (stateOverride.requiresOverride && stateOverride.stateOverride) {
@@ -348,7 +342,7 @@ function NewSimulationPageContent() {
     }
   }
 
-  const resetSimulation = () => {
+  const _resetSimulation = () => {
     setError(null)
   }
 

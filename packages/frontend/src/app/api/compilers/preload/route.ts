@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { preloadCompilers, getPreloadStatus } from '@/lib/compiler-preload'
+import { getPreloadStatus, preloadCompilers } from '@/lib/compiler-preload'
 
 export async function POST(_request: NextRequest) {
   try {

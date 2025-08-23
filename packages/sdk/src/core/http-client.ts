@@ -20,8 +20,8 @@ import { AltitraceNetworkError, ConfigurationError } from './errors'
  */
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxAttempts: 3,
-  baseDelay: 1000, // 1 second
-  maxDelay: 30_000, // 30 seconds
+  baseDelay: 1000,
+  maxDelay: 30_000,
   backoffMultiplier: 2,
   retryableStatusCodes: new Set([408, 429, 500, 502, 503, 504]),
   shouldRetry: (error: NetworkError, attempt: number): boolean => {
@@ -355,41 +355,6 @@ export class HttpClient {
     return this.request<T>(path, {
       method: 'POST',
       body,
-      ...options,
-    })
-  }
-
-  /**
-   * Make a PUT request.
-   * @param path - API path
-   * @param body - Request body
-   * @param options - Additional request options
-   * @returns Promise resolving to the response
-   */
-  public async put<T>(
-    path: string,
-    body?: unknown,
-    options: Partial<RequestOptions> = {},
-  ): Promise<ApiResponse<T>> {
-    return this.request<T>(path, {
-      method: 'PUT',
-      body,
-      ...options,
-    })
-  }
-
-  /**
-   * Make a DELETE request.
-   * @param path - API path
-   * @param options - Additional request options
-   * @returns Promise resolving to the response
-   */
-  public async delete<T>(
-    path: string,
-    options: Partial<RequestOptions> = {},
-  ): Promise<ApiResponse<T>> {
-    return this.request<T>(path, {
-      method: 'DELETE',
       ...options,
     })
   }

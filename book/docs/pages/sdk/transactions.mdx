@@ -1,338 +1,214 @@
 # Transaction Building
 
-The SDK provides fluent builder APIs for constructing and executing transactions with simulation and tracing capabilities. Use builders for complex scenarios with state overrides, block contexts, and multiple configuration options.
+Build and simulate transactions with the Altitrace SDK.
 
-## Basic Transaction
+## Transaction Format
 
 ```typescript
 interface TransactionCall {
-  from: string      // Sender address (required)
-  to?: string       // Recipient (optional for contract creation)
-  value?: string    // ETH value in hex (default: '0x0')
-  data?: string     // Transaction data (default: '0x')
-  gas?: string      // Gas limit in hex (optional)
+  from?: string | null    // Sender address
+  to?: string | null      // Recipient (null for contract creation)
+  data?: string | null    // Transaction data
+  value?: string | null   // ETH value in wei (hex)
+  gas?: string | null     // Gas limit (hex)
+  accessList?: AccessList | null  // EIP-2930 access list
 }
+```
 
-const transaction: TransactionCall = {
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+## Basic Examples
+
+### ETH Transfer
+
+```typescript
+const ethTransfer: TransactionCall = {
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0x1234567890123456789012345678901234567890',
   value: '0xde0b6b3a7640000', // 1 ETH
-  data: '0x',
   gas: '0x5208' // 21000 gas
 }
+
+const result = await client.simulateCall(ethTransfer)
+console.log('Gas used:', result.getTotalGasUsed())
 ```
 
-## Builder Patterns
-
-### Simulation Builder
+### ERC-20 Transfer
 
 ```typescript
-// Basic simulation with builder
-const result = await client.simulate()
-  .call({
-    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-    data: '0xa9059cbb...'
-  })
-  .withValidation(true)
-  .execute()
+const tokenTransfer: TransactionCall = {
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+  data: '0xa9059cbb' + // transfer(address,uint256)
+    '0000000000000000000000001234567890123456789012345678901234567890' + // to
+    '0000000000000000000000000000000000000000000000000000000000000064'   // 100 USDC
+}
 
-// Complex simulation with overrides
-const advancedResult = await client.simulate()
-  .call({ from: '0x...', to: '0x...', data: '0x...' })
-  .forAccount('0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B') // track changes
-  .withAssetChanges(true)
-  .withStateOverrides([{
-    address: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-    balance: '0x1bc16d674ec80000' // 2 ETH
-  }])
-  .withBlockOverrides({
-    timestamp: Math.floor(Date.now() / 1000) + 3600, // 1 hour future
-    baseFee: '0x3b9aca00' // 1 Gwei
-  })
-  .atBlock('latest')
-  .execute()
+const result = await client.simulateCall(tokenTransfer)
 ```
 
-### Trace Builder
+### Contract Deployment
 
 ```typescript
-// Basic call trace
-const trace = await client.trace()
-  .call({
-    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-    data: '0xa9059cbb...'
-  })
-  .withCallTracer({ onlyTopCall: false, withLogs: true })
-  .atBlock('latest')
-  .execute()
+const deployment: TransactionCall = {
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  data: '0x608060405234801561001057600080fd5b50...', // bytecode
+  gas: '0x3d0900' // 4M gas
+}
 
-// Multi-tracer analysis
-const detailedTrace = await client.trace()
-  .call({ from: '0x...', to: '0x...', data: '0x...' })
-  .withCallTracer()
-  .withPrestateTracer({ diffMode: true })
-  .withStructLogger({ disableMemory: true })
-  .with4ByteTracer()
-  .withStateOverrides([{
-    address: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-    balance: '0x1bc16d674ec80000'
-  }])
-  .execute()
-
-// Trace existing transaction
-const txTrace = await client.trace()
-  .transaction('0x1234...abcd')
-  .withCallTracer()
-  .withPrestateTracer()
-  .execute()
-```
-
-### Builder Methods Reference
-
-#### Simulation Builder Methods
-- `call(transaction)` - Add transaction to simulate
-- `forAccount(address)` - Track asset changes for account
-- `withAssetChanges(enabled)` - Enable asset change tracking
-- `withTransfers(enabled)` - Track ETH transfers
-- `withValidation(enabled)` - Enable transaction validation
-- `withStateOverrides(overrides)` - Override account states
-- `withBlockOverrides(overrides)` - Override block parameters
-- `atBlock(blockTag)` - Set execution block context
-- `execute()` - Run simulation
-- `build()` - Build request without executing
-
-#### Trace Builder Methods
-- `call(transaction)` - Trace a transaction call
-- `transaction(hash)` - Trace existing transaction
-- `withCallTracer(config?)` - Enable call tracing
-- `withPrestateTracer(config?)` - Enable state diff tracing
-- `withStructLogger(config?)` - Enable opcode-level tracing
-- `with4ByteTracer()` - Enable function signature tracing
-- `atBlock(blockTag)` - Set block context
-- `withStateOverrides(overrides)` - State modifications
-- `withBlockOverrides(overrides)` - Block modifications
-- `execute()` - Run trace
-
-## State Override Helpers
-
-```typescript
-import { StateOverrideHelpers } from '@altitrace/sdk/builders/helpers'
-
-// Set account balance
-const balanceOverride = StateOverrideHelpers.setBalance(
-  '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  '0x1bc16d674ec80000' // 2 ETH
-)
-
-// Set contract code
-const codeOverride = StateOverrideHelpers.setCode(
-  '0xContractAddress',
-  '0x608060405...' // new bytecode
-)
-
-// Set storage slots
-const storageOverride = StateOverrideHelpers.setStorage(
-  '0xContractAddress',
-  { '0x0': '0x1234', '0x1': '0x5678' }
-)
-
-// Use with simulation
-const result = await client.simulate()
-  .call({ from: '0x...', to: '0x...', data: '0x...' })
-  .withStateOverrides([balanceOverride, codeOverride])
-  .execute()
-```
-
-## Block Override Helpers
-
-```typescript
-import { BlockOverrideHelpers } from '@altitrace/sdk/builders/helpers'
-
-// Set block parameters
-const blockOverride = BlockOverrideHelpers.setGasParams({
-  gasLimit: 30000000,
-  baseFee: '0x3b9aca00' // 1 Gwei
-})
-
-const timestampOverride = BlockOverrideHelpers.setTimestamp(
-  Math.floor(Date.now() / 1000) + 3600 // 1 hour future
-)
-
-// Use with trace
-const trace = await client.trace()
-  .call({ from: '0x...', to: '0x...', data: '0x...' })
-  .withBlockOverrides([blockOverride, timestampOverride])
-  .withCallTracer()
-  .execute()
-```
-
-## ERC-20 Transfer
-
-```typescript
-const transferData = '0xa9059cbb' + // transfer(address,uint256) selector
-  '000000000000000000000000742d35cc6634c0532925a3b8d86c4f5e573f7d5b' + // to address
-  '0000000000000000000000000000000000000000000000000de0b6b3a7640000'   // amount (1 ETH)
-
-const erc20Transfer: TransactionCall = {
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c', // token contract
-  data: transferData
+const result = await client.simulateCall(deployment)
+if (result.isSuccess()) {
+  console.log('Contract deployed at:', result.calls[0].address)
 }
 ```
 
-## Contract Creation
+## Using Viem
+
+Integrate with viem for encoding and decoding.
 
 ```typescript
-const contractCreation: TransactionCall = {
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  // to: undefined for contract creation
-  data: '0x608060405234801561001057600080fd5b50...', // constructor + bytecode
-  gas: '0x3d0900' // 4000000 gas
-}
-```
-
-## With viem Integration
-
-```typescript
-import { encodeFunctionData, parseEther } from 'viem'
+import { encodeFunctionData, parseAbi, parseEther } from 'viem'
 
 // Encode function call
 const data = encodeFunctionData({
-  abi: [{
-    name: 'transfer',
-    type: 'function',
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'amount', type: 'uint256' }
-    ]
-  }],
+  abi: parseAbi(['function transfer(address to, uint256 amount)']),
   functionName: 'transfer',
-  args: ['0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B', parseEther('1')]
+  args: ['0x1234567890123456789012345678901234567890', parseEther('1')]
 })
 
 const transaction: TransactionCall = {
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   data
 }
+
+const result = await client.simulateCall(transaction)
 ```
 
-## Multi-call Transaction
+### Decoding Results
 
 ```typescript
-// Multiple operations in one transaction
-const multicallData = encodeFunctionData({
-  abi: [{
-    name: 'multicall',
-    type: 'function', 
-    inputs: [{ name: 'data', type: 'bytes[]' }]
-  }],
-  functionName: 'multicall',
-  args: [[
-    encodeFunctionData({ /* first call */ }),
-    encodeFunctionData({ /* second call */ }),
-    encodeFunctionData({ /* third call */ })
-  ]]
+import { decodeAbiParameters, parseAbi } from 'viem'
+
+const result = await client.simulateCall({
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: encodeFunctionData({
+    abi: parseAbi(['function balanceOf(address) view returns (uint256)']),
+    functionName: 'balanceOf',
+    args: ['0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c']
+  })
 })
 
-const multicall: TransactionCall = {
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xMulticallContract',
-  data: multicallData
+if (result.isSuccess()) {
+  const [balance] = decodeAbiParameters(
+    parseAbi(['uint256']),
+    result.calls[0].returnData
+  )
+  console.log('Balance:', balance)
 }
 ```
 
 ## Gas Estimation
 
-```typescript
-// Simulate first to get gas estimate
-const simulation = await client.simulate(transaction)
-if (simulation.status === 'success') {
-  // Use actual gas used + buffer
-  const gasEstimate = parseInt(simulation.gasUsed, 16)
-  const gasWithBuffer = Math.floor(gasEstimate * 1.2) // 20% buffer
-  
-  transaction.gas = '0x' + gasWithBuffer.toString(16)
-}
-```
-
-## Batch Operations
+Estimate gas by simulating first.
 
 ```typescript
-import { BundleHelpers } from '@altitrace/sdk/builders/helpers'
-
-// Create transaction bundle
-const bundle = BundleHelpers.createBundle([
-  { from: '0x...', to: '0x...', data: '0x...' },
-  { from: '0x...', to: '0x...', data: '0x...' }
-])
-
-// Trace multiple calls sequentially
-const traces = await client.trace()
-  .callMany([
-    { 
-      transaction: { from: '0x...', to: '0x...', data: '0x...' },
-      blockTag: 'latest'
-    },
-    {
-      transaction: { from: '0x...', to: '0x...', data: '0x...' },
-      blockTag: 'latest'
-    }
-  ])
-  .withCallTracer()
-  .execute()
-
-// Access List Builder
-const accessList = await client.accessList()
-  .withTransaction({
-    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-    data: '0xa9059cbb...'
-  })
-  .atBlock('latest')
-  .execute()
-
-console.log('Access list:', accessList.accessList)
-console.log('Gas savings:', accessList.gasUsed)
-```
-
-## Direct vs Builder APIs
-
-```typescript
-// Direct API - simple operations
-const quickSim = await client.simulate({
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+// Simulate to get gas estimate
+const simulation = await client.simulateCall({
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   data: '0xa9059cbb...'
 })
 
-// Builder API - complex operations
-const complexSim = await client.simulate()
-  .call({ from: '0x...', to: '0x...', data: '0x...' })
-  .forAccount('0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B')
-  .withAssetChanges(true)
-  .withStateOverrides([/* overrides */])
-  .withBlockOverrides({ timestamp: 1234567890 })
-  .atBlock('pending')
-  .execute()
+if (simulation.isSuccess()) {
+  const gasUsed = simulation.getTotalGasUsed()
+  
+  console.log('Estimated gas:', gasUsed)
+}
 ```
 
-## Transaction Validation
+## Multicall Pattern
 
 ```typescript
-// Basic validation
-function validateTransaction(tx: TransactionCall): boolean {
-  if (!tx.from || tx.from.length !== 42) return false
-  if (tx.to && tx.to.length !== 42) return false
-  if (tx.value && !tx.value.startsWith('0x')) return false
-  if (tx.data && !tx.data.startsWith('0x')) return false
-  if (tx.gas && !tx.gas.startsWith('0x')) return false
-  return true
+import { encodeFunctionData, parseAbi } from 'viem'
+
+const multicallAbi = parseAbi([
+  'function multicall(bytes[] calldata data) returns (bytes[] memory results)'
+])
+
+// Batch multiple calls
+const calls = [
+  encodeFunctionData({
+    abi: parseAbi(['function approve(address spender, uint256 amount)']),
+    functionName: 'approve',
+    args: ['0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', parseEther('100')]
+  }),
+  encodeFunctionData({
+    abi: parseAbi(['function transfer(address to, uint256 amount)']),
+    functionName: 'transfer',
+    args: ['0x1234567890123456789012345678901234567890', parseEther('10')]
+  })
+]
+
+const multicallTx: TransactionCall = {
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696', // Multicall3
+  data: encodeFunctionData({
+    abi: multicallAbi,
+    functionName: 'multicall',
+    args: [calls]
+  })
 }
 
-if (!validateTransaction(transaction)) {
-  throw new Error('Invalid transaction format')
+const result = await client.simulateCall(multicallTx)
+```
+
+## Common Patterns
+
+### Safe Transfer
+
+```typescript
+// Check balance before transfer
+const balanceCheck = await client.simulateCall({
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: encodeFunctionData({
+    abi: parseAbi(['function balanceOf(address) view returns (uint256)']),
+    functionName: 'balanceOf',
+    args: ['0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c']
+  })
+})
+
+if (balanceCheck.isSuccess()) {
+  const [balance] = decodeAbiParameters(
+    parseAbi(['uint256']),
+    balanceCheck.calls[0].returnData
+  )
+  
+  const transferAmount = parseEther('10')
+  if (balance >= transferAmount) {
+    // Proceed with transfer
+    const transfer = await client.simulateCall({
+      from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+      to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      data: encodeFunctionData({
+        abi: parseAbi(['function transfer(address to, uint256 amount)']),
+        functionName: 'transfer',
+        args: ['0x1234567890123456789012345678901234567890', transferAmount]
+      })
+    })
+  }
+}
+```
+
+### Transaction Validation
+
+```typescript
+import { isAddress, isHex } from 'viem'
+
+function validateTransaction(tx: TransactionCall): boolean {
+  if (tx.from && !isAddress(tx.from)) return false
+  if (tx.to && !isAddress(tx.to)) return false
+  if (tx.data && !isHex(tx.data)) return false
+  if (tx.value && !isHex(tx.value)) return false
+  if (tx.gas && !isHex(tx.gas)) return false
+  return true
 }
 ```

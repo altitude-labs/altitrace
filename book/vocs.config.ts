@@ -8,7 +8,7 @@ export default defineConfig({
   ogImageUrl: '/altitrace-prod.png',
   sidebar,
   topNav: [
-    { text: 'Run', link: '/run/ethereum' },
+    { text: 'Simulator', link: '/webapp' },
     { text: 'SDK', link: '/sdk/overview' },
     { text: 'GitHub', link: 'https://github.com/altitude-labs/altitrace' },
     {
@@ -33,7 +33,7 @@ export default defineConfig({
     {
       icon: 'telegram',
       link: 'https://t.me/reachaltitude',
-    },
+    }
   ],
   sponsors: [
     {
@@ -58,6 +58,6 @@ export default defineConfig({
   },
   editLink: {
     pattern:
-      'https://github.com/paradigmxyz/reth/edit/main/book/vocs/docs/pages/:path',
+      'https://github.com/altitude-labs/altitrace/edit/main/book/docs/pages/:path',
   },
 })

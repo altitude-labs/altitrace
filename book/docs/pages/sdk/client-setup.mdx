@@ -1,53 +1,180 @@
 # Client Setup
 
-## Quick Setup
+Configure the Altitrace client for your environment.
 
-```typescript
-import { createClient } from '@altitrace/sdk'
+## Creating a Client
 
-// Local development
-const client = createClient.local()
+:::code-group
 
-// Production
-const client = createClient.production('https://api.altitrace.com')
+```typescript [basic.ts]
+import { AltitraceClient } from '@altitrace/sdk'
+
+// Default client (localhost)
+const client = new AltitraceClient()
+
+// Custom endpoint
+const client = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1'
+})
 ```
 
-## Custom Configuration
-
-```typescript
+```typescript [production.ts]
 import { AltitraceClient } from '@altitrace/sdk'
 
 const client = new AltitraceClient({
-  baseUrl: 'http://localhost:8080/v1',
-  timeout: 30000,
-  retries: 3,
-  apiKey: 'your-api-key', // if required
-  debug: true // development only
+  baseUrl: 'https://altitrace.reachaltitude.xyz/v1',
+  timeout: 60_000,
+  maxRetries: 3,
+  debug: false
 })
 ```
+
+```typescript [authenticated.ts]
+import { AltitraceClient } from '@altitrace/sdk'
+
+const client = new AltitraceClient({
+  baseUrl: 'https://api.example.com/v1',
+  apiKey: process.env.ALTITRACE_API_KEY,
+  headers: {
+    'X-Custom-Header': 'value'
+  }
+})
+```
+
+:::
 
 ## Configuration Options
 
 ```typescript
 interface AltitraceClientConfig {
-  baseUrl: string         // API endpoint
-  timeout?: number        // Request timeout (ms)
-  retries?: number        // Retry attempts
-  apiKey?: string         // Authentication
-  debug?: boolean         // Debug logging
+  // API endpoint URL
+  baseUrl?: string
+  
+  // Request timeout in milliseconds
+  timeout?: number
+  
+  // Number of retry attempts
+  maxRetries?: number
+  
+  // API key for authentication
+  apiKey?: string
+  
+  // Enable debug logging
+  debug?: boolean
+  
+  // Custom headers
+  headers?: Record<string, string>
+  
+  // Retry configuration
+  retryConfig?: {
+    retryDelay?: number
+    shouldRetry?: (error: any) => boolean
+  }
 }
 ```
 
-## Client Usage
+## Default Values
 
 ```typescript
-// Direct methods
-const result = await client.simulate(transaction)
-const trace = await client.trace(transaction)
-const accessList = await client.accessList(transaction)
+{
+  baseUrl: 'http://localhost:8080/v1',
+  timeout: 30_000,
+  maxRetries: 3,
+  debug: false,
+  retryConfig: {
+    retryDelay: 1000
+  }
+}
+```
 
-// Sub-clients
-const result = await client.simulation.simulate(request)
-const trace = await client.trace.call(request)
-const accessList = await client.accessList.create(request)
+## Environment Variables
+
+The client supports configuration via environment variables:
+
+```bash
+# API endpoint
+ALTITRACE_API_URL=https://altitrace.reachaltitude.xyz/v1
+
+# API key
+ALTITRACE_API_KEY=your-api-key
+
+# Debug mode
+ALTITRACE_DEBUG=true
+```
+
+```typescript
+const client = new AltitraceClient({
+  baseUrl: process.env.ALTITRACE_API_URL,
+  apiKey: process.env.ALTITRACE_API_KEY,
+  debug: process.env.ALTITRACE_DEBUG === 'true'
+})
+```
+
+## Client Methods
+
+### Direct Access
+
+```typescript
+// Simulation
+const result = await client.simulateCall({
+  from: '0x...',
+  to: '0x...',
+  data: '0x...'
+})
+
+// Tracing
+const trace = await client.traceCall({
+  from: '0x...',
+  to: '0x...',
+  data: '0x...'
+})
+
+// Access List
+const accessList = await client.generateAccessList({
+  from: '0x...',
+  to: '0x...',
+  data: '0x...'
+})
+```
+
+### Builder Pattern
+
+```typescript
+// Simulation builder
+const result = await client.simulate()
+  .call({ /* transaction */ })
+  .withAssetChanges(true)
+  .execute()
+
+// Trace builder
+const trace = await client.trace()
+  .call({ /* transaction */ })
+  .withCallTracer()
+  .execute()
+
+// Access list builder
+const accessList = await client.accessList()
+  .call({ /* transaction */ })
+  .atBlock('latest')
+  .execute()
+```
+
+### Sub-clients
+
+```typescript
+// Direct access to specialized clients
+const simulation = client.simulation
+const tracing = client.tracing
+const accessLists = client.accessLists
+```
+
+## Health Check
+
+```typescript
+// Check API status
+const health = await client.healthCheck()
+
+console.log('Status:', health.status)
+console.log('Version:', health.version)
+console.log('Uptime:', health.uptime)
 ```

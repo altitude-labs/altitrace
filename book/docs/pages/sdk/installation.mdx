@@ -1,27 +1,56 @@
 # Installation
 
-## Install SDK
+Install the Altitrace SDK in your project.
 
-```bash
-bun add @altitrace/sdk viem
+## Package Manager
+
+:::code-group
+
+```bash [bun]
+bun add @altitrace/sdk
 ```
+
+```bash [npm]
+npm install @altitrace/sdk
+```
+
+```bash [yarn]
+yarn add @altitrace/sdk
+```
+
+```bash [pnpm]
+pnpm add @altitrace/sdk
+```
+
+:::
 
 ## Requirements
 
-- Node.js 18+
-- TypeScript 5.0+ (optional)
-- viem ^2.0.0 (peer dependency)
+- Node.js 18+ or Bun
+- TypeScript 5.0+ (recommended)
 
 ## Verify Installation
 
 ```typescript
-import { createClient } from '@altitrace/sdk'
+import { AltitraceClient } from '@altitrace/sdk'
 
-const client = createClient.local()
-console.log('SDK installed successfully')
+const client = new AltitraceClient()
+const health = await client.healthCheck()
+
+console.log('Status:', health.status)
 ```
 
-## Next Steps
+## TypeScript Configuration
 
-- [Client Setup](/sdk/client-setup) - Configure the client
-- [Quick Start](/sdk) - Basic usage examples
+The SDK includes TypeScript definitions. For optimal type safety:
+
+```json [tsconfig.json]
+{
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "bundler"
+  }
+}
+```
