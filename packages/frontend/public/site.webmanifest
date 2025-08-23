@@ -1,0 +1,21 @@
+{
+    "name": "Altitrace",
+    "short_name": "Altitrace",
+    "description": "HyperEVM transaction simulation and tracing platform",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#7795FA",
+    "icons": [
+        {
+            "src": "/logo.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        },
+        {
+            "src": "/favicon.ico",
+            "sizes": "32x32",
+            "type": "image/x-icon"
+        }
+    ]
+}
