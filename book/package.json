@@ -1,15 +1,14 @@
 {
-  "name": "vocs",
+  "name": "@altitrace/book",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vocs dev",
-    "build": "vocs build && bun generate-redirects.ts",
+    "build": "vocs build",
     "preview": "vocs preview",
     "check-links": "bun check-links.ts",
-    "lint": "biome check . --write --unsafe && biome format . --write",
-    "generate-redirects": "bun generate-redirects.ts"
+    "lint": "biome check . --write --unsafe && biome format . --write"
   },
   "dependencies": {
     "react": "latest",

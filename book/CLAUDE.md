@@ -52,13 +52,13 @@ bun run preview
 
 ### Code Examples and Snippets
 
-- **Live Examples**: Use the snippets system to include actual runnable code
+- **Live Examples**: Use the snippets system to include actual runnable code, IT MUST BUILD
 - **Rust Code**: Include cargo project examples in `docs/snippets/sources/`
 - **CLI Examples**: Show actual command usage with expected outputs
 
 ### Configuration
 
-- **Base Path**: Site deploys to `/reth` path (configured in `vocs.config.ts`)
+- **Base Path**: Site deploys to `/altitrace` path (configured in `vocs.config.ts`)
 - **Theme**: Custom accent colors for light/dark themes
 - **Vite**: Uses Vite as the underlying build tool
 
@@ -97,5 +97,5 @@ bun run preview
 
 - This is a TypeScript/React project using Vocs framework
 - Content is primarily MDX with some TypeScript configuration
-- Focus on clear, practical documentation that helps users succeed with Reth
+- Focus on clear, practical documentation that helps users succeed with Altitrace
 - Maintain consistency with existing documentation style and structure

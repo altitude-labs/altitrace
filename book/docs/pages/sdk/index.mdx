@@ -1,79 +1,143 @@
-# SDK Documentation
+# Getting Started
 
-TypeScript SDK for HyperEVM transaction simulation and tracing.
+Altitrace SDK for HyperEVM transaction simulation and tracing.
 
 ## Installation
 
 ```bash
-bun add @altitrace/sdk viem
+bun add @altitrace/sdk
 ```
 
-## Quick Start
+## Usage
+
+:::code-group
+
+```typescript [example.ts]
+import { AltitraceClient } from '@altitrace/sdk'
+
+const client = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1'
+})
+
+// Simulate a transaction
+const result = await client.simulateCall({
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a',
+  gas: '0xD6D8'
+})
+
+console.log('Success:', result.isSuccess())
+console.log('Gas Used:', result.getTotalGasUsed())
+```
+
+```typescript [config.ts]
+import { AltitraceClient } from '@altitrace/sdk'
+
+// Local development
+export const localClient = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1',
+  debug: true
+})
+
+// Production
+export const productionClient = new AltitraceClient({
+  baseUrl: 'https://altitrace.reachaltitude.xyz/v1',
+  timeout: 60_000,
+  maxRetries: 3
+})
+```
+
+:::
+
+## Core Features
+
+### Simulation
+
+Simulate transactions to predict execution results and gas usage.
 
 ```typescript
-import { createClient } from '@altitrace/sdk'
-
-const client = createClient.local() // or .production()
-
-// Simulate transaction
-const result = await client.simulate({
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-  data: '0xa9059cbb...'
-})
-
-// Trace transaction
-const trace = await client.trace({
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-  data: '0xa9059cbb...'
+const result = await client.simulateCall({
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0x095ea7b30000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d0000000000000000000000000000000000000000000000000000000000000064'
 })
 ```
 
-## Core Functions
+### Tracing
 
-- **simulate()** - Simulate transactions with gas estimates
-- **trace()** - Get execution traces with multiple tracers
-- **accessList()** - Generate access lists for gas optimization
-- **batch()** - Process multiple transactions
-
-## Access List Optimization
+Analyze transaction execution with multiple trace types.
 
 ```typescript
-// Generate access list for gas optimization
-const accessList = await client.accessList({
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-  data: '0xa9059cbb...'
+const trace = await client.traceCall({
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0x70a08231000000000000000000000000742d35cc6634c0532925a3b844bc9e7595f06e8c'
+}, {
+  callTracer: true,
+  prestateTracer: true
 })
-
-console.log('Access list:', accessList.accessList)
-console.log('Gas estimate:', accessList.gasUsed)
 ```
 
-## Builder API Methods
+### Access Lists
 
-### Simulation Builder
-- `call(tx)` - Add transaction
-- `forAccount(address)` - Track asset changes
-- `withAssetChanges(enabled)` - Enable change tracking
-- `withStateOverrides(overrides)` - Override account states
-- `withBlockOverrides(overrides)` - Override block parameters
-- `atBlock(tag)` - Set execution context
-- `execute()` - Run simulation
+Generate optimized access lists for EIP-2930 transactions.
 
-### Trace Builder
-- `call(tx)` / `transaction(hash)` - Set trace target
-- `withCallTracer(config)` - Call hierarchy tracing
-- `withPrestateTracer(config)` - State change tracing
-- `withStructLogger(config)` - Opcode-level tracing
-- `with4ByteTracer()` - Function signature tracing
-- `atBlock(tag)` - Set block context
-- `execute()` - Run trace
+```typescript
+const accessList = await client.generateAccessList({
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a'
+})
 
-## Next Steps
+console.log('Access List:', accessList.accessList)
+console.log('Gas Used:', accessList.gasUsed)
+```
 
-- [Client Setup](/sdk/client-setup) - Configuration options
-- [Simulation](/sdk/simulation) - Transaction simulation
-- [Tracing](/sdk/traces) - Execution tracing
-- [Transactions](/sdk/transactions) - Building transactions
+## Builder Pattern API
+
+For complex simulations, use the builder pattern.
+
+```typescript
+const result = await client.simulate()
+  .call({
+    from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0x70a08231000000000000000000000000742d35cc6634c0532925a3b844bc9e7595f06e8c'
+  })
+  .forAccount('0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c')
+  .withAssetChanges(true)
+  .atBlock('latest')
+  .execute()
+```
+
+## Batch Operations
+
+Process multiple simulations efficiently.
+
+```typescript
+const results = await client.simulateBatchAPI([
+  {
+    params: {
+      calls: [{
+        from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+        to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+        data: '0x70a08231000000000000000000000000742d35cc6634c0532925a3b844bc9e7595f06e8c'
+      }],
+      blockNumber: '0x1234567'
+    },
+    options: null
+  },
+  {
+    params: {
+      calls: [{
+        from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+        to: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+        data: '0x70a08231000000000000000000000000742d35cc6634c0532925a3b844bc9e7595f06e8c'
+      }],
+      blockNumber: '0x1234567'
+    },
+    options: null
+  }
+])
+```

@@ -2,7 +2,7 @@ import { LRUCache } from 'lru-cache'
 import { type NextRequest, NextResponse } from 'next/server'
 import solc from 'solc'
 import { z } from 'zod'
-import { getCachedCompiler, setCachedCompiler } from '@/lib/compiler-preload'
+import { getCachedCompiler } from '@/lib/compiler-preload'
 
 const { loadCached076Compiler } = require('../../../utils/load-cached-compiler')
 
