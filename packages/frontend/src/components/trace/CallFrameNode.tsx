@@ -15,7 +15,10 @@ import {
   XCircleIcon,
 } from 'lucide-react'
 import { useState } from 'react'
-import { CallTypeIcon, CallTypeIconOnly } from '@/components/shared/CallTypeIcon'
+import {
+  CallTypeIcon,
+  CallTypeIconOnly,
+} from '@/components/shared/CallTypeIcon'
 import { Badge, Card, CardContent } from '@/components/ui'
 import { useMultipleCopyToClipboard } from '@/hooks/useCopyToClipboard'
 
@@ -76,30 +79,43 @@ export function CallFrameNode({
   // Horizontal layout for mobile - flatten the tree into a horizontal scrollable list
   if (isHorizontal) {
     // Collect all calls in a flat array to display horizontally
-    const collectAllCalls = (call: CallFrame, currentDepth = 0, callIndex = 0) => {
-      const result = [{call, depth: currentDepth, index: callIndex}];
+    const collectAllCalls = (
+      call: CallFrame,
+      currentDepth = 0,
+      callIndex = 0,
+    ) => {
+      const result = [{ call, depth: currentDepth, index: callIndex }]
       if (call.calls) {
         call.calls.forEach((subcall, subIndex) => {
-          result.push(...collectAllCalls(subcall, currentDepth + 1, subIndex));
-        });
+          result.push(...collectAllCalls(subcall, currentDepth + 1, subIndex))
+        })
       }
-      return result;
-    };
+      return result
+    }
 
-    const allCalls = collectAllCalls(frame, depth, index);
+    const allCalls = collectAllCalls(frame, depth, index)
 
     return (
       <div className="flex gap-3 min-w-max">
         {allCalls.map((callItem, idx) => {
-          const { call, depth: callDepth, index: callIndex } = callItem;
-          const callGasUsed = Number.parseInt(call.gasUsed, 16);
-          const callIsSuccess = !call.reverted;
-          const callBorderColor = depthColors[callDepth % depthColors.length] || 'border-l-gray-500';
-          const callFunctionSig = call.input && call.input !== '0x' && call.input.length >= 10 ? call.input.slice(0, 10) : null;
+          const { call, depth: callDepth, index: callIndex } = callItem
+          const callGasUsed = Number.parseInt(call.gasUsed, 16)
+          const callIsSuccess = !call.reverted
+          const callBorderColor =
+            depthColors[callDepth % depthColors.length] || 'border-l-gray-500'
+          const callFunctionSig =
+            call.input && call.input !== '0x' && call.input.length >= 10
+              ? call.input.slice(0, 10)
+              : null
 
           return (
-            <div key={`h-${callDepth}-${callIndex}-${idx}`} className="flex-shrink-0 w-64">
-              <Card className={`border-l-4 ${callBorderColor} ${!callIsSuccess ? 'bg-red-50 border-red-200' : ''} h-full`}>
+            <div
+              key={`h-${callDepth}-${callIndex}-${idx}`}
+              className="flex-shrink-0 w-64"
+            >
+              <Card
+                className={`border-l-4 ${callBorderColor} ${!callIsSuccess ? 'bg-red-50 border-red-200' : ''} h-full`}
+              >
                 <CardContent className="p-3 flex flex-col justify-center">
                   <div className="space-y-2">
                     {/* Call type and status */}
@@ -117,14 +133,15 @@ export function CallFrameNode({
 
                     {/* Depth indicator */}
                     <div className="text-xs text-muted-foreground">
-                      Depth: {callDepth} {callDepth > 0 && `| Call #${callIndex + 1}`}
+                      Depth: {callDepth}{' '}
+                      {callDepth > 0 && `| Call #${callIndex + 1}`}
                     </div>
-                    
+
                     {/* Addresses */}
                     <div className="space-y-1">
                       <div className="text-xs text-muted-foreground">From:</div>
                       <div className="flex items-center gap-1">
-                        <a 
+                        <a
                           href={`https://hyperevmscan.io/address/${call.from}`}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -133,7 +150,12 @@ export function CallFrameNode({
                           {call.from}
                         </a>
                         <button
-                          onClick={() => copyToClipboard(`from-${callDepth}-${callIndex}`, call.from)}
+                          onClick={() =>
+                            copyToClipboard(
+                              `from-${callDepth}-${callIndex}`,
+                              call.from,
+                            )
+                          }
                           className="p-1 hover:bg-muted rounded transition-colors"
                           title="Copy address"
                         >
@@ -143,7 +165,7 @@ export function CallFrameNode({
                             <CopyIcon className="h-3 w-3 text-muted-foreground" />
                           )}
                         </button>
-                        <a 
+                        <a
                           href={`https://hyperevmscan.io/address/${call.from}`}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -157,7 +179,7 @@ export function CallFrameNode({
                       <div className="flex items-center gap-1">
                         {call.to ? (
                           <>
-                            <a 
+                            <a
                               href={`https://hyperevmscan.io/address/${call.to}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -165,18 +187,24 @@ export function CallFrameNode({
                             >
                               {call.to}
                             </a>
-                                                    <button
-                          onClick={() => call.to && copyToClipboard(`to-${callDepth}-${callIndex}`, call.to)}
-                          className="p-1 hover:bg-muted rounded transition-colors"
-                          title="Copy address"
-                        >
+                            <button
+                              onClick={() =>
+                                call.to &&
+                                copyToClipboard(
+                                  `to-${callDepth}-${callIndex}`,
+                                  call.to,
+                                )
+                              }
+                              className="p-1 hover:bg-muted rounded transition-colors"
+                              title="Copy address"
+                            >
                               {getCopyState(`to-${callDepth}-${callIndex}`) ? (
                                 <CheckIcon className="h-3 w-3 text-green-500" />
                               ) : (
                                 <CopyIcon className="h-3 w-3 text-muted-foreground" />
                               )}
                             </button>
-                            <a 
+                            <a
                               href={`https://hyperevmscan.io/address/${call.to}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -213,7 +241,8 @@ export function CallFrameNode({
                     {/* Subcall count for current call */}
                     {call.calls && call.calls.length > 0 && (
                       <div className="text-xs text-muted-foreground">
-                        📁 {call.calls.length} subcall{call.calls.length !== 1 ? 's' : ''}
+                        📁 {call.calls.length} subcall
+                        {call.calls.length !== 1 ? 's' : ''}
                       </div>
                     )}
 
@@ -232,19 +261,23 @@ export function CallFrameNode({
                       <div className="bg-red-100 border border-red-200 rounded-md p-2">
                         <div className="flex items-center gap-2">
                           <AlertCircleIcon className="h-3 w-3 text-red-600" />
-                          <span className="font-medium text-red-800 text-xs">Failed</span>
+                          <span className="font-medium text-red-800 text-xs">
+                            Failed
+                          </span>
                         </div>
-                        <div className="text-xs text-red-700 mt-1 break-words">{call.error}</div>
+                        <div className="text-xs text-red-700 mt-1 break-words">
+                          {call.error}
+                        </div>
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
             </div>
-          );
+          )
         })}
       </div>
-    );
+    )
   }
 
   // Default vertical layout for desktop
@@ -294,7 +327,7 @@ export function CallFrameNode({
               {/* From → To addresses */}
               <div className="flex items-center gap-2 text-sm min-w-0 flex-1">
                 <div className="flex items-center gap-1 min-w-0">
-                  <a 
+                  <a
                     href={`https://hyperevmscan.io/address/${frame.from}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -304,7 +337,12 @@ export function CallFrameNode({
                     {formatAddress(frame.from)}
                   </a>
                   <button
-                    onClick={() => copyToClipboard(`desktop-from-${depth}-${index}`, frame.from)}
+                    onClick={() =>
+                      copyToClipboard(
+                        `desktop-from-${depth}-${index}`,
+                        frame.from,
+                      )
+                    }
                     className="p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
                     title="Copy address"
                   >
@@ -314,7 +352,7 @@ export function CallFrameNode({
                       <CopyIcon className="h-3 w-3 text-muted-foreground" />
                     )}
                   </button>
-                  <a 
+                  <a
                     href={`https://hyperevmscan.io/address/${frame.from}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -328,7 +366,7 @@ export function CallFrameNode({
                 <div className="flex items-center gap-1 min-w-0">
                   {frame.to ? (
                     <>
-                      <a 
+                      <a
                         href={`https://hyperevmscan.io/address/${frame.to}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -338,7 +376,13 @@ export function CallFrameNode({
                         {formatAddress(frame.to)}
                       </a>
                       <button
-                        onClick={() => frame.to && copyToClipboard(`desktop-to-${depth}-${index}`, frame.to)}
+                        onClick={() =>
+                          frame.to &&
+                          copyToClipboard(
+                            `desktop-to-${depth}-${index}`,
+                            frame.to,
+                          )
+                        }
                         className="p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
                         title="Copy address"
                       >
@@ -348,7 +392,7 @@ export function CallFrameNode({
                           <CopyIcon className="h-3 w-3 text-muted-foreground" />
                         )}
                       </button>
-                      <a 
+                      <a
                         href={`https://hyperevmscan.io/address/${frame.to}`}
                         target="_blank"
                         rel="noopener noreferrer"

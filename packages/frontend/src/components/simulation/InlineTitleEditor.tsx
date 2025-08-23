@@ -35,7 +35,7 @@ export function InlineTitleEditor({
       onCancel()
       return
     }
-    
+
     setIsLoading(true)
     try {
       const success = updateMetadata(simulationId, { title: title.trim() })

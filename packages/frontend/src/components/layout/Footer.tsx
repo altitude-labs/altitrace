@@ -1,5 +1,5 @@
+import { GithubIcon, GlobeIcon, TwitterIcon } from 'lucide-react'
 import Link from 'next/link'
-import { GithubIcon, GlobeIcon, TwitterIcon, HeartIcon } from 'lucide-react'
 
 export function Footer() {
   return (

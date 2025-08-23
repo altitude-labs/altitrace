@@ -3,7 +3,7 @@ const nextConfig = {
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL
     const isProduction = process.env.NODE_ENV === 'production'
-    
+
     if (apiUrl) {
       return [
         {
@@ -12,7 +12,7 @@ const nextConfig = {
         },
       ]
     }
-    
+
     if (isProduction) {
       return [
         {
@@ -21,7 +21,7 @@ const nextConfig = {
         },
       ]
     }
-    
+
     return [
       {
         source: '/api/altitrace/:path*',
@@ -50,7 +50,10 @@ const nextConfig = {
       },
     ]
   },
-  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://altitrace.reachaltitude.xyz' : '',
+  assetPrefix:
+    process.env.NODE_ENV === 'production'
+      ? 'https://altitrace.reachaltitude.xyz'
+      : '',
   async redirects() {
     if (process.env.NODE_ENV === 'production') {
       return [

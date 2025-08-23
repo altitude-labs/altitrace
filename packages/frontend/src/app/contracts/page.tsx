@@ -96,7 +96,10 @@ export default function ContractsPage() {
               <span className="hidden sm:inline">Export All</span>
               <span className="sm:hidden">Export</span>
             </Button>
-            <Button onClick={() => setShowImportDialog(true)} className="text-xs sm:text-sm">
+            <Button
+              onClick={() => setShowImportDialog(true)}
+              className="text-xs sm:text-sm"
+            >
               <PlusIcon className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Import Contract</span>
               <span className="sm:hidden">Import</span>
@@ -119,7 +122,9 @@ export default function ContractsPage() {
               <div className="text-lg sm:text-xl font-bold text-green-600">
                 {stats.byStatus.imported}
               </div>
-              <div className="text-xs sm:text-sm text-muted-foreground">Imported</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                Imported
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -140,7 +145,9 @@ export default function ContractsPage() {
               <div className="text-lg sm:text-xl font-bold text-purple-600">
                 {allTags.length}
               </div>
-              <div className="text-xs sm:text-sm text-muted-foreground">Tags</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                Tags
+              </div>
             </CardContent>
           </Card>
         </div>

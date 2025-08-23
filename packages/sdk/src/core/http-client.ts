@@ -98,10 +98,11 @@ export class HttpClient {
 
     if (
       !this.config.baseUrl.startsWith('http://') &&
-      !this.config.baseUrl.startsWith('https://')
+      !this.config.baseUrl.startsWith('https://') &&
+      !this.config.baseUrl.startsWith('/')
     ) {
       throw new ConfigurationError(
-        'Base URL must start with http:// or https://',
+        'Base URL must start with http://, https://, or / (for relative URLs)',
         'baseUrl',
       )
     }
