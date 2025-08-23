@@ -1,8 +1,4 @@
-use crate::{
-    config::RedisConfig,
-    services::errors::{CacheError, HealthCheckError},
-    CacheResult,
-};
+use crate::{config::RedisConfig, error::CacheError, CacheResult};
 
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client, RedisError};
 use serde::{Deserialize, Serialize};
@@ -22,7 +18,7 @@ impl RedisCache {
             Ok(client) => client,
             Err(e) => {
                 error!(target: "altitrace::api::cache", "Failed to create Redis client: {:#}", e);
-                return Err(CacheError::Redis(e));
+                return Err(CacheError::from(e));
             }
         };
 
@@ -78,29 +74,29 @@ impl RedisCache {
                     Ok(deserialized) => Ok(Some(deserialized)),
                     Err(e) => {
                         error!(target: "altitrace::api::cache", "Deserialization error for key {}: {}", key, e);
-                        Err(CacheError::Deserialization(e))
+                        Err(CacheError::Deserialization(e.to_string()))
                     }
                 }
             }
             Ok(None) => Ok(None),
             Err(e) => {
                 error!(target: "altitrace::api::cache", "Error during fetch of: {}", key);
-                Err(CacheError::Redis(e))
+                Err(CacheError::from(e))
             }
         }
     }
 
     // check if a key is already stored in the cache
     pub async fn exist(&self, key: &str) -> CacheResult<Option<bool>> {
-        let mut conn = self.get_conn().await?;
-        let result: Option<bool> = conn.exists(key).await?;
+        let mut conn = self.get_conn().await.map_err(CacheError::from)?;
+        let result: Option<bool> = conn.exists(key).await.map_err(CacheError::from)?;
         Ok(result)
     }
 
     // remove a key-value pair from the cache
     pub async fn remove(&self, key: &str) -> CacheResult<Option<bool>> {
-        let mut conn = self.get_conn().await?;
-        let result: Option<bool> = conn.del(key).await?;
+        let mut conn = self.get_conn().await.map_err(CacheError::from)?;
+        let result: Option<bool> = conn.del(key).await.map_err(CacheError::from)?;
         Ok(result)
     }
 
@@ -121,37 +117,40 @@ impl RedisCache {
     }
 
     pub async fn check_health(&self) -> CacheResult<()> {
-        let mut conn = self
-            .get_conn()
-            .await
-            .map_err(HealthCheckError::ConnectionError)?;
+        let mut conn = self.get_conn().await.map_err(|e| {
+            CacheError::Connection(format!("Health check connection failed: {}", e))
+        })?;
 
         const TEST_KEY: &str = "health_check_key";
         const TEST_VALUE: &str = "health_check_value";
 
-        let health_status = async {
-            conn.set::<&str, &str, ()>(TEST_KEY, TEST_VALUE)
-                .await
-                .map_err(HealthCheckError::SetError)?;
+        // Set test value
+        conn.set::<&str, &str, ()>(TEST_KEY, TEST_VALUE)
+            .await
+            .map_err(|e| CacheError::Operation(format!("Health check set failed: {}", e)))?;
 
-            let value = conn
-                .get::<&str, Option<String>>(TEST_KEY)
-                .await
-                .map_err(HealthCheckError::GetError)?;
+        // Get test value
+        let value = conn
+            .get::<&str, Option<String>>(TEST_KEY)
+            .await
+            .map_err(|e| CacheError::Operation(format!("Health check get failed: {}", e)))?;
 
-            let value = value.ok_or(HealthCheckError::ValueNotFound)?;
-            if value != TEST_VALUE {
-                return Err(HealthCheckError::ValueMismatch);
-            }
+        let value = value.ok_or_else(|| {
+            CacheError::Operation("Health check test value not found".to_string())
+        })?;
 
-            conn.del::<&str, ()>(TEST_KEY)
-                .await
-                .map_err(HealthCheckError::CleanupError)?;
-
-            Ok(())
+        if value != TEST_VALUE {
+            return Err(CacheError::Operation(format!(
+                "Health check value mismatch: expected '{}', got '{}'",
+                TEST_VALUE, value
+            )));
         }
-        .await;
 
-        health_status.map_err(CacheError::HealthCheckFailed)
+        // Cleanup test key
+        conn.del::<&str, ()>(TEST_KEY)
+            .await
+            .map_err(|e| CacheError::Operation(format!("Health check cleanup failed: {}", e)))?;
+
+        Ok(())
     }
 }

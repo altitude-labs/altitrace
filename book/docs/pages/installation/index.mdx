@@ -1,0 +1,101 @@
+# Installation
+
+Get Altitrace running in minutes.
+
+## Prerequisites
+
+- **Node.js 18+** and **Bun 1.2.7+**
+- **Rust toolchain** (see rust-toolchain.toml)
+- **Redis** (or use our docker-compose)
+- **HyperEVM node** with [nanoreth](https://github.com/hl-archive-node/nanoreth) for trace support
+
+## Quick Start
+
+```bash
+# Clone and setup
+git clone https://github.com/altitude-dev/altitrace.git
+cd altitrace
+bun install
+
+# Start Redis (if not installed)
+docker compose up -d redis
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your HyperEVM RPC URL
+
+# Run everything
+bun run dev
+```
+
+This starts:
+- API server on http://localhost:8080
+- Frontend on http://localhost:3000
+- SDK in watch mode
+
+## Verify Installation
+
+```bash
+# Check API health
+curl http://localhost:8080/v1/status/healthcheck
+
+# Access Swagger UI
+open http://localhost:8080/v1/openapi/docs
+
+# Open web interface
+open http://localhost:3000
+```
+
+## Configuration
+
+Create a `.env` file in the root directory:
+
+```env
+# HyperEVM RPC Configuration
+HYPEREVM_RPC_URL=http://localhost:8545
+HYPEREVM_CHAIN_ID=1337
+
+# API Configuration
+API_PORT=8080
+API_HOST=0.0.0.0
+
+# Optional: Enable debug logging
+DEBUG=altitrace:*
+```
+
+## Next Steps
+
+- 📚 [Learn about the API](/api) - Understand the REST and RPC endpoints
+- 🛠️ [Explore the SDK](/sdk) - Integrate Altitrace into your applications
+- 🖥️ [Try the Web UI](/webapp) - Use the visual interface for manual simulations
+- ⚙️ [Advanced Configuration](/installation/configuration) - Customize your setup
+
+## Getting Help
+
+Need assistance? Here are your options:
+
+- 💬 [GitHub Discussions](https://github.com/altitude-dev/altitrace/discussions) - Community support
+- 🐛 [GitHub Issues](https://github.com/altitude-dev/altitrace/issues) - Bug reports and features
+- 📚 [Documentation](/introduction) - Comprehensive guides and references
+
+## Troubleshooting
+
+Common issues and solutions:
+
+### Connection Issues
+```bash
+# Check HyperEVM node connectivity
+curl -X POST -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  http://localhost:8545
+```
+
+### Port Conflicts
+If ports 3000 or 8080 are in use, update your `.env` file:
+```env
+API_PORT=8081
+FRONTEND_PORT=3001
+```
+
+### Permission Issues
+Ensure your user has permission to bind to the configured ports, or run with appropriate privileges.

@@ -1,0 +1,63 @@
+---
+layout: landing
+---
+
+import { HomePage } from 'vocs/components'
+
+<HomePage.Root>
+  <HomePage.Logo />
+  <HomePage.Tagline>HyperEVM Transaction Simulation Platform</HomePage.Tagline>
+  <HomePage.InstallPackage name="@altitrace/sdk" />
+  <HomePage.Description>
+    Comprehensive HyperEVM transaction simulation platform built by Altitude Labs for the Hyperliquid Hackathon. 
+    Simulate, debug, and analyze transactions with advanced tracing, state control, and comprehensive analytics.
+  </HomePage.Description>
+  <HomePage.Buttons>
+    <HomePage.Button href="/installation" variant="accent">Get Started</HomePage.Button>
+    <HomePage.Button href="/introduction">Learn More</HomePage.Button>
+    <HomePage.Button href="https://github.com/altitude-dev/altitrace">GitHub</HomePage.Button>
+  </HomePage.Buttons>
+</HomePage.Root>
+
+## Key Features
+
+- **🔍 Transaction Simulation**: Test transactions before execution with detailed analysis
+- **🐛 Advanced Debugging**: Step-through EVM execution with traces and storage diffs  
+- **🛠️ Developer Friendly**: Strong TypeScript SDK with helpers and builders
+- **🎯 Multiple Interfaces**: REST API, TypeScript SDK, and Web UI
+
+## Quick Example
+
+```typescript
+import { AltitraceClient } from '@altitrace/sdk'
+
+const client = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/api/v1'
+})
+
+const result = await client.simulate().call({
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0x70a082310000000000000000000000000000000000000000000000000000000000000000',
+  value: '0xde0b6b3a7640000',
+  gas: '0x520800',
+})
+
+console.log('Gas used:', result.gasUsed)
+console.log('Success:', result.success)
+```
+
+## Hackathon Context
+
+Altitrace was developed by **Altitude Labs** as part of the [Hyperliquid Hackathon](https://taikai.network/en/hl-hackathon-organizers/hackathons/hl-hackathon/overview), specifically targeting the HyperEVM Transaction Simulator bounty. The platform addresses the critical need for comprehensive simulation infrastructure within the HyperEVM ecosystem, enabling developers and protocols to test, debug, and optimize their transactions before on-chain execution.
+
+## Monorepo Architecture
+
+Altitrace follows a modern **Turborepo** monorepo structure with three tightly integrated packages:
+
+**`packages/api`** - High-performance Rust API server built with Actix Web, providing REST endpoints and comprehensive OpenAPI documentation. Features advanced simulation capabilities, multiple trace modes, and direct HyperEVM RPC integration.
+
+**`packages/sdk`** - Strongly-typed TypeScript SDK with comprehensive client libraries, request builders, and utility functions. Offers modular exports, dedicated clients for simulation and tracing, and seamless viem integration.
+
+**`packages/frontend`** - Modern React application built with Next.js, featuring sophisticated transaction simulation interfaces, visual analytics, ABI integration, and real-time trace visualization.
+
+The platform leverages **Alloy** for EVM primitives and RPC communication, providing native HyperEVM support with optimized performance for high-speed execution environments.

@@ -1,0 +1,247 @@
+# Transaction endpoints
+
+The transaction endpoints provide comprehensive analysis capabilities for transactions, including access list generation, detailed execution traces, and multi-level debugging information.
+
+## Access List Generation
+
+Generate optimized access lists for transactions to reduce gas costs through EIP-2930 pre-declaration of storage slots and addresses.
+
+### `POST /simulate/access-list`
+
+Analyzes transaction execution to identify all accessed storage locations and addresses, returning an optimized access list.
+
+```json
+{
+  "params": {
+    "from": "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B",
+    "to": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+    "data": "0xa9059cbb..."
+  },
+  "block": "latest"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "accessList": [
+      {
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "storageKeys": ["0x0000000000000000000000000000000000000000000000000000000000000001"]
+      }
+    ],
+    "gasUsed": "0x5208"
+  }
+}
+```
+
+## Transaction Tracing
+
+### `POST /trace/tx`
+
+Traces an existing transaction by hash with comprehensive execution analysis.
+
+```json
+{
+  "transactionHash": "0xbc4a51bbcbe7550446c151d0d53ee14d5318188e2af1726e28a481b075fc7b4c",
+  "tracerConfig": {
+    "callTracer": { "withLogs": true },
+    "prestateTracer": { "diffMode": true },
+    "4byteTracer": true
+  }
+}
+```
+
+### `POST /trace/call`
+
+Traces a hypothetical transaction call without on-chain execution.
+
+```json
+{
+  "call": {
+    "from": "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B",
+    "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "data": "0x70a08231..."
+  },
+  "tracerConfig": {
+    "callTracer": { "withLogs": true }
+  }
+}
+```
+
+### `POST /trace/call-many`
+
+Traces multiple calls sequentially with cumulative state changes, useful for transaction bundle analysis.
+
+```json
+{
+  "bundles": [{
+    "transactions": [
+      { "from": "0x742d...", "to": "0x1f98...", "data": "0xa905..." },
+      { "from": "0x742d...", "to": "0xA0b8...", "data": "0x095e..." }
+    ]
+  }],
+  "tracerConfig": { "callTracer": { "withLogs": true } }
+}
+```
+
+## Tracer Types
+
+The API supports multiple tracer types that can be used individually or combined for comprehensive analysis. The Call tracer is used by default.
+
+### Call Tracer
+
+Provides hierarchical transaction execution analysis with call structure, gas usage, and sub-call relationships.
+
+```typescript
+interface CallTracerConfig {
+  onlyTopCall?: boolean    // Trace only top-level call
+  withLogs?: boolean       // Include event logs
+}
+```
+
+**Response includes:**
+- Hierarchical call structure with gas tracking
+- Input/output data for each call  
+- Event logs and revert reasons
+- Call depth and execution flow
+
+### Prestate Tracer
+
+Captures account states before and after execution for state change analysis.
+
+```typescript
+interface PrestateTracerConfig {
+  diffMode?: boolean        // Show before/after state differences
+  disableCode?: boolean     // Exclude contract code from results
+  disableStorage?: boolean  // Exclude storage from results
+}
+```
+
+**Default mode:** Returns all accounts touched during execution
+**Diff mode:** Shows precise state changes with before/after values
+
+### Struct Logger
+
+Provides detailed opcode-level execution traces for deep debugging.
+
+```typescript
+interface StructLoggerConfig {
+  cleanStructLogs?: boolean      // Remove redundant information
+  disableMemory?: boolean        // Exclude memory from traces
+  disableStack?: boolean         // Exclude stack from traces
+  disableStorage?: boolean       // Exclude storage from traces
+  cleanStructLogs?: boolean      // Avoid returning every opcode execution step
+}
+```
+
+**Response includes:**
+- Step-by-step opcode execution
+- Stack, memory, and storage states
+- Gas consumption per operation
+- Execution errors and context
+
+### 4-Byte Tracer
+
+Analyzes function signatures and call patterns throughout execution.
+
+```json
+{
+  "totalIdentifiers": 3,
+  "identifiers": {
+    "0xa9059cbb": { "count": 2, "dataSize": 128 },
+    "0x70a08231": { "count": 1, "dataSize": 32 }
+  }
+}
+```
+
+## Advanced Features
+
+### State and Block Overrides
+
+All trace endpoints support state modifications for testing scenarios:
+
+```json
+{
+  "stateOverrides": {
+    "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B": {
+      "balance": "0x1bc16d674ec80000",
+      "storage": { "0x0": "0x1" }
+    }
+  },
+  "blockOverrides": {
+    "number": "0x123456",
+    "time": 1700000000,
+    "baseFee": "0x3b9aca00"
+  }
+}
+```
+
+### Multi-Tracer Analysis
+
+Combine multiple tracers in a single request for comprehensive debugging:
+
+```json
+{
+  "tracerConfig": {
+    "callTracer": { "withLogs": true },
+    "prestateTracer": { "diffMode": true },
+    "structLogger": { "cleanStructLogs": true },
+    "4byteTracer": true
+  }
+}
+```
+
+## Error Handling
+
+Trace endpoints return structured errors with actionable information:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "SIMULATION_EXECUTION_FAILED",
+    "message": "Transaction execution reverted",
+    "details": {
+      "revertReason": "ERC20: transfer amount exceeds balance",
+      "contractAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    },
+    "suggestion": "Check account balance before attempting transfer"
+  }
+}
+```
+
+Common error codes include:
+- `VALIDATION_ERROR` - Invalid request parameters
+- `SIMULATION_EXECUTION_FAILED` - Transaction execution issues
+- `STATE_ACCESS_ERROR` - Blockchain state access problems
+- `INSUFFICIENT_GAS` - Gas limit too low
+
+## SDK Integration
+
+The TypeScript SDK provides convenient access to all tracing functionality:
+
+```typescript
+import { createClient } from '@altitrace/sdk'
+
+const client = createClient.local()
+
+// Generate access list
+const accessList = await client.accessList.create({
+  params: { from: '0x742d...', to: '0x1f98...', data: '0xa905...' }
+})
+
+// Trace existing transaction  
+const trace = await client.trace.traceTransaction({
+  transactionHash: '0xbc4a51bb...',
+  tracerConfig: { callTracer: { withLogs: true } }
+})
+
+// Trace hypothetical call
+const callTrace = await client.trace.traceCall({
+  call: { from: '0x742d...', to: '0xA0b8...', data: '0x70a0...' },
+  tracerConfig: { callTracer: { withLogs: true } }
+})
+```

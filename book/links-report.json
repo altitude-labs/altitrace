@@ -1,0 +1,53 @@
+{
+  "timestamp": "2025-08-23T01:48:46.352Z",
+  "totalFiles": 17,
+  "totalLinks": 26,
+  "brokenLinks": [
+    {
+      "file": "docs/pages/api/index.mdx",
+      "link": "/api/debug",
+      "line": 185,
+      "reason": "Absolute path not found: /api/debug"
+    },
+    {
+      "file": "docs/pages/api/index.mdx",
+      "link": "/api/errors",
+      "line": 186,
+      "reason": "Absolute path not found: /api/errors"
+    },
+    {
+      "file": "docs/pages/sdk/index.mdx",
+      "link": "/sdk/examples",
+      "line": 80,
+      "reason": "Absolute path not found: /sdk/examples"
+    },
+    {
+      "file": "docs/pages/webapp/index.mdx",
+      "link": "/webapp/interface",
+      "line": 212,
+      "reason": "Absolute path not found: /webapp/interface"
+    },
+    {
+      "file": "docs/pages/webapp/index.mdx",
+      "link": "/webapp/simulation",
+      "line": 213,
+      "reason": "Absolute path not found: /webapp/simulation"
+    },
+    {
+      "file": "docs/pages/webapp/index.mdx",
+      "link": "/webapp/debugging",
+      "line": 214,
+      "reason": "Absolute path not found: /webapp/debugging"
+    },
+    {
+      "file": "docs/pages/webapp/index.mdx",
+      "link": "/webapp/export",
+      "line": 215,
+      "reason": "Absolute path not found: /webapp/export"
+    }
+  ],
+  "summary": {
+    "brokenCount": 7,
+    "validCount": 19
+  }
+}

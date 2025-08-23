@@ -6,7 +6,7 @@ use alloy_rpc_types_eth::BlockNumberOrTag;
 use alloy_transport_http::reqwest::Url;
 use alloy_transport_ws::WsConnect;
 
-use super::ProviderError;
+use crate::error::ProviderError;
 
 /// RPC provider connection and request handling.
 #[derive(Debug, Clone)]
@@ -47,7 +47,7 @@ impl RpcProvider {
 
         block
             .await
-            .map_err(|e| ProviderError::FetchError { block: to_fetch, error: e.to_string() })
+            .map_err(|e| ProviderError::fetch_error(to_fetch, e.to_string()))
             .and_then(|opt| opt.ok_or(ProviderError::BlockNotFound(to_fetch)))
     }
 
@@ -79,7 +79,7 @@ impl RpcProvider {
             .inner
             .get_block_receipts(block_id)
             .await
-            .map_err(|e| ProviderError::FetchError { block: to_fetch, error: e.to_string() })?
+            .map_err(|e| ProviderError::fetch_error(to_fetch, e.to_string()))?
             .ok_or(ProviderError::BlockNotFound(to_fetch))?;
 
         Ok(receipts
