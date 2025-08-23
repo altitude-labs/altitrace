@@ -347,8 +347,8 @@ function NewSimulationPageContent() {
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         {/* Header with Navigation */}
         <div className="space-y-4">
           <div className="flex items-center gap-4">
@@ -359,14 +359,18 @@ function NewSimulationPageContent() {
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowLeftIcon className="w-4 h-4 mr-1" />
-              Back to Simulator
+              <span className="hidden sm:inline">Back to Simulator</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">New Transaction Simulation</h1>
-              <p className="text-muted-foreground mt-1">
+              <h1 className="text-lg sm:text-xl font-bold">
+                <span className="hidden sm:inline">New Transaction Simulation</span>
+                <span className="sm:hidden">New Simulation</span>
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                 Build and simulate HyperEVM transactions with detailed tracing
                 and gas analysis
               </p>
@@ -381,9 +385,9 @@ function NewSimulationPageContent() {
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           {/* Left Column - Input Forms */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Contract Management */}
             <div data-section="contract-management">
               <ContractManager
@@ -411,7 +415,7 @@ function NewSimulationPageContent() {
           </div>
 
           {/* Right Column - Compact Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-4 order-first lg:order-last">
             {/* Status Card - Only show when there's meaningful status */}
             {(loading ||
               (selectedContract &&
