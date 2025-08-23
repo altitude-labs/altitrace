@@ -11,5 +11,6 @@ export {
 } from './Card'
 export { Input, type InputProps } from './Input'
 export { Select, type SelectOption, type SelectProps } from './Select'
+export { Spinner } from './Spinner'
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './Tabs'
 export { Textarea, type TextareaProps } from './Textarea'
