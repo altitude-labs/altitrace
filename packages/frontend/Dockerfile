@@ -5,6 +5,7 @@ WORKDIR /app
 # Install Bun for package management
 RUN npm install -g bun@1.2.7
 
+# Install dependencies for the entire monorepo
 FROM base AS deps
 
 RUN echo '{"name":"@altitrace/monorepo","private":true,"workspaces":["packages/*"],"packageManager":"bun@1.2.7"}' > package.json
@@ -12,6 +13,7 @@ COPY bun.lock ./
 COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/sdk/package.json ./packages/sdk/
 COPY packages/frontend/scripts ./packages/frontend/scripts
+COPY packages/frontend/public ./packages/frontend/public
 
 RUN bun install
 
