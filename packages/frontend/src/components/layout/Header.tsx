@@ -18,7 +18,7 @@ export function Header() {
               <ZapIcon className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-xl">AltiTrace</span>
+              <span className="font-bold text-xl">Altitrace</span>
               <span className="text-xs text-muted-foreground -mt-1">
                 HyperEVM Simulator
               </span>
