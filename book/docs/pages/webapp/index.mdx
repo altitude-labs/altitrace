@@ -1,0 +1,215 @@
+# Web Application
+
+The Altitrace web application delivers a sophisticated interface for HyperEVM transaction simulation and analysis. Built with **Next.js 15** and modern React patterns, the application provides comprehensive tools for developers, auditors, and power users working with HyperEVM transactions.
+
+## Architecture & Technology Stack
+
+**Frontend Framework** utilizing Next.js 15 with App Router for optimal performance and SEO, React 18 with modern hooks and concurrent features, TypeScript for comprehensive type safety, and Tailwind CSS with custom design system components.
+
+**State Management** through Zustand for lightweight, predictable state management, React Hook Form for robust form handling and validation, and LRU caching for optimal performance with frequently accessed data.
+
+**Visualization & Analytics** featuring Recharts for interactive gas usage and performance charts, Lucide React for consistent iconography throughout the interface, custom call trace tree components for execution flow visualization, and enhanced event display with automatic ABI decoding.
+
+**Developer Experience** enhancements include ABI import functionality with automatic function detection, smart block input with latest/number/tag support, transaction form builder with parameter validation, and comprehensive error boundaries with detailed diagnostics.
+
+## Key Capabilities
+
+**Transaction Simulation Interface** provides intuitive transaction building with ABI integration, real-time parameter validation and error checking, support for complex transaction bundles and dependencies, comprehensive gas analysis with visual breakdowns, and detailed execution results with trace visualization.
+
+**Advanced Debugging Tools** offer step-through execution traces with call frame trees, enhanced event displays with automatic parameter decoding, gas usage heatmaps for performance optimization, storage and state change visualization, and comprehensive error analysis with actionable suggestions.
+
+**Visual Analytics** include interactive charts for gas usage patterns, call depth and complexity analysis, asset flow visualization for token transfers, performance comparison tools for optimization, and comprehensive reporting with export capabilities.
+
+## Accessing the Web App
+
+Once you have Altitrace running locally:
+
+```bash
+# Start the development servers
+bun run dev
+
+# Web app will be available at:
+http://localhost:3000
+```
+
+For production deployments, the web app is typically available at your domain's root or `/app` path.
+
+## Interface Overview
+
+### Navigation
+
+- **Dashboard**: Overview of recent simulations and quick actions
+- **Simulator**: Main transaction simulation interface
+- **Debugger**: Advanced debugging tools and trace analysis
+- **History**: Past simulation results and saved scenarios
+- **Settings**: Configuration and preferences
+
+### Main Simulation Interface
+
+The primary simulation interface consists of:
+
+1. **Transaction Builder**: Form to construct transactions
+2. **Results Panel**: Simulation output and analysis
+3. **Trace Viewer**: Detailed execution traces
+4. **Gas Analysis**: Gas usage breakdown and optimization
+
+## Using the Simulator
+
+### Basic Transaction Simulation
+
+1. **Select Transaction Type**:
+   - Simple transfer
+   - Contract interaction
+   - Contract deployment
+   - Multi-call bundle
+
+2. **Fill Transaction Details**:
+   ```
+   From Address: 0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B
+   To Address: 0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c
+   Value: 1.0 ETH
+   Gas Limit: Auto-estimate
+   ```
+
+3. **Configure Simulation**:
+   - Block number (latest, specific, or custom)
+   - Trace options (memory, storage, return data)
+   - Debug level (basic, detailed, full)
+
+4. **Run Simulation**: Click "Simulate" to execute
+
+### Contract Interaction
+
+For contract calls, the interface provides:
+
+- **ABI Input**: Paste or upload contract ABI
+- **Function Selection**: Dropdown of available functions
+- **Parameter Input**: Type-safe parameter forms
+- **Encoding Preview**: See the encoded calldata
+
+### Advanced Features
+
+#### Batch Simulation
+Simulate multiple transactions in sequence:
+
+1. Click "Add Transaction" to create a batch
+2. Configure each transaction in the sequence
+3. Set dependencies and ordering
+4. Run the entire batch
+
+#### State Forking
+Simulate against different network states:
+
+1. Select "Fork from Block"
+2. Choose block number or use latest
+3. Optionally modify account balances
+4. Run simulations against forked state
+
+#### Custom Scenarios
+Save and reuse common simulation scenarios:
+
+1. Configure your transaction
+2. Click "Save Scenario"
+3. Name and tag for easy retrieval
+4. Load scenarios from the sidebar
+
+## Debugging Tools
+
+### Execution Trace Viewer
+
+The trace viewer provides:
+
+- **Step-by-step execution**: Navigate through each EVM operation
+- **Stack visualization**: See the EVM stack at each step
+- **Memory inspection**: View memory state changes
+- **Storage monitoring**: Track storage slot modifications
+- **Gas tracking**: Monitor gas consumption per operation
+
+### Error Analysis
+
+When transactions fail:
+
+- **Error highlighting**: Failed operations are highlighted
+- **Revert reasons**: Clear explanation of failure causes
+- **Stack traces**: Full execution path to the error
+- **Suggestions**: Recommendations for fixing issues
+
+### Performance Analysis
+
+- **Gas heatmap**: Visual representation of gas usage
+- **Optimization hints**: Suggestions for gas reduction
+- **Comparison tools**: Compare different implementation approaches
+- **Bottleneck identification**: Find expensive operations
+
+## Export and Sharing
+
+### Export Formats
+
+- **JSON**: Complete simulation data for programmatic use
+- **CSV**: Tabular data for spreadsheet analysis
+- **PDF Report**: Formatted report with visualizations
+- **Markdown**: Documentation-ready format
+
+### Sharing Features
+
+- **Shareable URLs**: Direct links to simulation results
+- **Team Workspaces**: Collaborative simulation environments
+- **Comment System**: Add notes and observations
+- **Version History**: Track changes to scenarios
+
+## Keyboard Shortcuts
+
+- **Ctrl/Cmd + Enter**: Run simulation
+- **Ctrl/Cmd + S**: Save current scenario
+- **Ctrl/Cmd + D**: Duplicate transaction
+- **F5**: Refresh with latest block
+- **Esc**: Clear current simulation
+- **?**: Show all shortcuts
+
+## Mobile Experience
+
+The web app is fully responsive:
+
+- **Touch-friendly**: Optimized for touch interactions
+- **Adaptive layout**: Interface adjusts to screen size
+- **Gesture support**: Swipe navigation and pinch-to-zoom
+- **Offline capability**: View cached results without network
+
+## Integration with Development Workflow
+
+### Browser Extension
+Install the Altitrace browser extension for:
+
+- **One-click simulation**: Simulate transactions from any dApp
+- **Transaction interception**: Preview transactions before signing
+- **Quick debugging**: Instant access to simulation tools
+
+### Development Tools
+- **DevTools integration**: Simulation data in browser DevTools
+- **Console commands**: Command-line access to simulation API
+- **Network monitoring**: Track simulation requests and responses
+
+## Settings and Configuration
+
+### Network Settings
+- **RPC endpoint**: Configure HyperEVM node connection
+- **Chain ID**: Set network identifier
+- **Default gas**: Set default gas limits and prices
+
+### UI Preferences
+- **Theme**: Light, dark, or auto mode
+- **Language**: Interface localization
+- **Notifications**: Configure alert preferences
+- **Layout**: Customize panel arrangement
+
+### Performance Settings
+- **Trace depth**: Limit trace detail for performance
+- **Cache settings**: Configure result caching
+- **Batch size**: Set maximum batch transaction count
+
+## Next Steps
+
+- 🖥️ [Interface Guide](/webapp/interface) - Detailed UI walkthrough
+- 🚀 [Simulation Tutorial](/webapp/simulation) - Step-by-step simulation guide
+- 🔍 [Debugging Features](/webapp/debugging) - Advanced debugging capabilities
+- 📥 [Export & Analysis](/webapp/export) - Working with simulation results

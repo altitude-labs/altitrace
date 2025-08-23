@@ -11,6 +11,71 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./client/altitrace": {
+      "types": "./dist/client/altitrace-client.d.ts",
+      "import": "./dist/client/altitrace-client.js",
+      "require": "./dist/client/altitrace-client.cjs"
+    },
+    "./client/simulation": {
+      "types": "./dist/client/simulation-client.d.ts",
+      "import": "./dist/client/simulation-client.js",
+      "require": "./dist/client/simulation-client.cjs"
+    },
+    "./client/trace": {
+      "types": "./dist/client/trace-client.d.ts",
+      "import": "./dist/client/trace-client.js",
+      "require": "./dist/client/trace-client.cjs"
+    },
+    "./builders/trace": {
+      "types": "./dist/builders/trace-builder.d.ts",
+      "import": "./dist/builders/trace-builder.js",
+      "require": "./dist/builders/trace-builder.cjs"
+    },
+    "./builders/simulation": {
+      "types": "./dist/builders/simulation-builder.d.ts",
+      "import": "./dist/builders/simulation-builder.js",
+      "require": "./dist/builders/simulation-builder.cjs"
+    },
+    "./builders/helpers/bundle": {
+      "types": "./dist/builders/helpers/bundle-helpers.d.ts",
+      "import": "./dist/builders/helpers/bundle-helpers.js",
+      "require": "./dist/builders/helpers/bundle-helpers.cjs"
+    },
+    "./builders/helpers/trace": {
+      "types": "./dist/builders/helpers/trace-helpers.d.ts",
+      "import": "./dist/builders/helpers/trace-helpers.js",
+      "require": "./dist/builders/helpers/trace-helpers.cjs"
+    },
+    "./builders/helpers/state-context": {
+      "types": "./dist/builders/helpers/state-context-helpers.d.ts",
+      "import": "./dist/builders/helpers/state-context-helpers.js",
+      "require": "./dist/builders/helpers/state-context-helpers.cjs"
+    },
+    "./builders/helpers/state-override": {
+      "types": "./dist/builders/helpers/state-override-helpers.d.ts",
+      "import": "./dist/builders/helpers/state-override-helpers.js",
+      "require": "./dist/builders/helpers/state-override-helpers.cjs"
+    },
+    "./builders/helpers/block-override": {
+      "types": "./dist/builders/helpers/block-override-helpers.d.ts",
+      "import": "./dist/builders/helpers/block-override-helpers.js",
+      "require": "./dist/builders/helpers/block-override-helpers.cjs"
+    },
+    "./utils/validation": {
+      "types": "./dist/utils/validation.d.ts",
+      "import": "./dist/utils/validation.js",
+      "require": "./dist/utils/validation.cjs"
+    },
+    "./utils/viem": {
+      "types": "./dist/utils/viem-integration.d.ts",
+      "import": "./dist/utils/viem-integration.js",
+      "require": "./dist/utils/viem-integration.cjs"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js",
+      "require": "./dist/types/index.cjs"
     }
   },
   "files": [

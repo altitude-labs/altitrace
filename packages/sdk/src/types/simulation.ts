@@ -3,6 +3,7 @@
  */
 
 import type { components } from '@sdk/generated/api-types'
+import type { AccessList } from './access-list'
 import type { BlockOverrides, BlockTag } from './block'
 import type { StateOverride } from './state'
 import type {
@@ -48,6 +49,8 @@ export interface ExtendedSimulationResult
   getErrors(): CallError[]
   /** Get asset changes summary */
   getAssetChangesSummary(): AssetChangeSummary[]
+  /** Get the total number of logs across all calls */
+  getLogCount(): number
   /** Get decoded events from all calls */
   getDecodedEvents(): DecodedEvent[]
 }
@@ -102,6 +105,11 @@ export interface BatchSimulationResult {
 export interface SimulationRequestBuilder {
   /** Add a transaction call */
   call(call: TransactionCall): SimulationRequestBuilder
+  /** Add a transaction call with access list */
+  callWithAccessList(
+    call: Omit<TransactionCall, 'accessList'>,
+    accessList: AccessList,
+  ): SimulationRequestBuilder
   /** Set account for asset tracking */
   forAccount(account: string): SimulationRequestBuilder
   /** Set block number */
@@ -140,6 +148,8 @@ export interface TransactionCallConfig {
   value?: string | bigint | undefined
   /** Gas limit */
   gas?: string | bigint | undefined
+  /** Access list for gas optimization */
+  accessList?: AccessList | undefined
 }
 
 /**

@@ -111,7 +111,12 @@ function normalizeTransactionCall(
 export function createSimulationBuilder(
   client: AltitraceClient,
 ): SimulationRequestBuilder {
-  return client.simulate()
+  return client.simulate().call({
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0x70a082310000000000000000000000000000000000000000000000000000000000000000',
+    value: '0xde0b6b3a7640000',
+    gas: '0x520800',
+  })
 }
 
 /**

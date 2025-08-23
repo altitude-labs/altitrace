@@ -1,0 +1,27 @@
+# Installation
+
+## Install SDK
+
+```bash
+bun add @altitrace/sdk viem
+```
+
+## Requirements
+
+- Node.js 18+
+- TypeScript 5.0+ (optional)
+- viem ^2.0.0 (peer dependency)
+
+## Verify Installation
+
+```typescript
+import { createClient } from '@altitrace/sdk'
+
+const client = createClient.local()
+console.log('SDK installed successfully')
+```
+
+## Next Steps
+
+- [Client Setup](/sdk/client-setup) - Configure the client
+- [Quick Start](/sdk) - Basic usage examples
