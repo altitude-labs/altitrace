@@ -1,7 +1,7 @@
 {
   "name": "@altitrace/frontend",
   "version": "0.1.0",
-  "description": "AltiTrace web frontend for HyperEVM transaction simulation",
+  "description": "Altitrace web frontend for HyperEVM transaction simulation",
   "private": true,
   "scripts": {
     "dev": "next dev",

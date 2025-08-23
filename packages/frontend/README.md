@@ -1,6 +1,6 @@
 # @altitrace/frontend
 
-The web frontend for AltiTrace - an interactive playground to build, simulate, and visualize HyperEVM transactions.
+The web frontend for Altitrace - an interactive playground to build, simulate, and visualize HyperEVM transactions.
 
 ## Tech Stack
 

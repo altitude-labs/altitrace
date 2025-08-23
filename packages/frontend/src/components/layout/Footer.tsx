@@ -8,7 +8,7 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <div>
-              <h3 className="font-bold text-lg">AltiTrace</h3>
+              <h3 className="font-bold text-lg">Altitrace</h3>
               <p className="text-sm text-muted-foreground">
                 HyperEVM Transaction Simulator
               </p>
@@ -119,7 +119,7 @@ export function Footer() {
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row items-center justify-between mt-8 pt-8 border-t">
           <div className="text-sm text-muted-foreground">
-            © 2024 AltiTrace. Built for HyperEVM.
+            © 2024 Altitrace. Built for HyperEVM.
           </div>
           <div className="flex items-center gap-6 mt-4 md:mt-0">
             <a
