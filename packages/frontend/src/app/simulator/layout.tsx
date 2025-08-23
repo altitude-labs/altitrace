@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Simulator - Altitrace',
-  description: 'Manage and execute your HyperEVM transaction simulations. Create, share and analyze your smart contract tests.',
+  description:
+    'Manage and execute your HyperEVM transaction simulations. Create, share and analyze your smart contract tests.',
   openGraph: {
     title: 'Transaction Simulator - Altitrace',
     description: 'Manage and execute your HyperEVM transaction simulations.',

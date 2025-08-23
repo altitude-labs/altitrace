@@ -1,6 +1,5 @@
 'use client'
 
-import { AltitraceClient } from '@altitrace/sdk'
 import {
   ArrowLeftIcon,
   ClockIcon,
@@ -13,6 +12,7 @@ import { useEffect, useState } from 'react'
 import { Layout } from '@/components/layout'
 import { EnhancedSimulationResults } from '@/components/simulation/EnhancedSimulationResults'
 import { Alert, AlertDescription, Button } from '@/components/ui'
+import { createAltitraceClient } from '@/utils/client'
 import type { StoredSimulation } from '@/utils/storage'
 import { exportSimulation, retrieveById } from '@/utils/storage'
 import {
@@ -64,11 +64,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         setExecuting(true)
 
         // Execute fresh simulation with trace data
-        const client = new AltitraceClient({
-          baseUrl: process.env.NEXT_PUBLIC_API_URL
-            ? `${process.env.NEXT_PUBLIC_API_URL}/v1`
-            : undefined,
-        })
+        const client = createAltitraceClient()
 
         const result = await executeEnhancedSimulation(
           client,
@@ -108,11 +104,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
   const handleExport = async () => {
     if (resolvedParams && simulationResult) {
       try {
-        const client = new AltitraceClient({
-          baseUrl: process.env.NEXT_PUBLIC_API_URL
-            ? `${process.env.NEXT_PUBLIC_API_URL}/v1`
-            : undefined,
-        })
+        const client = createAltitraceClient()
 
         const exportData = await exportSimulation(
           resolvedParams.id,

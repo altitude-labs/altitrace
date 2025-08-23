@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'New Simulation - Altitrace',
-  description: 'Create a new HyperEVM transaction simulation. Import your ABI, configure parameters and test your smart contracts.',
+  description:
+    'Create a new HyperEVM transaction simulation. Import your ABI, configure parameters and test your smart contracts.',
   openGraph: {
     title: 'New Simulation - Altitrace',
     description: 'Create a new HyperEVM transaction simulation.',
