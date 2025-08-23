@@ -1,0 +1,39 @@
+# What is Altitrace?
+
+Altitrace is a comprehensive **HyperEVM transaction simulation platform** developed by **Altitude Labs** for the [Hyperliquid Hackathon](https://taikai.network/en/hl-hackathon-organizers/hackathons/hl-hackathon/overview). The platform serves as essential infrastructure for the HyperEVM ecosystem, enabling developers, DeFi protocols, and users to simulate, debug, and optimize their transactions before execution on-chain.
+
+## Hackathon Bounty Alignment
+
+Altitrace directly addresses the **HyperEVM Transaction Simulator** bounty requirements by providing a complete simulation platform with:
+
+**Transaction Simulation Engine** featuring 100% accurate gas usage breakdown, real-time state simulation against current HyperEVM network state, historical simulation support against past blockchain states, and full control over transaction inputs and execution context.
+
+**Advanced Simulation Features** including state overrides for modifying contract storage and balances, account impersonation for testing without private keys, bundle simulations for testing chained interdependent transactions, and access list generation for gas efficiency optimization.
+
+**Transaction Analysis & Insights** providing detailed ERC-20/ERC-721 token flow analysis, granular gas usage breakdown by operation, human-readable event logs and state changes, clear actionable error messages for failed transactions, and complete step-by-step transaction execution details.
+
+**Developer Integration** through a comprehensive REST API for programmatic access, TypeScript SDK with strong typing, and extensive API documentation with integration guides.
+
+**User Interface** featuring an intuitive web dashboard for manual transaction simulation, visual transaction builder for constructing complex transactions, clear presentation of simulation results and insights, and shareable results for collaborative debugging.
+
+## Technical Architecture
+
+Altitrace implements a modern **Turborepo** monorepo structure with three tightly integrated packages:
+
+**`packages/api`** houses a high-performance Rust API server built with Actix Web, featuring comprehensive OpenAPI documentation, advanced simulation capabilities with multiple trace modes, direct HyperEVM RPC integration through Alloy, Redis caching for performance optimization, and structured error handling with detailed diagnostics.
+
+**`packages/sdk`** provides a strongly-typed TypeScript SDK with modular architecture, dedicated clients for simulation, tracing, and access list generation, comprehensive request builders and utility functions, seamless viem integration for enhanced EVM tooling, automatic OpenAPI type generation, and extensive example implementations.
+
+**`packages/frontend`** delivers a modern React application built with Next.js, featuring sophisticated transaction simulation interfaces, real-time visual analytics and gas analysis, ABI import and function building capabilities, advanced trace visualization with call frame trees, responsive design for desktop and mobile usage, and comprehensive state management with Zustand.
+
+## Core Capabilities
+
+The platform provides **Transaction Simulation** with accurate execution against live or historical HyperEVM states, comprehensive gas analysis with breakdown by operation, detailed event log decoding and state change tracking, support for complex transaction bundles with dependency analysis, and advanced error handling with actionable diagnostic information.
+
+**State Control Features** enable complete account state overrides including balances and storage, contract code modification for testing bug fixes, block environment overrides for timestamp and number manipulation, access list optimization for gas efficiency improvements, and account impersonation for testing without private key requirements.
+
+**Developer Experience** enhancements include comprehensive TypeScript support with zero `any` types, seamless viem integration for enhanced EVM tooling, modular SDK architecture for flexible integration, extensive documentation with practical examples, and automated OpenAPI type generation for API consistency.
+
+## Getting Started
+
+Ready to explore the platform? Begin with our [installation guide](/installation) for local development setup, review the [API documentation](/api) for programmatic integration, explore the [SDK documentation](/sdk) for TypeScript development, or try the [web application](/webapp) for interactive simulation testing.
