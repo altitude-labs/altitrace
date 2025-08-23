@@ -50,6 +50,7 @@ interface TransactionFormProps {
   } | null
   initialData?: Partial<FormData>
   compact?: boolean
+  onManualDataChange?: () => void
 }
 
 interface FormData {
@@ -80,6 +81,7 @@ export function TransactionForm({
   functionData,
   initialData,
   compact = false,
+  onManualDataChange,
 }: TransactionFormProps) {
   const [formData, setFormData] = useState<FormData>(() => ({
     ...initialFormData,
@@ -407,21 +409,52 @@ export function TransactionForm({
                   }
                 />
 
-                <Input
-                  label="Call Data"
-                  placeholder="0x..."
-                  value={formData.data}
-                  onChange={(e) => handleInputChange('data', e.target.value)}
-                  error={errors.data}
-                  description={
-                    compact
-                      ? undefined
-                      : functionData
-                        ? `Generated from ${functionData.functionName}() function`
-                        : 'Contract function call data (use ABI import for automatic generation)'
-                  }
-                  className="font-mono text-sm"
-                />
+                {functionData ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Call Data</label>
+                    <div className="bg-muted/50 p-3 rounded border">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          ✅ Generated from {functionData.functionName}()
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, data: '' }))
+                            onManualDataChange?.()
+                          }}
+                          className="text-xs h-6"
+                        >
+                          Edit manually
+                        </Button>
+                      </div>
+                      <div className="font-mono text-xs break-all text-muted-foreground bg-background p-2 rounded">
+                        {formData.data}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Input
+                    label="Call Data"
+                    placeholder="0x... (generate using function builder above)"
+                    value={formData.data}
+                    onChange={(e) => {
+                      handleInputChange('data', e.target.value)
+                      if (e.target.value !== formData.data) {
+                        onManualDataChange?.()
+                      }
+                    }}
+                    error={errors.data}
+                    description={
+                      compact
+                        ? undefined
+                        : 'Contract function call data (use Contract Manager above for automatic generation)'
+                    }
+                    className="font-mono text-sm"
+                  />
+                )}
 
                 <Input
                   label={compact ? 'Value' : 'Value (HYPE)'}
@@ -503,41 +536,6 @@ export function TransactionForm({
                       }
                     />
                   )}
-                </div>
-              )}
-
-              {/* Simulation Options */}
-              {showAdvanced && (
-                <div className={compact ? 'space-y-2' : 'space-y-4'}>
-                  {!compact && (
-                    <h3 className="font-semibold text-lg">
-                      Simulation Options
-                    </h3>
-                  )}
-
-                  <div className={compact ? 'space-y-1' : 'space-y-3'}>
-                    <div className={compact ? 'space-y-1' : 'space-y-2'}>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="validation"
-                          checked={formData.validation}
-                          onChange={(e) =>
-                            handleInputChange('validation', e.target.checked)
-                          }
-                          className="rounded"
-                        />
-                        <label htmlFor="validation" className="text-sm">
-                          Full EVM Validation
-                        </label>
-                      </div>
-                      {!compact && (
-                        <p className="text-xs text-muted-foreground ml-6">
-                          Perform full validation (gas limits, balances, etc.)
-                        </p>
-                      )}
-                    </div>
-                  </div>
                 </div>
               )}
 

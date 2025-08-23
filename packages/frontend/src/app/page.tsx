@@ -1,7 +1,6 @@
 import { BookOpenIcon, CodeIcon, PlayIcon } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui'
 import { generateHomeMetadata } from '@/utils/metadata'
 
@@ -9,7 +8,7 @@ export const metadata: Metadata = generateHomeMetadata()
 
 export default function Home() {
   return (
-    <Layout>
+    <div className="p-6">
       <div className="max-w-6xl mx-auto">
         {/* Hero Section */}
         <div className="text-center space-y-8 mb-16">
@@ -115,6 +114,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-    </Layout>
+    </div>
   )
 }

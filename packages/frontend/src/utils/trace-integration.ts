@@ -63,6 +63,26 @@ export async function executeEnhancedSimulation(
   request: SimulationRequest,
 ): Promise<EnhancedSimulationResult> {
   try {
+    console.log(
+      '\n🔬 [Enhanced Simulation] Starting enhanced simulation execution...',
+    )
+    console.log('📋 Request details:')
+    console.log(
+      '   Block:',
+      request.params.blockNumber || request.params.blockTag || 'latest',
+    )
+    console.log(
+      '   State overrides count:',
+      request.options?.stateOverrides?.length || 0,
+    )
+    if (request.options?.stateOverrides?.length) {
+      console.log(
+        '   State override addresses:',
+        request.options.stateOverrides.map((o) => o.address),
+      )
+      console.log('   State overrides details:', request.options.stateOverrides)
+    }
+
     // Extract the first call for tracing and access list (assumes single transaction simulation)
     const primaryCall = request.params.calls[0]
 
@@ -70,11 +90,44 @@ export async function executeEnhancedSimulation(
       throw new Error('No calls found in simulation request')
     }
 
+    console.log('🎯 Primary call details:')
+    console.log('   To:', primaryCall.to)
+    console.log(
+      '   Data:',
+      primaryCall.data?.substring(0, 50) +
+        (primaryCall.data && primaryCall.data.length > 50 ? '...' : ''),
+    )
+    console.log('   Value:', primaryCall.value || '0x0')
+
     // Execute simulation, trace, and access list comparison in parallel
+    console.log(
+      '⚡ [API Calls] Executing parallel API calls (simulation, trace, access list)...',
+    )
+
     const [simulationResult, traceResult, accessListComparison] =
       await Promise.all([
         // Original simulation API
-        client.executeSimulation(request),
+        (async () => {
+          console.log(
+            '📡 [Simulation API] Calling simulation endpoint with state overrides...',
+          )
+          const simResult = await client.executeSimulation(request)
+          console.log('✅ [Simulation API] Response received:')
+          console.log('   Success:', simResult.isSuccess())
+          console.log('   Status:', simResult.status)
+          console.log('   Gas used:', simResult.gasUsed)
+          console.log('   Total gas used:', simResult.getTotalGasUsed())
+          if (simResult.calls && simResult.calls.length > 0) {
+            console.log(
+              '   First call return data:',
+              simResult.calls[0].returnData,
+            )
+          }
+          if (!simResult.isSuccess()) {
+            console.log('   Errors:', simResult.getErrors())
+          }
+          return simResult
+        })(),
 
         // Trace API for call hierarchy (fallback silently if not available)
         client
@@ -122,9 +175,41 @@ export async function executeEnhancedSimulation(
       hasGasComparison: !!accessListComparison?.success.baseline,
     }
 
+    console.log('\n🏁 [Enhanced Simulation Complete] Summary:')
+    console.log('   Simulation success:', enhancedResult.isSuccess())
+    console.log('   Simulation status:', enhancedResult.status)
+    console.log('   Has call hierarchy:', enhancedResult.hasCallHierarchy)
+    console.log('   Has access list:', enhancedResult.hasAccessList)
+    console.log('   Has gas comparison:', enhancedResult.hasGasComparison)
+    if (request.options?.stateOverrides?.length) {
+      console.log(
+        '   🎯 State overrides applied:',
+        request.options.stateOverrides.length,
+      )
+      console.log(
+        '   📍 Overridden addresses:',
+        request.options.stateOverrides.map((o) => o.address),
+      )
+      console.log('   ✅ Bytecode successfully overridden during simulation!')
+    }
+
     return enhancedResult
   } catch (_error) {
+    console.log(
+      '⚠️ [Enhanced Simulation] Error occurred, falling back to basic simulation...',
+    )
     const simulationResult = await client.executeSimulation(request)
+
+    console.log('🔄 [Fallback Simulation] Basic simulation result:')
+    console.log('   Success:', simulationResult.isSuccess())
+    console.log('   Status:', simulationResult.status)
+    if (request.options?.stateOverrides?.length) {
+      console.log(
+        '   🎯 State overrides still applied in fallback:',
+        request.options.stateOverrides.length,
+      )
+    }
+
     return {
       ...simulationResult,
       hasCallHierarchy: false,
