@@ -76,7 +76,7 @@ export function CallFrameNode({
   // Horizontal layout for mobile - flatten the tree into a horizontal scrollable list
   if (isHorizontal) {
     // Collect all calls in a flat array to display horizontally
-    const collectAllCalls = (call: CallFrame, currentDepth: number = 0, callIndex: number = 0): Array<{call: CallFrame, depth: number, index: number}> => {
+    const collectAllCalls = (call: CallFrame, currentDepth = 0, callIndex = 0) => {
       const result = [{call, depth: currentDepth, index: callIndex}];
       if (call.calls) {
         call.calls.forEach((subcall, subIndex) => {
@@ -165,11 +165,11 @@ export function CallFrameNode({
                             >
                               {call.to}
                             </a>
-                            <button
-                              onClick={() => copyToClipboard(`to-${callDepth}-${callIndex}`, call.to)}
-                              className="p-1 hover:bg-muted rounded transition-colors"
-                              title="Copy address"
-                            >
+                                                    <button
+                          onClick={() => call.to && copyToClipboard(`to-${callDepth}-${callIndex}`, call.to)}
+                          className="p-1 hover:bg-muted rounded transition-colors"
+                          title="Copy address"
+                        >
                               {getCopyState(`to-${callDepth}-${callIndex}`) ? (
                                 <CheckIcon className="h-3 w-3 text-green-500" />
                               ) : (
@@ -338,7 +338,7 @@ export function CallFrameNode({
                         {formatAddress(frame.to)}
                       </a>
                       <button
-                        onClick={() => copyToClipboard(`desktop-to-${depth}-${index}`, frame.to)}
+                        onClick={() => frame.to && copyToClipboard(`desktop-to-${depth}-${index}`, frame.to)}
                         className="p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
                         title="Copy address"
                       >
