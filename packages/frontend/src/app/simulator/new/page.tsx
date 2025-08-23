@@ -1,8 +1,5 @@
 'use client'
 
-import { AltitraceClient } from '@altitrace/sdk'
-
-
 import type {
   HexString as Hex,
   SimulationRequest as SdkSimulationRequest,
@@ -17,6 +14,7 @@ import { Layout } from '@/components/layout'
 // Removed unused imports
 import { Alert, AlertDescription, Button } from '@/components/ui'
 import type { ParsedAbi } from '@/types/api'
+import { createAltitraceClient } from '@/utils/client'
 import { getRequest, store } from '@/utils/storage'
 import {
   type EnhancedSimulationResult,
@@ -135,11 +133,7 @@ function NewSimulationPageContent() {
     setSimulationResult(null)
 
     try {
-      const client = new AltitraceClient({
-        baseUrl: process.env.NEXT_PUBLIC_API_URL
-          ? `${process.env.NEXT_PUBLIC_API_URL}/v1`
-          : undefined,
-      })
+      const client = createAltitraceClient()
 
       // Use enhanced simulation with trace data
       const result = await executeEnhancedSimulation(client, {
