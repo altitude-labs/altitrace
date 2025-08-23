@@ -1,6 +1,9 @@
 # Rust
 target/
 
+# config prod
+packages/api/config/prod.toml
+
 # Gitlab
 .gitlab-ci-local
 
