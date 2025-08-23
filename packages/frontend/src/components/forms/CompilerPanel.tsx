@@ -274,11 +274,6 @@ export function CompilerPanel({
     originalAbi,
     compareAbis,
     lastDetectedVersion,
-    setLastDetectedVersion,
-    setSelectedVersion,
-    setIsAutoDetected,
-    setLastResult,
-    setIsCompiling,
   ])
 
   // Auto-compile when source code changes (debounced) - only if enabled

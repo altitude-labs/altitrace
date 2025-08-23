@@ -201,39 +201,3 @@ export function validateAccessList(accessList: AccessList): {
     errors,
   }
 }
-
-/**
- * Pretty print an access list for debugging.
- */
-export function printAccessList(accessList: AccessList): void {
-  console.log('Access List:')
-
-  if (accessList.length === 0) {
-    console.log('  (empty)')
-    return
-  }
-
-  for (let i = 0; i < accessList.length; i++) {
-    const item = accessList[i]
-    if (!item) {
-      console.log(`  Account ${i + 1}: (null/undefined)`)
-      continue
-    }
-
-    console.log(`  Account ${i + 1}: ${item.address}`)
-
-    if (item.storageKeys.length === 0) {
-      console.log('    No storage slots')
-    } else {
-      console.log(`    Storage slots (${item.storageKeys.length}):`)
-      for (const key of item.storageKeys) {
-        console.log(`      ${key}`)
-      }
-    }
-  }
-
-  const stats = getAccessListStats(accessList)
-  console.log(
-    `\\nStats: ${stats.totalAccounts} accounts, ${stats.totalStorageSlots} storage slots`,
-  )
-}

@@ -38,7 +38,7 @@ export interface ContractStateOverride {
  */
 async function fetchDeployedBytecode(
   address: string,
-  blockTag: string = 'latest',
+  blockTag = 'latest',
 ): Promise<string | null> {
   try {
     // Use a public RPC endpoint - in production this should be configurable
@@ -69,11 +69,7 @@ async function fetchDeployedBytecode(
 
     // Return null if no code deployed (returns '0x')
     return data.result === '0x' ? null : data.result
-  } catch (error) {
-    console.warn(
-      `Failed to fetch bytecode for ${address} at block ${blockTag}:`,
-      error,
-    )
+  } catch (_error) {
     return null
   }
 }
@@ -103,7 +99,7 @@ function normalizeBytecode(bytecode: string): string {
 async function compareBytecode(
   address: string,
   localBytecode: string,
-  blockTag: string = 'latest',
+  blockTag = 'latest',
 ): Promise<BytecodeComparison> {
   const deployedBytecode = await fetchDeployedBytecode(address, blockTag)
 
@@ -134,7 +130,7 @@ async function compareBytecode(
  */
 export async function requiresStateOverrideAsync(
   contract: StoredContract,
-  blockTag: string = 'latest',
+  blockTag = 'latest',
 ): Promise<{ requiresOverride: boolean; comparison?: BytecodeComparison }> {
   const contractName =
     contract.metadata?.title || contract.contractData?.name || 'Unknown'
@@ -213,7 +209,7 @@ export function requiresStateOverride(contract: StoredContract): boolean {
  */
 export async function createContractStateOverrideAsync(
   contract: StoredContract,
-  blockTag: string = 'latest',
+  blockTag = 'latest',
 ): Promise<ContractStateOverride> {
   const contractName =
     contract.metadata?.title || contract.contractData?.name || 'Unknown'

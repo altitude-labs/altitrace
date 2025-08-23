@@ -1,0 +1,23 @@
+{
+  "cachedVersions": {
+    "0.7.6": {
+      "filename": "soljson-v0.7.6+commit.7338295f.js",
+      "path": "/Users/querty/dev/blockchain/projects/altitude/altitrace/packages/frontend/solc-cache/soljson-v0.7.6+commit.7338295f.js",
+      "url": "https://binaries.soliditylang.org/bin/soljson-v0.7.6+commit.7338295f.js",
+      "cachedAt": "2025-08-23T13:48:58.812Z"
+    },
+    "0.7.5": {
+      "filename": "soljson-v0.7.5+commit.eb77ed65.js",
+      "path": "/Users/querty/dev/blockchain/projects/altitude/altitrace/packages/frontend/solc-cache/soljson-v0.7.5+commit.eb77ed65.js",
+      "url": "https://binaries.soliditylang.org/bin/soljson-v0.7.5+commit.eb77ed65.js",
+      "cachedAt": "2025-08-23T13:48:58.814Z"
+    },
+    "0.7.4": {
+      "filename": "soljson-v0.7.4+commit.3f05b770.js",
+      "path": "/Users/querty/dev/blockchain/projects/altitude/altitrace/packages/frontend/solc-cache/soljson-v0.7.4+commit.3f05b770.js",
+      "url": "https://binaries.soliditylang.org/bin/soljson-v0.7.4+commit.3f05b770.js",
+      "cachedAt": "2025-08-23T13:48:58.814Z"
+    }
+  },
+  "setupAt": "2025-08-23T13:48:58.814Z"
+}

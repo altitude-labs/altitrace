@@ -1,0 +1,200 @@
+# generateAccessList
+
+Generates an access list for a transaction to optimize gas usage.
+
+## Usage
+
+:::code-group
+
+```typescript [example.ts]
+import { client } from './config'
+
+const accessList = await client.generateAccessList({ // [!code focus:7]
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a'
+})
+
+console.log('Access List:', accessList.accessList)
+console.log('Gas Used:', accessList.gasUsed)
+```
+
+```typescript [config.ts]
+import { AltitraceClient } from '@altitrace/sdk'
+
+export const client = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1'
+})
+```
+
+:::
+
+### With Gas Comparison
+
+```typescript
+// Compare gas usage with and without access list
+const comparison = await client.compareAccessList()
+  .call({
+    from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0xa9059cbb...'
+  })
+  .atBlock('latest')
+  .execute()
+
+console.log('Without access list:', comparison.withoutAccessList.gasUsed)
+console.log('With access list:', comparison.withAccessList.gasUsed)
+console.log('Gas saved:', comparison.gasSaved)
+console.log('Savings:', comparison.percentageSaved.toFixed(2) + '%')
+```
+
+## Builder Pattern
+
+For complex access list generation.
+
+```typescript
+const accessList = await client.accessList()
+  .call({
+    from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0xa9059cbb...'
+  })
+  .atBlock('0x1234567')
+  .execute()
+
+// Use the access list in simulation
+const result = await client.simulateCallWithAccessList(
+  {
+    from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0xa9059cbb...'
+  },
+  accessList.accessList
+)
+```
+
+## Returns
+
+`ExtendedAccessListResponse`
+
+The access list response with helper methods.
+
+## Parameters
+
+### call
+
+- **Type:** `TransactionCall`
+
+The transaction call to analyze.
+
+```typescript
+const accessList = await client.generateAccessList({
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c', // [!code focus]
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0x095ea7b3...'
+})
+```
+
+### options.block (optional)
+
+- **Type:** `string | number | bigint`
+- **Default:** `'latest'`
+
+The block to generate the access list against.
+
+```typescript
+const accessList = await client.generateAccessList(
+  { /* transaction */ },
+  { block: '0x1234567' } // [!code focus]
+)
+```
+
+## Access List Format
+
+```typescript
+interface AccessList {
+  address: string
+  storageKeys: string[]
+}[]
+```
+
+Example access list:
+
+```typescript
+[
+  {
+    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    storageKeys: [
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000000000000000000000000000002'
+    ]
+  },
+  {
+    address: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    storageKeys: []
+  }
+]
+```
+
+## Gas Optimization
+
+Access lists reduce gas costs by pre-declaring storage slots.
+
+```typescript
+// EIP-2930 transaction with access list
+const optimizedCall = {
+  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  data: '0xa9059cbb...',
+  accessList: [
+    {
+      address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      storageKeys: ['0x0', '0x1']
+    }
+  ]
+}
+
+// Simulate with access list
+const result = await client.simulateCall(optimizedCall)
+console.log('Optimized gas:', result.getTotalGasUsed())
+```
+
+## Error Handling
+
+```typescript
+try {
+  const accessList = await client.generateAccessList({
+    from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
+    to: '0xInvalidContract',
+    data: '0xa9059cbb...'
+  })
+} catch (error) {
+  if (accessList.error) {
+    console.error('Access list generation failed:', accessList.error)
+  }
+}
+```
+
+## Types
+
+```typescript
+interface ExtendedAccessListResponse {
+  accessList: AccessList
+  gasUsed: string
+  error?: string | null
+  
+  // Helper methods
+  hasError(): boolean
+  getGasUsed(): bigint
+  getFormattedAccessList(): FormattedAccessList[]
+  getTotalStorageKeys(): number
+}
+
+interface AccessListComparisonResult {
+  withAccessList: ExtendedAccessListResponse
+  withoutAccessList: ExtendedSimulationResult
+  gasSaved: bigint
+  percentageSaved: number
+  isWorthUsing(): boolean
+}
+```
