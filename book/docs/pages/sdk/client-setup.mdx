@@ -1,0 +1,53 @@
+# Client Setup
+
+## Quick Setup
+
+```typescript
+import { createClient } from '@altitrace/sdk'
+
+// Local development
+const client = createClient.local()
+
+// Production
+const client = createClient.production('https://api.altitrace.com')
+```
+
+## Custom Configuration
+
+```typescript
+import { AltitraceClient } from '@altitrace/sdk'
+
+const client = new AltitraceClient({
+  baseUrl: 'http://localhost:8080/v1',
+  timeout: 30000,
+  retries: 3,
+  apiKey: 'your-api-key', // if required
+  debug: true // development only
+})
+```
+
+## Configuration Options
+
+```typescript
+interface AltitraceClientConfig {
+  baseUrl: string         // API endpoint
+  timeout?: number        // Request timeout (ms)
+  retries?: number        // Retry attempts
+  apiKey?: string         // Authentication
+  debug?: boolean         // Debug logging
+}
+```
+
+## Client Usage
+
+```typescript
+// Direct methods
+const result = await client.simulate(transaction)
+const trace = await client.trace(transaction)
+const accessList = await client.accessList(transaction)
+
+// Sub-clients
+const result = await client.simulation.simulate(request)
+const trace = await client.trace.call(request)
+const accessList = await client.accessList.create(request)
+```
