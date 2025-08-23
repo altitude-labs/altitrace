@@ -334,6 +334,10 @@ export function importSimulation(data: string): boolean {
       .map((sim) => ({
         ...sim,
         timestamp: sim.timestamp.toISOString(),
+        result: sim.result ? {
+          ...sim.result,
+          gasUsed: sim.result.gasUsed?.toString()
+        } : undefined,
       }))
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
