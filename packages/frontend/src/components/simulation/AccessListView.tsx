@@ -4,6 +4,7 @@ import type { ExtendedAccessListResponse } from '@altitrace/sdk/types'
 import {
   AlertTriangleIcon,
   CheckCircleIcon,
+  CopyIcon,
   DatabaseIcon,
   FuelIcon,
   HashIcon,
@@ -11,6 +12,7 @@ import {
   TrendingUpIcon,
   XCircleIcon,
 } from 'lucide-react'
+import { useState } from 'react'
 import {
   Badge,
   Card,
@@ -32,6 +34,8 @@ export function AccessListView({
   accessListData,
   gasComparison,
 }: AccessListViewProps) {
+  const [isCopied, setIsCopied] = useState(false)
+  
   const displayData: AccessListDisplayData = {
     accountCount: accessListData.getAccountCount(),
     totalStorageSlots: accessListData.getStorageSlotCount(),
@@ -122,13 +126,13 @@ export function AccessListView({
         </CardContent>
       </Card>
 
-      {/* Gas Optimization Info */}
+      {/* Access List Info */}
       {displayData.isSuccess && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUpIcon className="h-5 w-5" />
-              Gas Optimization
+              Access List
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -201,9 +205,31 @@ export function AccessListView({
       {displayData.isSuccess && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <KeyIcon className="h-5 w-5" />
-              Raw Access List
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <KeyIcon className="h-5 w-5" />
+                Raw Access List
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const accessListJson = JSON.stringify(accessListData.accessList, null, 2)
+                    await navigator.clipboard.writeText(accessListJson)
+                    setIsCopied(true)
+                    setTimeout(() => setIsCopied(false), 2000)
+                  } catch {
+                  }
+                }}
+                className="p-2 hover:bg-muted rounded transition-colors"
+                title={isCopied ? "Copied!" : "Copy to clipboard"}
+              >
+                {isCopied ? (
+                  <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                ) : (
+                  <CopyIcon className="h-4 w-4" />
+                )}
+              </button>
             </CardTitle>
           </CardHeader>
           <CardContent>
