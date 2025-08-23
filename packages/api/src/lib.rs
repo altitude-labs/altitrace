@@ -5,6 +5,7 @@ pub mod services;
 pub mod types;
 pub mod utils;
 pub mod validation;
+#[allow(dead_code)]
 pub mod version;
 
 use alloy_transport_http::reqwest::Url;
