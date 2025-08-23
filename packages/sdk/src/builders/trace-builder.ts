@@ -7,12 +7,7 @@
  */
 
 import type { AltitraceClient } from '@sdk/client/altitrace-client'
-import type {
-  BlockOverrides,
-  StateOverride,
-  TraceConfig,
-  TraceRequestBuilder,
-} from '@sdk/types'
+import type { TraceRequestBuilder } from '@sdk/types/trace'
 
 /**
  * Create a new trace request builder.
@@ -41,6 +36,17 @@ import type {
  *   .withCallTracer()
  *   .withPrestateTracer({ diffMode: true })
  *   .with4ByteTracer()
+ *   .execute();
+ *
+ * // Trace multiple calls with state context
+ * const bundles = BundleHelpers.createBundles([
+ *   [{ to: '0x123...', data: '0x...' }],
+ *   [{ to: '0x456...', data: '0x...' }],
+ * ]);
+ * const callManyTrace = await builder
+ *   .callMany(bundles)
+ *   .atBlock('latest')
+ *   .withCallTracer()
  *   .execute();
  * ```
  *
@@ -95,213 +101,9 @@ export function createTraceBuilder(
   return client.trace()
 }
 
-/**
- * Utility functions for creating common trace configurations.
- */
-export const TraceHelpers = {
-  /**
-   * Create a comprehensive trace configuration with all tracers enabled.
-   */
-  allTracers(): TraceConfig {
-    return {
-      callTracer: { onlyTopCall: false, withLogs: true },
-      prestateTracer: {
-        diffMode: true,
-        disableCode: false,
-        disableStorage: false,
-      },
-      structLogger: {
-        disableMemory: true,
-        disableStack: false,
-        disableStorage: false,
-        disableReturnData: false,
-        cleanStructLogs: true,
-      },
-      '4byteTracer': true,
-    }
-  },
-
-  /**
-   * Create a minimal trace configuration for basic call tracking.
-   */
-  basicCallTrace(): TraceConfig {
-    return {
-      callTracer: { onlyTopCall: false, withLogs: true },
-    }
-  },
-
-  /**
-   * Create a configuration optimized for state analysis.
-   */
-  stateAnalysis(): TraceConfig {
-    return {
-      prestateTracer: {
-        diffMode: true,
-        disableCode: false,
-        disableStorage: false,
-      },
-      callTracer: { onlyTopCall: false, withLogs: false },
-    }
-  },
-
-  /**
-   * Create a configuration for detailed EVM execution analysis.
-   */
-  detailedExecution(): TraceConfig {
-    return {
-      structLogger: {
-        disableMemory: false,
-        disableStack: false,
-        disableStorage: false,
-        disableReturnData: false,
-        cleanStructLogs: false,
-      },
-      callTracer: { onlyTopCall: false, withLogs: true },
-    }
-  },
-
-  /**
-   * Create a configuration for function call analysis.
-   */
-  functionAnalysis(): TraceConfig {
-    return {
-      '4byteTracer': true,
-      callTracer: { onlyTopCall: false, withLogs: false },
-    }
-  },
-}
-
-/**
- * Utility functions for creating common state overrides.
- */
-export const StateOverrideHelpers = {
-  /**
-   * Create a state override to set account balance.
-   */
-  setBalance(
-    address: string,
-    balance: bigint | string,
-  ): Record<string, StateOverride> {
-    const balanceHex =
-      typeof balance === 'bigint' ? `0x${balance.toString(16)}` : balance
-    return {
-      [address]: { balance: balanceHex },
-    }
-  },
-
-  /**
-   * Create a state override to set account nonce.
-   */
-  setNonce(address: string, nonce: number): Record<string, StateOverride> {
-    return {
-      [address]: { nonce },
-    }
-  },
-
-  /**
-   * Create a state override to replace contract code.
-   */
-  setCode(address: string, code: string): Record<string, StateOverride> {
-    return {
-      [address]: { code },
-    }
-  },
-
-  /**
-   * Create a state override to modify storage slots.
-   */
-  setStorage(
-    address: string,
-    storage: Record<string, string>,
-  ): Record<string, StateOverride> {
-    return {
-      [address]: { storage },
-    }
-  },
-
-  /**
-   * Create a state override for complete account state.
-   */
-  setAccount(
-    address: string,
-    config: {
-      balance?: bigint | string
-      nonce?: number
-      code?: string
-      storage?: Record<string, string>
-    },
-  ): Record<string, StateOverride> {
-    const override: StateOverride = {}
-
-    if (config.balance !== undefined) {
-      override.balance =
-        typeof config.balance === 'bigint'
-          ? `0x${config.balance.toString(16)}`
-          : config.balance
-    }
-
-    if (config.nonce !== undefined) {
-      override.nonce = config.nonce
-    }
-
-    if (config.code !== undefined) {
-      override.code = config.code
-    }
-
-    if (config.storage !== undefined) {
-      override.storage = config.storage
-    }
-
-    return { [address]: override }
-  },
-}
-
-/**
- * Utility functions for creating common block overrides.
- */
-export const BlockOverrideHelpers = {
-  /**
-   * Create block overrides for a specific timestamp.
-   */
-  setTimestamp(timestamp: number): BlockOverrides {
-    return { time: timestamp }
-  },
-
-  /**
-   * Create block overrides for a specific block number.
-   */
-  setBlockNumber(blockNumber: string | number): BlockOverrides {
-    const numberHex =
-      typeof blockNumber === 'number'
-        ? `0x${blockNumber.toString(16)}`
-        : blockNumber
-    return { number: numberHex }
-  },
-
-  /**
-   * Create block overrides for gas parameters.
-   */
-  setGasParams(config: {
-    gasLimit?: number
-    baseFee?: string
-  }): BlockOverrides {
-    const override: BlockOverrides = {}
-
-    if (config.gasLimit !== undefined) {
-      override.gasLimit = config.gasLimit
-    }
-
-    if (config.baseFee !== undefined) {
-      override.baseFee = config.baseFee
-    }
-
-    return override
-  },
-
-  /**
-   * Create block overrides for coinbase (fee recipient).
-   */
-  setCoinbase(coinbase: string): BlockOverrides {
-    return { coinbase }
-  },
-}
+// Helpers are now available as individual modules to avoid barrel file issues:
+// - './helpers/trace-helpers' exports TraceHelpers
+// - './helpers/state-override-helpers' exports StateOverrideHelpers
+// - './helpers/block-override-helpers' exports BlockOverrideHelpers
+// - './helpers/bundle-helpers' exports BundleHelpers
+// - './helpers/state-context-helpers' exports StateContextHelpers and TxIndexHelpers

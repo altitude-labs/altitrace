@@ -3,9 +3,6 @@
   "extends": ["../../biome.json"],
   "linter": {
     "rules": {
-      "performance": {
-        "noBarrelFile": "off"
-      },
       "complexity": {
         "noStaticOnlyClass": "error"
       }
@@ -17,7 +14,8 @@
       "src/**/*.tsx",
       "!node_modules",
       "!dist",
-      "!src/generated"
+      "!src/generated",
+      "!examples"
     ]
   }
 }

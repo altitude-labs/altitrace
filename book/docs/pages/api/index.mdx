@@ -1,0 +1,185 @@
+# API Reference
+
+The Altitrace API provides programmatic access to HyperEVM transaction simulation and debugging capabilities. Built with **Rust and Actix Web**, the API offers high-performance REST endpoints with comprehensive OpenAPI documentation and automatic type generation.
+
+## Base URL
+
+```
+http://localhost:8080/v1
+```
+
+## Interactive Documentation
+
+The API features a **Swagger UI** interface for interactive testing and exploration:
+
+```
+http://localhost:8080/v1/openapi/docs
+```
+
+This interactive documentation provides complete API schema definitions, request/response examples, parameter validation, and the ability to test endpoints directly from your browser. The OpenAPI specification is automatically generated from the Rust code, ensuring documentation stays synchronized with implementation.
+
+## Configuration
+
+The API uses **TOML configuration files** located in `packages/api/config/` for environment-specific settings:
+
+- `dev.toml` - Development configuration with permissive CORS and no authentication
+- `prod.toml` - Production configuration with restricted origins and optional auth tokens  
+- `test.toml` - Test configuration optimized for automated testing
+
+### Authentication
+
+Authentication is configured through the `auth_token` field in the TOML configuration:
+
+```toml
+[api]
+auth_token = "your_secret_token_here"
+rate_limit_requests = 1000
+rate_limit_duration = 60
+```
+
+When an auth token is configured, requests must include the `Authorization: Bearer <token>` header or `X-API-Key: <token>` header.
+
+### Rate Limiting
+
+The API implements configurable rate limiting per IP address:
+
+```toml
+[api]
+rate_limit_requests = 1000  # requests per duration window
+rate_limit_duration = 60    # duration window in seconds
+```
+
+### CORS Configuration
+
+Cross-origin resource sharing is fully configurable per environment:
+
+```toml
+[api.cors]
+allowed_origins = ["https://altitrace.com", "https://www.altitrace.com"]
+allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+allowed_headers = ["accept", "content-type", "authorization", "x-api-key"]
+allow_credentials = true
+max_age = 86400
+```
+
+### Redis Caching
+
+The API uses Redis for performance optimization and caching:
+
+```toml
+[redis]
+url = "redis://localhost:6379"
+``` 
+
+## REST Endpoints
+
+### Health Check
+
+```http
+GET /health
+```
+
+Returns the API health status and version information.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "version": "1.0.0",
+  "network": "hyperevm",
+  "uptime": 3600
+}
+```
+
+### Simulate Transaction
+
+```http
+POST /simulate
+```
+
+Simulates a transaction without executing it on-chain.
+
+**Request Body:**
+```json
+{
+  "transaction": {
+    "from": "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B",
+    "to": "0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c",
+    "value": "0x0",
+    "data": "0xa9059cbb...",
+    "gas": "0x5208"
+  },
+  "blockNumber": "latest",
+  "traceConfig": {
+    "enableMemory": true,
+    "enableReturnData": true,
+    "enableStorage": true
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "gasUsed": "0x5208",
+    "gasLimit": "0x5208",
+    "logs": [],
+    "returnValue": "0x",
+    "trace": {
+      "steps": [],
+      "storageChanges": {},
+      "memoryChanges": []
+    }
+  }
+}
+```
+
+### Batch Simulation
+
+```http
+POST /simulate/batch
+```
+
+Simulates multiple transactions in sequence.
+
+**Request Body:**
+```json
+{
+  "transactions": [
+    {
+      "from": "0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B",
+      "to": "0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c",
+      "data": "0xa9059cbb..."
+    }
+  ],
+  "blockNumber": "latest"
+}
+```
+
+## SDK Integration
+
+The [TypeScript SDK](/sdk) provides a type-safe client for this API:
+
+```typescript
+import { AltitraceClient } from '@altitrace/sdk'
+
+const client = new AltitraceClient({
+  apiUrl: 'http://localhost:8080/api/v1'
+})
+
+const result = await client.simulate({
+  transaction: {
+    from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
+    to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
+    data: '0xa9059cbb...'
+  }
+})
+```
+
+## Next Steps
+
+- 🔐 [Authentication](/api/authentication) - Secure your API access
+- 📊 [Simulation Endpoints](/api/simulation) - Detailed simulation API reference
+- 🔗 [Transaction Endpoints](/api/transactions) - Detailed transaction API reference

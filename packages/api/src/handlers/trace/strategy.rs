@@ -1,16 +1,21 @@
 use alloy_primitives::TxHash;
-use alloy_rpc_types::{BlockId, TransactionRequest as AlloyTransactionRequest};
+use alloy_rpc_types::{
+    BlockId, Bundle as AlloyBundle, StateContext as AlloyStateContext,
+    TransactionRequest as AlloyTransactionRequest,
+};
 use alloy_rpc_types_eth::{state::StateOverride, BlockOverrides};
 use alloy_rpc_types_trace::geth::{
-    DefaultFrame, GethDebugTracerConfig, GethDebugTracingCallOptions, GethDebugTracingOptions,
-    GethTrace,
+    CallConfig, DefaultFrame, GethDebugTracerConfig, GethDebugTracingCallOptions,
+    GethDebugTracingOptions, GethTrace,
 };
 use std::{future::Future, str::FromStr};
 
 use crate::{
+    error::RpcError,
     handlers::{
         simulation::conversion::convert_block_overrides,
         trace::{TraceCallRequest, TraceConfig, Tracers},
+        TraceCallManyRequest,
     },
     types::conversion::ConversionService,
 };
@@ -75,9 +80,9 @@ impl TracingStrategy {
 
                 Self::Hybrid { tracers_options, struct_logger_options }
             }
-            // No tracers at all - fallback to default
+            // No tracers at all - fallback to call tracer
             _ => {
-                let options = GethDebugTracingOptions::default();
+                let options = GethDebugTracingOptions::call_tracer(CallConfig::default());
                 Self::TracersOnly(options)
             }
         }
@@ -101,14 +106,21 @@ impl TracingStrategy {
     }
 
     /// Execute transaction trace
-    pub async fn execute<F, Fut, E>(&self, tx_hash: TxHash, trace_fn: F) -> Result<TracingResult, E>
+    pub async fn execute<F, Fut, E>(
+        &self,
+        tx_hash: TxHash,
+        trace_fn: F,
+    ) -> Result<TracingResult, RpcError>
     where
         F: Fn(TxHash, GethDebugTracingOptions) -> Fut + Clone,
         Fut: Future<Output = Result<GethTrace, E>>,
+        E: Into<RpcError>,
     {
         match self {
             Self::StructLoggerOnly(options) | Self::TracersOnly(options) => {
-                let trace = trace_fn(tx_hash, options.clone()).await?;
+                let trace = trace_fn(tx_hash, options.clone())
+                    .await
+                    .map_err(|e| e.into())?;
                 Ok(TracingResult::Single(trace))
             }
             Self::Hybrid { tracers_options, struct_logger_options } => {
@@ -117,7 +129,7 @@ impl TracingStrategy {
                 let struct_logger_fut = trace_fn(tx_hash, struct_logger_options.clone());
 
                 let (tracers_trace, struct_logger_trace) =
-                    tokio::try_join!(tracers_fut, struct_logger_fut)?;
+                    tokio::try_join!(tracers_fut, struct_logger_fut).map_err(|e| e.into())?;
 
                 Ok(TracingResult::Dual {
                     tracers_trace,
@@ -132,10 +144,11 @@ impl TracingStrategy {
         &self,
         call_request: TraceCallRequest,
         trace_fn: F,
-    ) -> Result<TracingResult, E>
+    ) -> Result<TracingResult, RpcError>
     where
         F: Fn(AlloyTransactionRequest, BlockId, GethDebugTracingCallOptions) -> Fut + Clone,
         Fut: Future<Output = Result<GethTrace, E>>,
+        E: Into<RpcError>,
     {
         let TraceCallRequest {
             call,
@@ -146,23 +159,34 @@ impl TracingStrategy {
             ..
         } = call_request;
 
-        let block_overrides = convert_block_overrides(block_overrides.unwrap_or_default())
-            .map_err(|e| eyre::anyhow!("Failed to convert block overrides: {}", e))
-            .ok();
-        let state_overrides =
-            ConversionService::state_overrides_to_alloy(&state_overrides.unwrap_or_default())
-                .map_err(|e| eyre::anyhow!("Failed to convert state overrides: {}", e))
-                .ok();
-        let tx_request = AlloyTransactionRequest::try_from(call)
-            .map_err(|e| eyre::anyhow!("Failed to convert call: {}", e))
-            .unwrap();
-        let block_id = BlockId::from_str(&block).unwrap_or_default();
+        let block_overrides = block_overrides
+            .map(convert_block_overrides)
+            .transpose()
+            .map_err(|e| {
+                RpcError::invalid_params("trace_call", format!("Invalid block overrides: {}", e))
+            })?;
+
+        let state_overrides = state_overrides
+            .map(|overrides| ConversionService::state_overrides_to_alloy(&overrides))
+            .transpose()
+            .map_err(|e| {
+                RpcError::invalid_params("trace_call", format!("Invalid state overrides: {}", e))
+            })?;
+
+        let tx_request = AlloyTransactionRequest::try_from(call).map_err(|e| {
+            RpcError::invalid_params("trace_call", format!("Failed to convert call: {}", e))
+        })?;
+        let block_id = BlockId::from_str(&block).map_err(|_| {
+            RpcError::invalid_params("trace_call", format!("Invalid block identifier: {}", block))
+        })?;
 
         match self {
             Self::StructLoggerOnly(options) | Self::TracersOnly(options) => {
                 let call_options =
                     self.create_call_options(options, state_overrides, block_overrides);
-                let trace = trace_fn(tx_request, block_id, call_options).await?;
+                let trace = trace_fn(tx_request, block_id, call_options)
+                    .await
+                    .map_err(|e| e.into())?;
                 Ok(TracingResult::Single(trace))
             }
             Self::Hybrid { tracers_options, struct_logger_options } => {
@@ -183,9 +207,60 @@ impl TracingStrategy {
                 let struct_logger_fut = trace_fn(tx_request, block_id, struct_logger_call_options);
 
                 let (tracers_trace, struct_logger_trace) =
-                    tokio::try_join!(tracers_fut, struct_logger_fut)?;
+                    tokio::try_join!(tracers_fut, struct_logger_fut).map_err(|e| e.into())?;
 
                 Ok(TracingResult::Dual {
+                    tracers_trace,
+                    struct_logger_trace: Box::new(struct_logger_trace),
+                })
+            }
+        }
+    }
+
+    /// Execute call trace with overrides
+    pub async fn execute_call_many<F, Fut, E>(
+        &self,
+        call_request: TraceCallManyRequest,
+        trace_fn: F,
+    ) -> Result<TracingResultMany, RpcError>
+    where
+        F: Fn(Vec<AlloyBundle>, AlloyStateContext, GethDebugTracingCallOptions) -> Fut + Clone,
+        Fut: Future<Output = Result<Vec<GethTrace>, E>>,
+        E: Into<RpcError>,
+    {
+        let TraceCallManyRequest { bundles, state_context, .. } = call_request;
+
+        let alloy_bundles: Vec<AlloyBundle> = bundles
+            .into_iter()
+            .map(|bundle| bundle.into())
+            .collect::<Vec<_>>();
+        let alloy_state_context: AlloyStateContext = state_context.into();
+
+        match self {
+            Self::StructLoggerOnly(options) | Self::TracersOnly(options) => {
+                let call_options = self.create_call_options(options, None, None);
+                let trace = trace_fn(alloy_bundles, alloy_state_context, call_options)
+                    .await
+                    .map_err(|e| e.into())?;
+
+                Ok(TracingResultMany::Single(trace))
+            }
+            Self::Hybrid { tracers_options, struct_logger_options } => {
+                // Create call options for both traces
+                let tracers_call_options = self.create_call_options(tracers_options, None, None);
+                let struct_logger_call_options =
+                    self.create_call_options(struct_logger_options, None, None);
+
+                // Execute both calls concurrently
+                let tracers_fut =
+                    trace_fn(alloy_bundles.clone(), alloy_state_context, tracers_call_options);
+                let struct_logger_fut =
+                    trace_fn(alloy_bundles, alloy_state_context, struct_logger_call_options);
+
+                let (tracers_trace, struct_logger_trace) =
+                    tokio::try_join!(tracers_fut, struct_logger_fut).map_err(|e| e.into())?;
+
+                Ok(TracingResultMany::Dual {
                     tracers_trace,
                     struct_logger_trace: Box::new(struct_logger_trace),
                 })
@@ -219,11 +294,29 @@ pub enum TracingResult {
     Dual { tracers_trace: GethTrace, struct_logger_trace: Box<GethTrace> },
 }
 
+/// Result of `trace_call_many` execution
+#[derive(Debug, Clone)]
+pub enum TracingResultMany {
+    /// Single trace result
+    Single(Vec<GethTrace>),
+    /// Dual trace result (tracers + struct logger)
+    Dual { tracers_trace: Vec<GethTrace>, struct_logger_trace: Box<Vec<GethTrace>> },
+}
+
 impl std::fmt::Display for TracingResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Single(_) => write!(f, "Single trace"),
             Self::Dual { .. } => write!(f, "Dual trace"),
+        }
+    }
+}
+
+impl std::fmt::Display for TracingResultMany {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Single(traces) => write!(f, "Single trace ({})", traces.len()),
+            Self::Dual { tracers_trace, .. } => write!(f, "Dual trace ({})", tracers_trace.len()),
         }
     }
 }
@@ -258,9 +351,93 @@ impl TracingResult {
         }
     }
 
+    /// Extract [`DefaultFrame`] from JS trace if possible
+    pub fn extract_default_frame_from_js(&self) -> Option<DefaultFrame> {
+        let js_value = match self {
+            Self::Single(GethTrace::JS(value)) => Some(value),
+            Self::Dual { struct_logger_trace, .. } => {
+                if let GethTrace::JS(value) = struct_logger_trace.as_ref() {
+                    Some(value)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        if let Some(json_value) = js_value {
+            Self::try_extract_default_frame_from_json(json_value)
+        } else {
+            None
+        }
+    }
+
+    /// Try to extract [`DefaultFrame`] from a JSON value
+    fn try_extract_default_frame_from_json(json_value: &serde_json::Value) -> Option<DefaultFrame> {
+        match json_value {
+            // Handle array case - search through all elements for a DefaultFrame
+            serde_json::Value::Array(arr) => {
+                for element in arr {
+                    if let Some(default_frame) = Self::try_parse_as_default_frame(element) {
+                        return Some(default_frame);
+                    }
+                }
+                None
+            }
+            // Handle single object case
+            _ => Self::try_parse_as_default_frame(json_value),
+        }
+    }
+
+    /// Try to parse a single JSON value as a [`DefaultFrame`]
+    fn try_parse_as_default_frame(value: &serde_json::Value) -> Option<DefaultFrame> {
+        if let serde_json::Value::Object(_) = value {
+            return serde_json::from_value::<DefaultFrame>(value.clone()).ok();
+        }
+        None
+    }
+
     /// Check if this result contains multiple traces
     pub const fn is_dual(&self) -> bool {
         matches!(self, Self::Dual { .. })
+    }
+}
+
+impl TracingResultMany {
+    /// Get the primary traces (for single) or tracers traces (for dual)
+    pub const fn primary_traces(&self) -> &Vec<GethTrace> {
+        match self {
+            Self::Single(traces) => traces,
+            Self::Dual { tracers_trace, .. } => tracers_trace,
+        }
+    }
+
+    /// Get the struct logger traces if available
+    pub fn struct_logger_traces(&self) -> Option<&Vec<GethTrace>> {
+        match self {
+            Self::Single(_) => None,
+            Self::Dual { struct_logger_trace, .. } => Some(struct_logger_trace.as_ref()),
+        }
+    }
+
+    /// Check if this result contains dual traces
+    pub const fn is_dual(&self) -> bool {
+        matches!(self, Self::Dual { .. })
+    }
+
+    /// Convert to a vector of `TracingResult` for easier processing
+    pub fn into_individual_results(self) -> Vec<TracingResult> {
+        match self {
+            Self::Single(traces) => traces.into_iter().map(TracingResult::Single).collect(),
+            Self::Dual { tracers_trace, struct_logger_trace } => tracers_trace
+                .into_iter()
+                .zip(*struct_logger_trace)
+                .map(|(tracers, struct_logger)| TracingResult::Dual {
+                    tracers_trace: tracers,
+                    struct_logger_trace: Box::new(struct_logger),
+                })
+                .collect(),
+        }
     }
 }
 

@@ -47,7 +47,7 @@ const DEFAULT_CONFIG: Required<AltitraceClientConfig> = {
     Accept: 'application/json',
     'User-Agent': '@altitrace/sdk/1.0.0',
   },
-  fetch: globalThis.fetch,
+  fetch: globalThis.fetch.bind(globalThis),
   debug: false,
   apiKey: '',
   userAgent: '',
@@ -81,7 +81,9 @@ export class HttpClient {
       timeout: config.timeout ?? DEFAULT_CONFIG.timeout,
       retries: config.retryConfig ?? DEFAULT_CONFIG.retryConfig,
       headers: { ...DEFAULT_CONFIG.headers, ...config.headers },
-      fetch: config.fetch ?? DEFAULT_CONFIG.fetch,
+      fetch: config.fetch
+        ? config.fetch.bind(globalThis)
+        : DEFAULT_CONFIG.fetch,
       debug: config.debug ?? DEFAULT_CONFIG.debug,
     }
   }

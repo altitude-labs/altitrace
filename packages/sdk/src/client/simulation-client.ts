@@ -9,6 +9,7 @@ import { AltitraceApiError, ValidationError } from '@sdk/core/errors'
 import type { HttpClient } from '@sdk/core/http-client'
 import type { components } from '@sdk/generated/api-types'
 import type {
+  AccessList,
   BatchSimulationConfig,
   BatchSimulationResult,
   BlockTag,
@@ -149,6 +150,32 @@ export class SimulationClient {
     }
 
     return this.executeSimulation(request, executionOptions)
+  }
+
+  /**
+   * Execute a simple call simulation with access list without using the builder pattern.
+   * This is a convenience method for single contract calls with gas optimization.
+   */
+  async simulateCallWithAccessList(
+    call: Omit<TransactionCall, 'accessList'>,
+    accessList: AccessList,
+    options?: {
+      blockTag?: BlockTag | string
+      validation?: boolean
+      traceAssetChanges?: boolean
+      traceTransfers?: boolean
+      account?: string
+      stateOverrides?: StateOverride[]
+      blockOverrides?: BlockOverrides
+    },
+    executionOptions?: SimulationExecutionOptions,
+  ): Promise<ExtendedSimulationResult> {
+    const callWithAccessList: TransactionCall = {
+      ...call,
+      accessList,
+    }
+
+    return this.simulateCall(callWithAccessList, options, executionOptions)
   }
 
   /**
@@ -343,6 +370,13 @@ export class SimulationClient {
       return events
     }
 
+    extended.getLogCount = () => {
+      return result.calls.reduce(
+        (acc, call) => acc + (call.logs?.length || 0),
+        0,
+      )
+    }
+
     return extended
   }
 }
@@ -366,6 +400,19 @@ class SimulationRequestBuilderImpl implements SimulationRequestBuilder {
   call(call: TransactionCall): SimulationRequestBuilder {
     this.params.calls = this.params.calls || []
     this.params.calls.push(call)
+    return this
+  }
+
+  callWithAccessList(
+    call: Omit<TransactionCall, 'accessList'>,
+    accessList: AccessList,
+  ): SimulationRequestBuilder {
+    const callWithAccessList: TransactionCall = {
+      ...call,
+      accessList,
+    }
+    this.params.calls = this.params.calls || []
+    this.params.calls.push(callWithAccessList)
     return this
   }
 

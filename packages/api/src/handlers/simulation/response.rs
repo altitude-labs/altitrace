@@ -1,3 +1,7 @@
+use alloy_eip2930::{
+    AccessList as AlloyAccessList, AccessListItem as AlloyAccessListItem,
+    AccessListResult as AlloyAccessListResult,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -267,4 +271,80 @@ pub struct StorageGasBreakdown {
     /// Gas used for storage write operations (SSTORE).
     #[schema(example = "20000")]
     pub writes: String,
+}
+
+/// Access list response.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AccessListResponse {
+    /// Access list.
+    pub access_list: AccessList,
+    /// Gas used by the transaction.
+    #[schema(example = "1000000")]
+    pub gas_used: String,
+    /// Error if the transaction failed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[serde(transparent)]
+pub struct AccessList(pub Vec<AccessListItem>);
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AccessListItem {
+    /// Account address that would be loaded at the start of execution.
+    pub address: String,
+    /// Storage slots that would be accessed by the account.
+    pub storage_keys: Vec<String>,
+}
+
+impl From<AccessListItem> for AlloyAccessListItem {
+    fn from(item: AccessListItem) -> Self {
+        Self {
+            address: item.address.parse().unwrap_or_default(),
+            storage_keys: item
+                .storage_keys
+                .into_iter()
+                .map(|key| key.parse().unwrap_or_default())
+                .collect(),
+        }
+    }
+}
+
+impl From<AccessList> for AlloyAccessList {
+    fn from(list: AccessList) -> Self {
+        Self(list.0.into_iter().map(|item| item.into()).collect())
+    }
+}
+
+impl From<AlloyAccessList> for AccessList {
+    fn from(alloy_list: AlloyAccessList) -> Self {
+        Self(
+            alloy_list
+                .0
+                .into_iter()
+                .map(|item| AccessListItem {
+                    address: format!("0x{:x}", item.address),
+                    storage_keys: item
+                        .storage_keys
+                        .into_iter()
+                        .map(|key| format!("0x{:x}", key))
+                        .collect(),
+                })
+                .collect(),
+        )
+    }
+}
+
+impl From<AlloyAccessListResult> for AccessListResponse {
+    fn from(result: AlloyAccessListResult) -> Self {
+        Self {
+            access_list: result.access_list.into(),
+            gas_used: result.gas_used.to_string(),
+            error: result.error,
+        }
+    }
 }

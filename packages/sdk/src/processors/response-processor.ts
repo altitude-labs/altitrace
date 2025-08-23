@@ -88,6 +88,14 @@ class ExtendedSimulationResultImpl implements ExtendedSimulationResult {
   }
 
   /**
+   * Get the total number of logs across all calls.
+   * @returns Total number of logs
+   */
+  public getLogCount(): number {
+    return this.calls.reduce((acc, call) => acc + call.logs.length, 0)
+  }
+
+  /**
    * Get decoded events from all logs.
    * @returns Array of decoded events
    */
