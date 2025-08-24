@@ -1344,7 +1344,7 @@ function RequestParametersView({
                         htmlFor="from-address"
                         className="text-sm font-medium text-muted-foreground"
                       >
-                        From Address
+                        From
                       </label>
                       <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
                         <span className="sm:hidden">{`${call.from.slice(0, 10)}...${call.from.slice(-8)}`}</span>
@@ -1358,7 +1358,7 @@ function RequestParametersView({
                         htmlFor="to-address"
                         className="text-sm font-medium text-muted-foreground"
                       >
-                        To Address
+                        To
                       </label>
                       <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
                         <span className="sm:hidden">{`${call.to.slice(0, 10)}...${call.to.slice(-8)}`}</span>
@@ -1376,14 +1376,10 @@ function RequestParametersView({
                         </label>
                         <p className="font-mono text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
                           <span className="sm:hidden">
-                            {call.data.length > 50
-                              ? `${call.data.slice(0, 50)}...`
-                              : call.data}
+                            {call.data}
                           </span>
                           <span className="hidden sm:inline">
-                            {call.data.length > 100
-                              ? `${call.data.slice(0, 100)}...`
-                              : call.data}
+                            {call.data}
                           </span>
                         </p>
                       </div>

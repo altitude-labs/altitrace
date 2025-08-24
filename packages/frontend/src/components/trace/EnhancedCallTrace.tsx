@@ -4,6 +4,7 @@ import type { CallFrame, ExtendedTracerResponse } from '@altitrace/sdk/types'
 import {
   ChevronDownIcon,
   ChevronRightIcon,
+  DatabaseIcon,
   EyeIcon,
   FuelIcon,
   SettingsIcon,
@@ -18,6 +19,8 @@ import {
   CardTitle,
 } from '@/components/ui'
 import { parseBlockchainError, parseBlockchainErrorWithOutput } from '@/utils/error-parser'
+import { parseStorageOperations, type StorageOperation } from '@/utils/trace-helpers'
+import { StorageOperationsView } from './StorageOperationsView'
 
 interface EnhancedCallTraceProps {
   traceData: ExtendedTracerResponse
@@ -34,6 +37,7 @@ export function EnhancedCallTrace({
 }: EnhancedCallTraceProps) {
   const [showGas, setShowGas] = useState(true)
   const [showFullTrace, setShowFullTrace] = useState(false)
+  const [showStorage, setShowStorage] = useState(false)
   const rootCall = traceData.callTracer?.rootCall
 
   if (!rootCall) {
@@ -132,6 +136,15 @@ export function EnhancedCallTrace({
               <EyeIcon className="h-4 w-4 mr-1" />
               Full Trace
             </Button>
+            <Button
+              variant={showStorage ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setShowStorage(!showStorage)}
+              className="h-8"
+            >
+              <DatabaseIcon className="h-4 w-4 mr-1" />
+              Storage
+            </Button>
           </div>
         </div>
       </CardHeader>
@@ -174,6 +187,8 @@ export function EnhancedCallTrace({
               isRoot={true}
               showGas={showGas}
               showFullTrace={showFullTrace}
+              showStorage={showStorage}
+              traceData={traceData}
             />
           </div>
         </div>
@@ -190,6 +205,9 @@ interface CallNodeProps {
   isRoot?: boolean
   showGas: boolean
   showFullTrace: boolean
+  showStorage: boolean
+  traceData: ExtendedTracerResponse
+  allStorageOperations?: StorageOperation[]
 }
 
 function CallNode({
@@ -199,12 +217,27 @@ function CallNode({
   isRoot = false,
   showGas,
   showFullTrace,
+  showStorage,
+  traceData,
+  allStorageOperations = [],
 }: CallNodeProps) {
   const [isExpanded, setIsExpanded] = useState(depth < 3) // Auto-expand first 3 levels
   
   const hasSubcalls = frame.calls && frame.calls.length > 0
   const gasUsed = Number.parseInt(frame.gasUsed, 16)
   const isSuccess = !frame.reverted
+  
+  // Parse storage operations for all calls (only once at root level)
+  const storageOpsForPassing: StorageOperation[] = showStorage && isRoot
+    ? parseStorageOperations(traceData, frame)
+    : allStorageOperations
+  
+  // Filter storage operations for this specific call by depth and contract
+  const callStorageOperations: StorageOperation[] = showStorage
+    ? storageOpsForPassing.filter(op => 
+        op.depth === depth && op.contract === (frame.to || frame.from || '')
+      )
+    : []
   
   // Format addresses - short format for display
   const formatAddress = (address: string) => {
@@ -399,6 +432,50 @@ function CallNode({
         </div>
       )}
       
+      {/* Inline storage operations display for this specific call */}
+      {showStorage && callStorageOperations.length > 0 && (
+        <div 
+          className="bg-muted/10 border-l-2 border-muted/50 text-xs"
+          style={{ 
+            marginLeft: `${12 + 96 + (showGas ? 80 : 0) + 16 + indentLevel + 12}px`
+          }}
+        >
+          <div className="py-1 px-3 space-y-1">
+            <div className="text-blue-600 dark:text-blue-400 font-semibold text-xs mb-2">
+              STORAGE ({callStorageOperations.length} ops)
+            </div>
+            {callStorageOperations.map((op, index) => (
+              <div key={`${op.pc}-${index}`} className="flex items-center gap-2 text-xs py-1">
+                <div className={`px-2 py-0.5 rounded font-mono text-xs ${
+                  op.opcode === 'SSTORE' 
+                    ? 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
+                    : 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                }`}>
+                  {op.opcode}
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">Slot:</span>
+                  <code className="bg-muted/50 px-1 py-0.5 rounded text-xs">
+                    {op.slot.length > 12 ? `${op.slot.slice(0, 8)}...${op.slot.slice(-4)}` : op.slot}
+                  </code>
+                </div>
+                {op.opcode === 'SSTORE' && op.value && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">→</span>
+                    <code className="bg-green-500/10 text-green-700 dark:text-green-400 px-1 py-0.5 rounded text-xs">
+                      {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
+                    </code>
+                  </div>
+                )}
+                <div className="text-muted-foreground text-xs ml-auto">
+                  Gas: {op.gasCost}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       {/* Render subcalls */}
       {hasSubcalls && isExpanded && frame.calls && (
         <>
@@ -410,6 +487,9 @@ function CallNode({
               index={subIndex}
               showGas={showGas}
               showFullTrace={showFullTrace}
+              showStorage={showStorage}
+              traceData={traceData}
+              allStorageOperations={storageOpsForPassing}
             />
           ))}
         </>

@@ -2,7 +2,7 @@
  * @fileoverview Trace data helpers for processing raw trace responses
  */
 
-import type { TracerResponse, LogEntry } from '@altitrace/sdk/types'
+import type { TracerResponse, LogEntry, StructLog, CallFrame } from '@altitrace/sdk/types'
 
 /**
  * Extended tracer response with helper methods (compatible with SDK's ExtendedTracerResponse)
@@ -243,4 +243,175 @@ function collectAccessedAccounts(call: any, accounts: Set<string>): void {
       collectAccessedAccounts(subCall, accounts)
     }
   }
+}
+
+/**
+ * Storage operation interface for SSTORE/SLOAD opcodes
+ */
+export interface StorageOperation {
+  opcode: 'SSTORE' | 'SLOAD'
+  depth: number
+  gas: number
+  gasCost: number
+  pc: number
+  slot: string
+  value?: string // For SSTORE operations (the value being stored)
+  oldValue?: string // For SSTORE operations (previous value)
+  contract: string // Contract address where storage operation occurred
+  callIndex: number // Index to help match with call hierarchy
+}
+
+/**
+ * Parse storage operations (SSTORE/SLOAD) from struct logger trace data
+ * This extracts detailed storage operations similar to Tenderly's interface
+ */
+export function parseStorageOperations(
+  traceData: TracerResponse,
+  rootCall: CallFrame
+): StorageOperation[] {
+  if (!traceData.structLogger?.structLogs) {
+    return []
+  }
+
+  const storageOps: StorageOperation[] = []
+  const callStack: Array<{ contract: string; depth: number; index: number }> = []
+  
+  // Initialize with root call
+  if (rootCall.to) {
+    callStack.push({ 
+      contract: rootCall.to, 
+      depth: 0, 
+      index: 0 
+    })
+  }
+
+  for (let i = 0; i < traceData.structLogger.structLogs.length; i++) {
+    const log = traceData.structLogger.structLogs[i]
+    
+    // Update call stack based on depth changes
+    updateCallStack(callStack, log, rootCall)
+    
+    // Only process storage operations
+    if (log.op === 'SSTORE' || log.op === 'SLOAD') {
+      const currentCall = callStack[callStack.length - 1]
+      
+      if (currentCall && log.stack && log.stack.length >= 2) {
+        // For EVM stack, storage operations have:
+        // SSTORE: stack[0] = slot, stack[1] = value
+        // SLOAD: stack[0] = slot
+        const slot = log.stack[log.stack.length - 1] // Top of stack
+        const value = log.op === 'SSTORE' ? log.stack[log.stack.length - 2] : undefined
+        
+        // For SSTORE operations, we can get the old value from storage state
+        let oldValue: string | undefined
+        if (log.op === 'SSTORE' && log.storage && slot) {
+          oldValue = log.storage[slot]
+        }
+
+        storageOps.push({
+          opcode: log.op as 'SSTORE' | 'SLOAD',
+          depth: log.depth,
+          gas: log.gas,
+          gasCost: log.gasCost || 0,
+          pc: log.pc,
+          slot: formatStorageSlot(slot),
+          value: value ? formatStorageValue(value) : undefined,
+          oldValue: oldValue ? formatStorageValue(oldValue) : undefined,
+          contract: currentCall.contract,
+          callIndex: currentCall.index
+        })
+      }
+    }
+  }
+
+  return storageOps
+}
+
+/**
+ * Update call stack based on current execution depth
+ * This helps track which contract each storage operation belongs to
+ */
+function updateCallStack(
+  callStack: Array<{ contract: string; depth: number; index: number }>,
+  log: StructLog,
+  rootCall: CallFrame
+): void {
+  // Remove calls that are deeper than current depth
+  while (callStack.length > 0 && callStack[callStack.length - 1].depth > log.depth) {
+    callStack.pop()
+  }
+  
+  // This is a simplified approach - in reality, we'd need to track CALL opcodes
+  // to properly maintain the call stack with contract addresses
+  // For now, we'll use the depth to approximate the call structure
+}
+
+/**
+ * Format storage slot for display (pad to 32 bytes if needed)
+ */
+function formatStorageSlot(slot: string): string {
+  if (!slot || slot === '0x') return '0x0'
+  
+  // Ensure proper hex format
+  if (!slot.startsWith('0x')) {
+    slot = '0x' + slot
+  }
+  
+  // Pad to 32 bytes (64 hex characters + 0x)
+  if (slot.length < 66) {
+    slot = '0x' + slot.slice(2).padStart(64, '0')
+  }
+  
+  return slot
+}
+
+/**
+ * Format storage value for display
+ */
+function formatStorageValue(value: string): string {
+  if (!value || value === '0x') return '0x0'
+  
+  // Ensure proper hex format
+  if (!value.startsWith('0x')) {
+    value = '0x' + value
+  }
+  
+  // Remove leading zeros for cleaner display, but keep at least one zero
+  const cleanValue = value.replace(/^0x0+/, '0x') || '0x0'
+  return cleanValue === '0x' ? '0x0' : cleanValue
+}
+
+/**
+ * Group storage operations by contract for better organization
+ */
+export function groupStorageOperationsByContract(
+  operations: StorageOperation[]
+): Record<string, StorageOperation[]> {
+  const grouped: Record<string, StorageOperation[]> = {}
+  
+  for (const op of operations) {
+    if (!grouped[op.contract]) {
+      grouped[op.contract] = []
+    }
+    grouped[op.contract].push(op)
+  }
+  
+  return grouped
+}
+
+/**
+ * Get storage operations count for a specific contract
+ */
+export function getStorageOperationsCount(operations: StorageOperation[]): number {
+  return operations.length
+}
+
+/**
+ * Filter storage operations by type (SSTORE or SLOAD)
+ */
+export function filterStorageOperationsByType(
+  operations: StorageOperation[],
+  type: 'SSTORE' | 'SLOAD'
+): StorageOperation[] {
+  return operations.filter(op => op.opcode === type)
 }
