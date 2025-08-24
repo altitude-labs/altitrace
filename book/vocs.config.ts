@@ -3,13 +3,14 @@ import { sidebar } from './sidebar'
 
 export default defineConfig({
   title: 'Altitrace',
-  logoUrl: '/logo.png',
-  iconUrl: '/logo.png',
+  logoUrl: '/logo.svg',
+  iconUrl: '/logo.svg',
   ogImageUrl: '/altitrace-prod.png',
+//  basePath: '/docs',
   sidebar,
   topNav: [
-    { text: 'Simulator', link: '/webapp' },
-    { text: 'SDK', link: '/sdk/overview' },
+    { text: 'Simulator', link: 'https://altitrace.reachaltitude.xyz' },
+    { text: 'SDK', link: '/sdk' },
     { text: 'GitHub', link: 'https://github.com/altitude-labs/altitrace' },
     {
       text: 'v0.1.0',

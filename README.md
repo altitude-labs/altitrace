@@ -97,9 +97,9 @@ Altitrace consists of three main parts:
 
 ## Community & Support
 
-- 📖 [Documentation](https://docs.altitrace.com) - Complete guides and API reference
+- 📖 [Documentation](https://docs.altitrace.reachaltitude.xyz) - Complete guides and API reference
 - 💬 [Discord](https://discord.gg/altitrace) - Community support and discussion
-- 🐛 [GitHub Issues](https://github.com/altitude-dev/altitrace/issues) - Bug reports and feature requests
+- 🐛 [GitHub Issues](https://github.com/altitude-labs/altitrace/issues) - Bug reports and feature requests
 - 🔗 [Examples](https://github.com/altitude-dev/altitrace-examples) - Real-world usage patterns
 
 ## License

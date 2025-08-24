@@ -57,28 +57,31 @@ export function Footer() {
             <h4 className="font-semibold">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="#"
-                  className="hover:text-primary transition-colors opacity-50 cursor-not-allowed"
+                <Link
+                  href="https://docs.altitrace.reachaltitude.xyz"
+                  target="_blank"
+                  className="hover:text-primary transition-colors"
                 >
-                  Documentation (Coming Soon)
-                </a>
+                  Documentation
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="hover:text-primary transition-colors opacity-50 cursor-not-allowed"
+                <Link
+                  href="https://docs.altitrace.reachaltitude.xyz/api"
+                  target="_blank"
+                  className="hover:text-primary transition-colors"
                 >
-                  API Reference (Coming Soon)
-                </a>
+                  API Reference
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="hover:text-primary transition-colors opacity-50 cursor-not-allowed"
+                <Link
+                  href="https://docs.altitrace.reachaltitude.xyz/sdk"
+                  target="_blank"
+                  className="hover:text-primary transition-colors"
                 >
-                  SDK Guide (Coming Soon)
-                </a>
+                  SDK Guide
+                </Link>
               </li>
             </ul>
           </div>
