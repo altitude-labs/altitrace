@@ -65,17 +65,10 @@ async function parseTransactionAssetChanges(
   txIndex: number,
 ): Promise<Array<{ address: string; change: bigint }>> {
   try {
-    console.log(
-      `🔍 [Bundle Asset Tracking] Processing transaction ${txIndex + 1} for account ${targetAccount}`,
-    )
-
     const allChanges = new Map<string, bigint>()
 
     // 1. Parse native HYPE transfers from trace data
     if (traceData?.callTracer?.rootCall) {
-      console.log(
-        `📞 [Bundle Asset Tracking] Tx${txIndex + 1}: Parsing native transfers...`,
-      )
       const nativeChanges = parseNativeTransfers(traceData, targetAccount)
 
       for (const change of nativeChanges) {
@@ -92,9 +85,6 @@ async function parseTransactionAssetChanges(
         : []
 
     if (logs.length > 0) {
-      console.log(
-        `📝 [Bundle Asset Tracking] Tx${txIndex + 1}: Parsing ${logs.length} logs for token transfers...`,
-      )
       const tokenChanges = parseTokenTransfersFromLogs(logs, targetAccount)
 
       for (const change of tokenChanges) {
@@ -106,9 +96,6 @@ async function parseTransactionAssetChanges(
     // Convert to array format
     const result = Array.from(allChanges.entries()).map(
       ([address, change]) => ({ address, change }),
-    )
-    console.log(
-      `✅ [Bundle Asset Tracking] Tx${txIndex + 1}: Found ${result.length} asset changes`,
     )
 
     return result
@@ -129,10 +116,6 @@ async function aggregateBundleAssetChanges(
   targetAccount: string,
 ): Promise<any[]> {
   try {
-    console.log(
-      `🔍 [Bundle Asset Tracking] Aggregating asset changes across ${transactionResults.length} transactions`,
-    )
-
     const bundleChanges = new Map<string, { address: string; change: bigint }>()
 
     // Process each successful transaction
@@ -140,9 +123,6 @@ async function aggregateBundleAssetChanges(
       const txResult = transactionResults[i]
 
       if (txResult.status !== 'success' || !txResult.traceData) {
-        console.log(
-          `ℹ️ [Bundle Asset Tracking] Skipping transaction ${i + 1} (status: ${txResult.status})`,
-        )
         continue
       }
 
@@ -170,10 +150,6 @@ async function aggregateBundleAssetChanges(
       if (changeData.change === BigInt(0)) {
         continue // Skip zero changes
       }
-
-      console.log(
-        `🔧 [Bundle Asset Tracking] Processing bundle asset change for ${address}: ${changeData.change > 0n ? '+' : ''}${changeData.change.toString()}`,
-      )
 
       // Fetch token metadata
       const metadata = await getTokenMetadata(address)
@@ -204,21 +180,6 @@ async function aggregateBundleAssetChanges(
           diff: changeData.change.toString(),
         },
       })
-    }
-
-    if (assetChanges.length > 0) {
-      console.log(
-        `✅ [Bundle Asset Tracking] Found ${assetChanges.length} total bundle asset changes:`,
-      )
-      assetChanges.forEach((change) => {
-        console.log(
-          `  • ${change.symbol || change.tokenAddress}: ${change.type === 'gain' ? '+' : '-'}${change.netChange}`,
-        )
-      })
-    } else {
-      console.log(
-        'ℹ️ [Bundle Asset Tracking] No net asset changes detected across bundle',
-      )
     }
 
     return assetChanges
@@ -291,12 +252,6 @@ export async function executeBundleSimulation(
       }
     })
 
-    console.log(
-      '📡 [Bundle API] Calling traceCallMany with',
-      bundles.length,
-      'bundles...',
-    )
-
     // Execute bundle using trace API directly (the builder pattern has issues with state context)
     const rawTraceResult = await client.traceCallMany(bundles, {
       stateContext: {
@@ -316,9 +271,6 @@ export async function executeBundleSimulation(
     const traceResult: TracerManyResponse = rawTraceResult.map((response) =>
       extendTracerResponse(response),
     )
-
-    console.log('✅ [Bundle API] Trace response received')
-    console.log('   Results count:', traceResult.length)
 
     // Process results
     const transactionResults: BundleTransactionResult[] = []
@@ -390,16 +342,8 @@ export async function executeBundleSimulation(
         },
       })
 
-      console.log(
-        `   Transaction ${i + 1}: ${status} (gas: ${Number(gasUsedBig).toLocaleString()})`,
-      )
-
       // Check if we should continue on failure
       if (status === 'failed' && !bundleTx.continueOnFailure) {
-        console.log(
-          `   🛑 Bundle execution stopped at transaction ${i + 1} (continue on failure: ${bundleTx.continueOnFailure})`,
-        )
-
         // Mark remaining transactions as skipped
         for (let j = i + 1; j < request.transactions.length; j++) {
           const skippedTx = request.transactions[j]
@@ -436,9 +380,6 @@ export async function executeBundleSimulation(
     // Calculate bundle-level asset changes if an account is specified
     let bundleAssetChanges: any[] = []
     if (request.account && request.traceAssetChanges) {
-      console.log(
-        '🔍 [Bundle Simulation] Calculating bundle-level asset changes...',
-      )
       try {
         bundleAssetChanges = await aggregateBundleAssetChanges(
           transactionResults,
@@ -454,9 +395,6 @@ export async function executeBundleSimulation(
 
     // Calculate per-transaction asset changes if account is specified
     if (request.account && request.traceAssetChanges) {
-      console.log(
-        '🔍 [Bundle Simulation] Calculating per-transaction asset changes...',
-      )
       for (let i = 0; i < transactionResults.length; i++) {
         const txResult = transactionResults[i]
         if (txResult.status === 'success' && txResult.traceData) {

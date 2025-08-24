@@ -374,8 +374,6 @@ export async function getTokenMetadata(
 
   // Fetch from blockchain (using viem client from config)
   try {
-    console.log(`🔍 [Token Metadata] Fetching metadata for ${tokenAddress}...`)
-
     // Import viem client here to avoid circular dependencies
     const { viemClient } = await import('@/config/chains')
 
@@ -432,10 +430,6 @@ export async function getTokenMetadata(
     // Cache the result
     tokenMetadataCache.set(normalizedAddress, metadata)
 
-    console.log(
-      `✅ [Token Metadata] Fetched metadata for ${tokenAddress}:`,
-      metadata,
-    )
     return metadata
   } catch (error) {
     console.warn(
@@ -463,18 +457,11 @@ export function parseNativeTransfers(
     return changes
   }
 
-  console.log(
-    '🔍 [Native Transfers] Analyzing call trace for native value transfers...',
-  )
-
   // Recursive function to analyze all calls in the trace
   function analyzeCall(call: any, depth = 0) {
     if (!call) return
 
     const indent = '  '.repeat(depth)
-    console.log(
-      `${indent}📞 [Call] ${call.from || 'unknown'} → ${call.to || 'unknown'}, value: ${call.value || '0x0'}`,
-    )
 
     // Check if this call transfers native currency to/from our target account
     const value = call.value ? BigInt(call.value) : BigInt(0)
@@ -485,7 +472,6 @@ export function parseNativeTransfers(
     if (value > 0n) {
       if (from === target) {
         // Outgoing native transfer
-        console.log(`${indent}💸 [Native] Outgoing: -${value.toString()} HYPE`)
         changes.push({
           address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
           change: -value,
@@ -493,7 +479,6 @@ export function parseNativeTransfers(
       }
       if (to === target) {
         // Incoming native transfer
-        console.log(`${indent}💰 [Native] Incoming: +${value.toString()} HYPE`)
         changes.push({
           address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
           change: value,
@@ -511,9 +496,6 @@ export function parseNativeTransfers(
 
   analyzeCall(traceData.callTracer.rootCall)
 
-  console.log(
-    `✅ [Native Transfers] Found ${changes.length} native transfer changes`,
-  )
   return changes
 }
 
@@ -529,10 +511,6 @@ export function parseTokenTransfersFromLogs(
   if (!logs || logs.length === 0) {
     return []
   }
-
-  console.log(
-    `🔍 [Token Transfers] Analyzing ${logs.length} logs for ERC-20/ERC-721 transfers...`,
-  )
 
   // ERC-20/ERC-721 Transfer event signature: Transfer(address,address,uint256)
   const TRANSFER_SIGNATURE =
@@ -567,19 +545,13 @@ export function parseTokenTransfersFromLogs(
       continue
     }
 
-    console.log(
-      `📝 [Transfer] ${tokenAddress}: ${fromAddress} → ${toAddress}, amount: ${amount.toString()}`,
-    )
-
     // Check if this transfer affects our target account
     let netChange = BigInt(0)
     if (fromAddress === target) {
       netChange -= amount // Outgoing transfer (negative)
-      console.log(`💸 [Transfer] Outgoing: -${amount.toString()}`)
     }
     if (toAddress === target) {
       netChange += amount // Incoming transfer (positive)
-      console.log(`💰 [Transfer] Incoming: +${amount.toString()}`)
     }
 
     if (netChange !== BigInt(0)) {
@@ -594,9 +566,7 @@ export function parseTokenTransfersFromLogs(
     address,
     change,
   }))
-  console.log(
-    `✅ [Token Transfers] Found ${result.length} token transfer changes`,
-  )
+
   return result
 }
 
@@ -611,8 +581,6 @@ async function executeTraceBasedAssetTracking(
   traceResult: any,
 ): Promise<any[] | undefined> {
   try {
-    console.log('🔍 [Trace Asset Tracking] Starting trace-based asset tracking')
-
     // Get the target account from the request or primary call
     const targetAccount = request.params.account || primaryCall.from
     if (!targetAccount) {
@@ -622,15 +590,10 @@ async function executeTraceBasedAssetTracking(
       return undefined
     }
 
-    console.log(`🎯 [Trace Asset Tracking] Target account: ${targetAccount}`)
-
     const allChanges = new Map<string, { address: string; change: bigint }>()
 
     // 1. Parse native HYPE transfers from trace data
     if (traceResult?.callTracer?.rootCall) {
-      console.log(
-        '🔍 [Trace Asset Tracking] Parsing native transfers from trace data...',
-      )
       const nativeChanges = parseNativeTransfers(traceResult, targetAccount)
 
       for (const change of nativeChanges) {
@@ -641,10 +604,6 @@ async function executeTraceBasedAssetTracking(
         existing.change += change.change
         allChanges.set(change.address, existing)
       }
-    } else {
-      console.log(
-        'ℹ️ [Trace Asset Tracking] No trace data available for native transfer analysis',
-      )
     }
 
     // 2. Parse ERC-20/ERC-721 Transfer events from logs
@@ -653,29 +612,17 @@ async function executeTraceBasedAssetTracking(
     // Try to get logs from trace data first (preferred)
     if (traceResult?.getAllLogs) {
       logs = traceResult.getAllLogs()
-      console.log(
-        `🔍 [Trace Asset Tracking] Using ${logs.length} logs from trace data`,
-      )
     }
     // Fallback to simulation result logs
     else if (simulationResult?.getAllLogs) {
       logs = simulationResult.getAllLogs()
-      console.log(
-        `🔍 [Trace Asset Tracking] Using ${logs.length} logs from simulation result`,
-      )
     }
     // Fallback to direct logs property
     else if (simulationResult?.logs?.length) {
       logs = simulationResult.logs
-      console.log(
-        `🔍 [Trace Asset Tracking] Using ${logs.length} logs from simulation logs property`,
-      )
     }
 
     if (logs.length > 0) {
-      console.log(
-        '🔍 [Trace Asset Tracking] Parsing token transfers from logs...',
-      )
       const tokenChanges = parseTokenTransfersFromLogs(logs, targetAccount)
 
       for (const change of tokenChanges) {
@@ -686,10 +633,6 @@ async function executeTraceBasedAssetTracking(
         existing.change += change.change
         allChanges.set(change.address, existing)
       }
-    } else {
-      console.log(
-        'ℹ️ [Trace Asset Tracking] No logs available for token transfer analysis',
-      )
     }
 
     // 3. Convert to asset changes format with metadata fetching
@@ -699,10 +642,6 @@ async function executeTraceBasedAssetTracking(
       if (changeData.change === BigInt(0)) {
         continue // Skip zero changes
       }
-
-      console.log(
-        `🔧 [Trace Asset Tracking] Processing asset change for ${address}: ${changeData.change > 0n ? '+' : ''}${changeData.change.toString()}`,
-      )
 
       // Fetch token metadata
       const metadata = await getTokenMetadata(address)
@@ -736,30 +675,8 @@ async function executeTraceBasedAssetTracking(
     }
 
     if (assetChanges.length > 0) {
-      console.log(
-        `✅ [Trace Asset Tracking] Found ${assetChanges.length} asset changes:`,
-      )
-      assetChanges.forEach((change, index) => {
-        console.log(
-          `  • ${change.symbol || change.tokenAddress}: ${change.type === 'gain' ? '+' : '-'}${change.netChange}`,
-        )
-        console.log(`    [${index}] Full change object:`, {
-          tokenAddress: change.tokenAddress,
-          symbol: change.symbol,
-          decimals: change.decimals,
-          netChange: change.netChange,
-          type: change.type,
-        })
-      })
-
-      // Debug: Log the final asset changes array being returned
-      console.log(
-        `🚀 [Trace Asset Tracking] Returning asset changes array:`,
-        assetChanges,
-      )
       return assetChanges
     } else {
-      console.log('ℹ️ [Trace Asset Tracking] No asset changes detected')
       return []
     }
   } catch (error) {
@@ -1015,27 +932,15 @@ function mergeAssetChanges(
 
   // If only trace data available, use it
   if (!apiAssetChanges || apiAssetChanges.length === 0) {
-    console.log(
-      '✅ [Asset Merge] Using trace asset changes only:',
-      traceAssetChanges?.length || 0,
-    )
     return traceAssetChanges || []
   }
 
   // If only API data available, use it
   if (!traceAssetChanges || traceAssetChanges.length === 0) {
-    console.log(
-      '✅ [Asset Merge] Using API asset changes only:',
-      apiAssetChanges.length,
-    )
     return apiAssetChanges
   }
 
   // If both available, merge them (prefer trace data for duplicates)
-  console.log(
-    `🔄 [Asset Merge] Merging API (${apiAssetChanges.length}) and trace (${traceAssetChanges.length}) asset changes`,
-  )
-
   const mergedMap = new Map<string, any>()
 
   // Add API data first
@@ -1055,7 +960,6 @@ function mergeAssetChanges(
   }
 
   const merged = Array.from(mergedMap.values())
-  console.log(`✅ [Asset Merge] Final merged asset changes: ${merged.length}`)
   return merged
 }
 
@@ -1168,41 +1072,9 @@ export async function executeEnhancedSimulation(
     }
 
     // Merge asset changes from trace parsing with API results (if any)
-    console.log('🔄 [Asset Integration] Merging asset changes:', {
-      apiAssetChanges: simulationResult.assetChanges?.length || 0,
-      traceAssetChanges: traceAssetChanges?.length || 0,
-    })
-
     const mergedAssetChanges = mergeAssetChanges(
       simulationResult.assetChanges,
       traceAssetChanges,
-    )
-
-    console.log('🎯 [Asset Integration] Final merged asset changes:', {
-      count: mergedAssetChanges.length,
-      changes: mergedAssetChanges.map((change) => ({
-        tokenAddress: change.tokenAddress,
-        symbol: change.symbol,
-        type: change.type,
-        netChange: change.netChange,
-      })),
-    })
-
-    // Debug: Log the final data being added to the enhanced result
-    console.log(
-      '🔧 [Asset Integration] Adding asset changes to enhanced result:',
-      {
-        mergedAssetChanges: mergedAssetChanges,
-        sampleChange: mergedAssetChanges[0]
-          ? {
-              hasToken: !!mergedAssetChanges[0].token,
-              hasValue: !!mergedAssetChanges[0].value,
-              tokenAddress: mergedAssetChanges[0].token?.address,
-              symbol: mergedAssetChanges[0].token?.symbol,
-              valueDiff: mergedAssetChanges[0].value?.diff,
-            }
-          : 'No changes',
-      },
     )
 
     // Combine results
@@ -1220,37 +1092,12 @@ export async function executeEnhancedSimulation(
 
     // Override getAssetChangesSummary to use our trace-based asset changes
     enhancedResult.getAssetChangesSummary = () => {
-      console.log(
-        '🔍 [Custom getAssetChangesSummary] Called with merged asset changes:',
-        {
-          count: mergedAssetChanges.length,
-          hasChanges: mergedAssetChanges.length > 0,
-          sampleChange: mergedAssetChanges[0] || null,
-        },
-      )
-
       if (!mergedAssetChanges || mergedAssetChanges.length === 0) {
-        console.log(
-          '🔍 [Custom getAssetChangesSummary] No asset changes, returning empty array',
-        )
         return []
       }
 
       // Convert our format to AssetChangeSummary format
       const summary = mergedAssetChanges.map((change, index) => {
-        console.log(
-          `🔧 [Custom getAssetChangesSummary] Processing change ${index}:`,
-          {
-            tokenAddress: change.tokenAddress,
-            symbol: change.symbol,
-            decimals: change.decimals,
-            netChange: change.netChange,
-            type: change.type,
-            hasNestedToken: !!change.token,
-            hasNestedValue: !!change.value,
-          },
-        )
-
         return {
           tokenAddress: change.tokenAddress,
           symbol: change.symbol,
@@ -1260,10 +1107,6 @@ export async function executeEnhancedSimulation(
         }
       })
 
-      console.log(
-        '✅ [Custom getAssetChangesSummary] Returning summary:',
-        summary,
-      )
       return summary
     }
 
@@ -1494,8 +1337,6 @@ export async function executeTransactionTrace(
   client: AltitraceClient,
   txHash: string,
 ): Promise<EnhancedTraceResult> {
-  console.log(`🔍 [Transaction Trace] Starting trace for ${txHash}`)
-
   try {
     // Execute the trace
     const traceResult = await client
@@ -1505,8 +1346,6 @@ export async function executeTransactionTrace(
       .with4ByteTracer()
       .execute()
 
-    console.log('✅ [Transaction Trace] Trace completed successfully')
-
     // Extract basic information from trace
     const rootCall = traceResult.callTracer?.rootCall
     const success = rootCall ? !rootCall.reverted : true
@@ -1515,10 +1354,6 @@ export async function executeTransactionTrace(
 
     // Extract contract addresses for ABI fetching
     const contractAddresses = extractContractAddressesFromTrace(traceResult)
-    console.log(
-      `🔍 [Transaction Trace] Found ${contractAddresses.length} contract addresses:`,
-      contractAddresses,
-    )
 
     // Fetch contracts and ABIs (in parallel with rate limiting)
     let fetchedContracts: ContractFetchResult[] = []
@@ -1526,10 +1361,6 @@ export async function executeTransactionTrace(
     let decodedEvents: any[] = []
 
     if (contractAddresses.length > 0) {
-      console.log(
-        `🔍 [Transaction Trace] Starting ABI fetch for addresses:`,
-        contractAddresses,
-      )
       try {
         const contractResults =
           await fetchContractsWithRateLimit(contractAddresses)
@@ -1543,9 +1374,6 @@ export async function executeTransactionTrace(
             decodedEvents = await decodeEventsFromLogs(
               rootCall.logs,
               combinedABI,
-            )
-            console.log(
-              `🎯 [Transaction Trace] Decoded ${decodedEvents.length} events`,
             )
           }
         }
@@ -1592,10 +1420,6 @@ export async function executeTransactionTrace(
       combinedABI: combinedABI || undefined,
       decodedEvents: decodedEvents.length > 0 ? decodedEvents : undefined,
     }
-
-    console.log(
-      `🎉 [Transaction Trace] Enhanced trace result created with ${fetchedContracts.length} contracts and ${decodedEvents.length} decoded events`,
-    )
 
     return enhancedResult
   } catch (error) {
@@ -1646,10 +1470,6 @@ function extractContractAddressesFromTrace(
     extractFromCallAndLogs(traceData.callTracer.rootCall)
   }
 
-  console.log(
-    `🔍 [extractContractAddressesFromTrace] Found addresses:`,
-    Array.from(addresses),
-  )
   return Array.from(addresses)
 }
 
@@ -1660,10 +1480,6 @@ async function fetchContractsWithRateLimit(
   addresses: string[],
 ): Promise<ContractFetchResult[]> {
   const results: ContractFetchResult[] = []
-
-  console.log(
-    `🔍 [Contract Fetcher] Fetching contracts for ${addresses.length} addresses...`,
-  )
 
   // Fetch with rate limiting - process in batches of 2
   const batchSize = 2
@@ -1678,11 +1494,6 @@ async function fetchContractsWithRateLimit(
         )
         if (contract.abi && contract.abi.length > 0) {
           results.push(contract)
-          console.log(
-            `✅ [Contract Fetcher] Found ABI for ${address} (${contract.explorerSource})`,
-          )
-        } else {
-          console.log(`⚠️ [Contract Fetcher] No ABI found for ${address}`)
         }
       } catch (error) {
         console.warn(
@@ -1699,10 +1510,6 @@ async function fetchContractsWithRateLimit(
       await new Promise((resolve) => setTimeout(resolve, 200))
     }
   }
-
-  console.log(
-    `🎯 [Contract Fetcher] Successfully fetched ${results.length} contracts with ABIs`,
-  )
 
   return results
 }
@@ -1739,10 +1546,6 @@ function createCombinedABIFromContracts(
   }
 
   if (combinedEvents.length === 0) return null
-
-  console.log(
-    `🔧 [Contract Fetcher] Created combined ABI with ${combinedEvents.length} events`,
-  )
 
   return combinedEvents as Abi
 }

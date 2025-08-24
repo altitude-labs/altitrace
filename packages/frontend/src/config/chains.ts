@@ -19,20 +19,6 @@ const needsProxy =
 const effectiveRpcUrl =
   needsProxy && typeof window !== 'undefined' ? '/api/rpc-proxy' : rpcUrl
 
-// Log the configuration
-console.log(`🔗 [Viem Client] RPC Configuration:`)
-console.log(`   Original RPC URL: ${rpcUrl}`)
-console.log(`   Effective URL: ${effectiveRpcUrl}`)
-console.log(`   Using proxy: ${needsProxy && typeof window !== 'undefined'}`)
-
-if (process.env.NEXT_PUBLIC_RPC_URL) {
-  console.log(
-    `✅ [Viem Client] Custom RPC URL from NEXT_PUBLIC_RPC_URL environment variable`,
-  )
-} else {
-  console.log(`ℹ️ [Viem Client] Using default HyperEVM RPC URL`)
-}
-
 export const hyperevm = defineChain({
   id: 999,
   name: 'HyperEVM',

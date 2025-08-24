@@ -133,12 +133,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         if (isBundleRequest) {
           // Bundle simulation
           setRequestType('bundle')
-          console.log('🔗 [Results Page] Executing bundle simulation...')
           const bundleReq = storedSimulation.request as any
-          console.log(
-            '   Bundle transactions:',
-            bundleReq.bundleRequest?.transactions?.length || 0,
-          )
 
           const bundleResult = await executeBundleSimulation(
             client,
@@ -147,21 +142,6 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
 
           const enhancedBundleResult =
             enhanceBundleSimulationResult(bundleResult)
-
-          console.log('📬 [Bundle Results] Bundle simulation completed:')
-          console.log('   Bundle status:', enhancedBundleResult.bundleStatus)
-          console.log(
-            '   Success count:',
-            enhancedBundleResult.getSuccessCount(),
-          )
-          console.log(
-            '   Failure count:',
-            enhancedBundleResult.getFailureCount(),
-          )
-          console.log(
-            '   Total gas used:',
-            enhancedBundleResult.getTotalGasUsed(),
-          )
 
           setBundleResult(enhancedBundleResult)
 
@@ -178,11 +158,6 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         } else if (isTraceRequest && storedSimulation.metadata?.traceHash) {
           // Transaction trace
           setRequestType('trace')
-          console.log('🔍 [Results Page] Executing transaction trace...')
-          console.log(
-            '   Transaction hash:',
-            storedSimulation.metadata?.traceHash,
-          )
 
           const result = await executeTransactionTrace(
             client,
@@ -202,23 +177,9 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         } else {
           // Single simulation
           setRequestType('simulation')
-          console.log('🚀 [Results Page] Executing single simulation...')
           const singleReq = storedSimulation.request as any
-          console.log('   Request params:', singleReq.params)
-          console.log('   Options:', singleReq.options)
 
           const result = await executeEnhancedSimulation(client, singleReq)
-
-          console.log('📬 [Results Page] Simulation completed:')
-          console.log('   Success:', result.isSuccess())
-          console.log('   Status:', result.status)
-          if (result.isSuccess()) {
-            console.log('   Gas used:', result.getTotalGasUsed())
-            console.log('✅ [Results Page] Displaying successful results')
-          } else {
-            console.log('   Errors:', result.getErrors())
-            console.log('❌ [Results Page] Displaying error results')
-          }
 
           setSimulationResult(result)
 
