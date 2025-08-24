@@ -3,8 +3,8 @@ import { sidebar } from './sidebar'
 
 export default defineConfig({
   title: 'Altitrace',
-  logoUrl: '/logo.png',
-  iconUrl: '/logo.png',
+  logoUrl: '/logo.svg',
+  iconUrl: '/logo.svg',
   ogImageUrl: '/altitrace-prod.png',
   sidebar,
   topNav: [
