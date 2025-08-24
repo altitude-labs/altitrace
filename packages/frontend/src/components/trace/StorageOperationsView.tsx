@@ -332,7 +332,7 @@ function StorageOperationCard({ operation, index }: StorageOperationCardProps) {
             <span>Gas: {operation.gas.toLocaleString()}</span>
             <span>Cost: {operation.gasCost.toLocaleString()}</span>
             <span>PC: {operation.pc}</span>
-            <span>Depth: {operation.depth}</span>
+            <span>Call: [{operation.callContext || `${operation.depth}.0`}]</span>
           </div>
         </div>
       </div>

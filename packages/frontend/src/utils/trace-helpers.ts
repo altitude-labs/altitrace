@@ -258,7 +258,17 @@ export interface StorageOperation {
   value?: string // For SSTORE operations (the value being stored)
   oldValue?: string // For SSTORE operations (previous value)
   contract: string // Contract address where storage operation occurred
-  callIndex: number // Index to help match with call hierarchy
+  callContext: string // Full call context identifier like "0.0" or "1.2" representing [depth][index]
+}
+
+/**
+ * Call context tracker for building proper call hierarchy
+ */
+interface CallContextInfo {
+  contract: string
+  callIndex: string // Format: "depth.index" like "0.0", "1.0", "1.1"
+  startPc: number
+  endPc?: number
 }
 
 /**
@@ -274,80 +284,93 @@ export function parseStorageOperations(
   }
 
   const storageOps: StorageOperation[] = []
+  const callStack: CallContextInfo[] = []
+  const depthIndexMap = new Map<number, number>() // Track index count at each depth
   
-  // Create a simple mapping of depth to contract address using actual struct logs
-  // This tracks what contract is executing at each depth based on the actual trace
-  const depthToContract = new Map<number, string>()
-  
-  // Pre-process to map EVM execution depths to contract addresses
-  for (let i = 0; i < traceData.structLogger.structLogs.length; i++) {
-    const log = traceData.structLogger.structLogs[i]
-    
-    // Track depth changes - when we see certain opcodes, we know the contract context
-    if (log.op === 'CALL' || log.op === 'STATICCALL' || log.op === 'DELEGATECALL') {
-      // The target contract is in the stack - this is complex to extract from stack
-      // For now, we'll rely on the call hierarchy we already have
-      continue
-    }
-  }
-  
-  // Build a simple map of calls by depth for reference
-  const callsByDepth = new Map<number, CallFrame[]>()
-  
-  function collectCallsByDepth(call: CallFrame, currentDepth: number) {
-    if (call.to) {
-      if (!callsByDepth.has(currentDepth)) {
-        callsByDepth.set(currentDepth, [])
-      }
-      callsByDepth.get(currentDepth)!.push(call)
-    }
-    
-    if (call.calls) {
-      call.calls.forEach(subcall => {
-        collectCallsByDepth(subcall, currentDepth + 1)
-      })
-    }
-  }
-  
-  collectCallsByDepth(rootCall, 0)
+  // Initialize with root call
+  callStack.push({
+    contract: rootCall.to || '',
+    callIndex: '0.0',
+    startPc: 0
+  })
+  depthIndexMap.set(0, 0)
 
   for (let i = 0; i < traceData.structLogger.structLogs.length; i++) {
     const log = traceData.structLogger.structLogs[i]
+    const prevLog = i > 0 ? traceData.structLogger.structLogs[i - 1] : null
     
-    // Only process storage operations
+    // Handle call stack changes
+    if (prevLog && log.depth !== prevLog.depth) {
+      if (log.depth > prevLog.depth) {
+        // Entering a new call - check the previous opcode to determine call type
+        if (prevLog.op === 'CALL' || prevLog.op === 'STATICCALL' || 
+            prevLog.op === 'DELEGATECALL' || prevLog.op === 'CALLCODE' ||
+            prevLog.op === 'CREATE' || prevLog.op === 'CREATE2') {
+          
+          // Extract target address from stack if possible
+          let targetContract = ''
+          if (prevLog.stack && prevLog.stack.length >= 2) {
+            // For CALL-like opcodes (CALL, CALLCODE, DELEGATECALL, STATICCALL), the target address is the second from top
+            // Stack layout varies by opcode, but for simplicity we'll try to extract it
+            const addressHex = prevLog.stack[prevLog.stack.length - 2]
+            if (addressHex) {
+              // Convert 32-byte hex to address (last 20 bytes)
+              const fullHex = addressHex.startsWith('0x') ? addressHex.slice(2) : addressHex
+              targetContract = '0x' + fullHex.slice(-40) // Last 40 hex chars = 20 bytes
+            }
+          }
+          
+          // If we couldn't extract from stack, fall back to call hierarchy
+          if (!targetContract || targetContract === '0x0000000000000000000000000000000000000000') {
+            const callsAtDepth = getCallsAtDepth(rootCall, log.depth)
+            if (callsAtDepth.length > 0) {
+              targetContract = callsAtDepth[0].to || ''
+            }
+          }
+          
+          // Calculate call index
+          const currentDepthIndex = depthIndexMap.get(log.depth) || 0
+          depthIndexMap.set(log.depth, currentDepthIndex + 1)
+          
+          const callContext: CallContextInfo = {
+            contract: targetContract,
+            callIndex: `${log.depth}.${currentDepthIndex}`,
+            startPc: log.pc
+          }
+          
+          callStack.push(callContext)
+        }
+      } else if (log.depth < prevLog.depth) {
+        // Returning from call(s)
+        while (callStack.length > 1 && callStack[callStack.length - 1].callIndex.split('.')[0] > log.depth.toString()) {
+          const finishedCall = callStack.pop()
+          if (finishedCall) {
+            finishedCall.endPc = prevLog.pc
+          }
+        }
+      }
+    }
+    
+    // Process storage operations
     if (log.op === 'SSTORE' || log.op === 'SLOAD') {
-      // Get possible contracts at this depth
-      const possibleCalls = callsByDepth.get(log.depth) || []
+      const currentCall = callStack[callStack.length - 1]
       
-      // For now, take the first contract at this depth
-      // This is a simplification but should work for most cases
-      const contract = possibleCalls[0]?.to || rootCall.to || ''
-      
-      if (contract && log.stack && log.stack.length >= 1) {
-        // For EVM stack, storage operations have:
-        // SSTORE: stack[0] = slot, stack[1] = value (from bottom)
-        // SLOAD: stack[0] = slot (from bottom)
-        // Note: EVM stack is LIFO, so we access from the end
+      if (currentCall && currentCall.contract && log.stack && log.stack.length >= 1) {
         const slot = log.stack[log.stack.length - 1] // Top of stack is the slot
         
         let value: string | undefined
         let oldValue: string | undefined
         
         if (log.op === 'SSTORE' && log.stack.length >= 2) {
-          // For SSTORE: the new value is the second item from top
           value = log.stack[log.stack.length - 2]
           
-          // Get the old value from storage state if available
           if (log.storage && slot) {
             oldValue = log.storage[slot]
           }
         } else if (log.op === 'SLOAD') {
-          // For SLOAD: get the read value from the next operation's stack (if available)
-          // The SLOAD pushes the read value onto the stack, so it appears as the top item in the next operation
           if (i + 1 < traceData.structLogger.structLogs.length) {
             const nextLog = traceData.structLogger.structLogs[i + 1]
             if (nextLog.stack && nextLog.stack.length > 0) {
-              // The value that was read by SLOAD is now the top of the stack in the next operation
               value = nextLog.stack[nextLog.stack.length - 1]
             }
           }
@@ -362,14 +385,32 @@ export function parseStorageOperations(
           slot: formatStorageSlot(slot),
           value: value ? formatStorageValue(value) : undefined,
           oldValue: oldValue ? formatStorageValue(oldValue) : undefined,
-          contract: contract,
-          callIndex: log.depth // Use depth as call index
+          contract: currentCall.contract,
+          callContext: currentCall.callIndex
         })
       }
     }
   }
 
   return storageOps
+}
+
+/**
+ * Helper to get calls at a specific depth from the call hierarchy
+ */
+function getCallsAtDepth(rootCall: CallFrame, targetDepth: number): CallFrame[] {
+  const calls: CallFrame[] = []
+  
+  function traverse(call: CallFrame, currentDepth: number) {
+    if (currentDepth === targetDepth) {
+      calls.push(call)
+    } else if (call.calls && currentDepth < targetDepth) {
+      call.calls.forEach(subcall => traverse(subcall, currentDepth + 1))
+    }
+  }
+  
+  traverse(rootCall, 0)
+  return calls
 }
 
 /**

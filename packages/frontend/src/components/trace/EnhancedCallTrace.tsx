@@ -208,6 +208,7 @@ interface CallNodeProps {
   showStorage: boolean
   traceData: ExtendedTracerResponse
   allStorageOperations?: StorageOperation[]
+  parentCallContext?: string
 }
 
 function CallNode({
@@ -220,12 +221,16 @@ function CallNode({
   showStorage,
   traceData,
   allStorageOperations = [],
+  parentCallContext = '',
 }: CallNodeProps) {
   const [isExpanded, setIsExpanded] = useState(depth < 3) // Auto-expand first 3 levels
   
   const hasSubcalls = frame.calls && frame.calls.length > 0
   const gasUsed = Number.parseInt(frame.gasUsed, 16)
   const isSuccess = !frame.reverted
+  
+  // Build current call context identifier
+  const currentCallContext = isRoot ? '0.0' : `${depth}.${index}`
   
   // Parse storage operations for all calls (only once at root level)
   const allStorageOps: StorageOperation[] = showStorage && isRoot
@@ -235,14 +240,10 @@ function CallNode({
   // Pass all storage operations down to child calls  
   const storageOpsForPassing = allStorageOps
   
-  // Advanced strategy: Match storage operations by contract address and call depth exactly
-  // Only show storage operations that belong specifically to this exact call frame
+  // Match storage operations by exact call context
+  // This ensures each storage operation appears only in its correct call frame
   const callStorageOperations: StorageOperation[] = showStorage && allStorageOps.length > 0
-    ? allStorageOps.filter(op => {
-        // Strict matching: operation must be for this exact contract AND at this exact depth
-        // This ensures each operation appears only once in the UI hierarchy
-        return op.contract === frame.to && op.depth === depth
-      })
+    ? allStorageOps.filter(op => op.callContext === currentCallContext)
     : []
   
   // Format addresses - short format for display
@@ -504,6 +505,7 @@ function CallNode({
               showStorage={showStorage}
               traceData={traceData}
               allStorageOperations={storageOpsForPassing}
+              parentCallContext={currentCallContext}
             />
           ))}
         </>
