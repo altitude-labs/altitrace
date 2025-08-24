@@ -20,7 +20,7 @@ import {
   WalletIcon,
   XCircleIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { DecHexToggle } from '@/components/shared/DecHexToggle'
 import {
   CallTraceTree,
@@ -368,12 +368,29 @@ function SimulationQuickStats({
                   <XCircleIcon className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
                 )}
                 <p className="text-sm sm:text-lg font-bold truncate">
-                  {result.status}
+                  {result.isSuccess() ? result.status : 'failed'}
                 </p>
               </div>
               {!result.isSuccess() && result.getErrors().length > 0 && (
                 <p className="text-xs text-red-600 dark:text-red-400 mt-1 line-clamp-2">
-                  {getErrorSummary(result.getErrors()[0])}
+                  {(() => {
+                    const errors = result.getErrors()
+                    // Find the most specific error (contract error data)
+                    const specificError = errors.find(error => {
+                      const errorMessage = typeof error === 'string' ? error : (error.reason || error.message || '')
+                      const parsed = parseBlockchainError(error)
+                      return parsed.type === 'revert' && parsed.details && 
+                        parsed.details !== 'execution reverted' &&
+                        parsed.details !== 'The transaction was reverted by the contract'
+                    })
+                    
+                    if (specificError) {
+                      const errorMessage = typeof specificError === 'string' ? specificError : (specificError.reason || specificError.message || '')
+                      return `Transaction reverted: ${errorMessage}`
+                    }
+                    
+                    return getErrorSummary(errors[0])
+                  })()}
                 </p>
               )}
             </div>
@@ -511,6 +528,43 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
   // Get transaction hash from receipt data (for trace results)
   const receiptData = (result as any).receipt
   const transactionHash = receiptData?.transactionHash
+  
+  // Process errors to combine generic revert messages with actual error data
+  const processedErrors = React.useMemo(() => {
+    if (errors.length <= 1) return errors
+    
+    // Parse all errors
+    const parsedErrors = errors.map(error => ({
+      original: error,
+      parsed: parseBlockchainError(error)
+    }))
+    
+    // Look for pairs of generic revert + specific error data
+    const genericReverts = parsedErrors.filter(e => 
+      e.parsed.type === 'revert' && 
+      (e.parsed.details === 'execution reverted' || 
+       e.parsed.details === 'The transaction was reverted by the contract' ||
+       !e.parsed.details)
+    )
+    
+    const specificErrors = parsedErrors.filter(e => {
+      // Contract error codes or specific error messages
+      if (e.parsed.type === 'revert' && e.parsed.details) {
+        const details = e.parsed.details
+        return details !== 'execution reverted' && 
+               details !== 'The transaction was reverted by the contract'
+      }
+      return e.parsed.type !== 'revert'
+    })
+    
+    // If we have both generic and specific errors, prefer specific ones
+    if (genericReverts.length > 0 && specificErrors.length > 0) {
+      return specificErrors.map(e => e.original)
+    }
+    
+    // Otherwise return all errors
+    return errors
+  }, [errors])
 
   return (
     <div className="space-y-6">
@@ -603,20 +657,24 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
       </div>
 
       {/* Errors */}
-      {errors.length > 0 && (
+      {processedErrors.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
               <div className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/20">
                 <AlertTriangleIcon className="h-4 w-4 text-red-600 dark:text-red-500" />
               </div>
-              Errors ({errors.length})
+              {processedErrors.length === 1 ? 'Error' : `Errors (${processedErrors.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {errors.map((error, index: number) => {
+              {processedErrors.map((error, index: number) => {
                 const parsedError = parseBlockchainError(error)
+                // For short error codes or specific contract errors, show them prominently
+                const isContractError = parsedError.type === 'revert' && parsedError.details && 
+                  parsedError.details !== 'The transaction was reverted by the contract'
+                
                 return (
                   <div
                     key={`error-${error.reason || error.message || index}`}
@@ -627,10 +685,10 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
                     </div>
                     <div className="flex-1 space-y-1">
                       <div className="font-medium">
-                        {parsedError.title}
+                        {isContractError ? 'Contract Error' : parsedError.title}
                       </div>
                       {parsedError.details && (
-                        <div className="text-sm text-muted-foreground">
+                        <div className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
                           {parsedError.details}
                         </div>
                       )}

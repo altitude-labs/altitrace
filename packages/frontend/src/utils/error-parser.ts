@@ -59,22 +59,33 @@ export function parseBlockchainError(error: string | { reason?: string; message?
     }
   }
   
-  // Revert reason pattern
+  // Revert reason pattern with data
   const revertMatch = errorMessage.match(/execution reverted:\s*(.+)/i)
   if (revertMatch) {
+    const revertReason = revertMatch[1].trim()
     return {
       type: 'revert',
       title: 'Transaction reverted',
-      details: revertMatch[1].trim()
+      details: revertReason
     }
   }
   
-  // Generic revert without reason
+  // Generic revert without reason - but check if this is just a generic message
+  // and there might be actual error data in other errors
+  if (errorMessage.toLowerCase().includes('revert') && errorMessage.toLowerCase().includes('contract')) {
+    return {
+      type: 'revert',
+      title: 'Transaction reverted',
+      details: null // No specific details, might be paired with actual error data
+    }
+  }
+  
+  // Any other revert pattern
   if (errorMessage.toLowerCase().includes('revert')) {
     return {
       type: 'revert',
       title: 'Transaction reverted',
-      details: 'The transaction was reverted by the contract'
+      details: errorMessage
     }
   }
   
@@ -91,6 +102,19 @@ export function parseBlockchainError(error: string | { reason?: string; message?
       type: 'rpc',
       title: 'RPC Error',
       details: errorMessage.replace(/RPC internal error:\s*/i, '').replace(/RPC error:\s*/i, '')
+    }
+  }
+  
+  // Check if this might be contract error data (could be any format)
+  // If it's not a typical error message format, it's likely contract error data
+  if (!errorMessage.toLowerCase().includes('error') && 
+      !errorMessage.toLowerCase().includes('failed') &&
+      !errorMessage.toLowerCase().includes('invalid') &&
+      errorMessage.length > 0) {
+    return {
+      type: 'revert',
+      title: 'Contract error',
+      details: errorMessage
     }
   }
   
