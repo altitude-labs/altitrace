@@ -43,6 +43,12 @@ import type { EnhancedSimulationResult } from '@/utils/trace-integration'
 import { AccessListView } from './AccessListView'
 import { EnhancedEventDisplay } from './EnhancedEventDisplay'
 import { EnhancedGasAnalysis } from './EnhancedGasAnalysis'
+import {
+  detectBlockSize,
+  getBlockSizeLabel,
+  getBlockSizeBadgeVariant,
+  extractGasLimit,
+} from '@/utils/block-utils'
 import { StateChangesView } from './StateChangesView'
 
 interface EnhancedSimulationResultsProps {
@@ -244,7 +250,10 @@ export function EnhancedSimulationResults({
 
             <div className="mt-6" data-tab-content>
               <TabsContent value="overview">
-                <SimulationOverview result={result} />
+                <SimulationOverview
+                  result={result}
+                  simulationRequest={simulationRequest}
+                />
               </TabsContent>
 
               <TabsContent value="calls">
@@ -306,13 +315,20 @@ function SimulationQuickStats({
   result: EnhancedSimulationResult
   simulationRequest?: EnhancedSimulationResultsProps['simulationRequest']
 }) {
-  // For trace results with receipt, use receipt block number, otherwise parse hex
+  // For trace results with receipt, use receipt block number, otherwise parse hex or decimal
   const traceResult = result as any
   const receiptData = traceResult.receipt
   const blockNumberDecimal = receiptData?.blockNumber
     ? Number(receiptData.blockNumber)
     : result.blockNumber
-      ? Number.parseInt(result.blockNumber, 16)
+      ? (() => {
+          // Try hex parsing first, then decimal if that fails
+          const hexValue = Number.parseInt(result.blockNumber, 16)
+          if (!isNaN(hexValue)) return hexValue
+
+          const decimalValue = Number(result.blockNumber)
+          return !isNaN(decimalValue) ? decimalValue : 0
+        })()
       : 0
 
   const gasUsedDecimal = Number(result.getTotalGasUsed())
@@ -441,9 +457,31 @@ function SimulationQuickStats({
                 Events
               </p>
               <p className="text-sm sm:text-lg font-bold">{eventCount}</p>
-              <p className="text-xs text-muted-foreground">
-                Block #{blockNumberDecimal.toLocaleString()}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {blockNumberDecimal > 0
+                    ? `Block #${blockNumberDecimal.toLocaleString()}`
+                    : 'Block Info N/A'}
+                </p>
+                {blockNumberDecimal > 0 &&
+                  (() => {
+                    const gasLimit =
+                      extractGasLimit(simulationRequest) ||
+                      extractGasLimit(result)
+                    const blockSize = detectBlockSize(gasLimit)
+                    if (blockSize !== 'unknown') {
+                      return (
+                        <Badge
+                          variant={getBlockSizeBadgeVariant(blockSize)}
+                          className="text-xs"
+                        >
+                          {getBlockSizeLabel(blockSize)}
+                        </Badge>
+                      )
+                    }
+                    return null
+                  })()}
+              </div>
             </div>
             <ListIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0 mt-1" />
           </div>
@@ -519,7 +557,13 @@ function SimulationQuickStats({
   )
 }
 
-function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
+function SimulationOverview({
+  result,
+  simulationRequest,
+}: {
+  result: EnhancedSimulationResult
+  simulationRequest?: EnhancedSimulationResultsProps['simulationRequest']
+}) {
   const errors = result.getErrors()
   const assetChanges = result.getAssetChangesSummary()
 
@@ -571,8 +615,25 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
               >
                 Block Number
               </label>
-              <div className="mt-1">
+              <div className="mt-1 flex items-center gap-2">
                 <DecHexToggle value={result.blockNumber} />
+                {(() => {
+                  const gasLimit =
+                    extractGasLimit(simulationRequest) ||
+                    extractGasLimit(result)
+                  const blockSize = detectBlockSize(gasLimit)
+                  if (blockSize !== 'unknown') {
+                    return (
+                      <Badge
+                        variant={getBlockSizeBadgeVariant(blockSize)}
+                        className="text-xs"
+                      >
+                        {getBlockSizeLabel(blockSize)}
+                      </Badge>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             </div>
             <div>

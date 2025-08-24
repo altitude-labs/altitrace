@@ -36,6 +36,22 @@ import {
 } from './trace-integration'
 
 /**
+ * Recursively check if any call in the call tree has reverted
+ */
+function hasRevertedCalls(calls: any[]): boolean {
+  for (const call of calls) {
+    if (call.reverted) {
+      return true
+    }
+    // Recursively check sub-calls
+    if (call.calls && hasRevertedCalls(call.calls)) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Recursively extract logs from call trace hierarchy
  */
 function extractLogsFromCalls(calls: any[]): any[] {
@@ -303,17 +319,25 @@ export async function executeBundleSimulation(
       const gasUsedBig = BigInt(gasUsed)
       totalGasUsed += gasUsedBig
 
-      // Determine transaction status from rootCall
+      // Determine transaction status from rootCall and sub-calls
       let status: BundleTransactionResult['status'] = 'success'
       let error: BundleTransactionResult['error'] | undefined
 
-      if (traceResponse.callTracer?.rootCall?.reverted) {
+      // Check if root call reverted
+      const rootReverted = traceResponse.callTracer?.rootCall?.reverted
+
+      // Check if any sub-calls reverted (recursive check)
+      const hasRevertedSubCall = hasRevertedCalls(
+        traceResponse.callTracer?.rootCall?.calls || [],
+      )
+
+      if (rootReverted || hasRevertedSubCall) {
         status = 'failed'
         failureCount++
         error = {
           type: 'execution_reverted',
-          reason: 'Transaction reverted',
-          message: `Transaction ${i + 1} reverted during execution`,
+          reason: rootReverted ? 'Root call reverted' : 'Sub-call reverted',
+          message: `Transaction ${i + 1} ${rootReverted ? 'reverted during execution' : 'failed due to reverted sub-call'}`,
         }
       } else {
         successCount++

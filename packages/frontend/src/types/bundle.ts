@@ -5,6 +5,7 @@
 import type {
   Address,
   BlockTag,
+  BlockOverrides,
   HexString as Hex,
   SimulationParams,
   SimulationRequest,
@@ -48,6 +49,8 @@ export interface BundleSimulationRequest {
   traceTransfers: boolean
   /** State overrides to apply during bundle execution */
   stateOverrides?: StateOverride[]
+  /** Block overrides to apply during bundle execution */
+  blockOverrides?: BlockOverrides | null
 }
 
 /**
@@ -121,6 +124,8 @@ export interface BundleFormData {
   account?: string
   /** State overrides for bundle simulation */
   stateOverrides: StateOverride[]
+  /** Block overrides for bundle simulation */
+  blockOverrides?: BlockOverrides | null
 }
 
 /**
@@ -151,4 +156,5 @@ export const createDefaultBundleFormData = (): BundleFormData => ({
   blockNumber: '',
   validation: true,
   stateOverrides: [],
+  blockOverrides: null,
 })

@@ -35,6 +35,12 @@ import {
   getStateChangesCount,
 } from '@/utils/trace-integration'
 import { formatWeiValue } from '@/utils/abi'
+import {
+  detectBlockSize,
+  getBlockSizeLabel,
+  getBlockSizeBadgeVariant,
+  extractGasLimit,
+} from '@/utils/block-utils'
 
 interface BundleSimulationResultsProps {
   result: EnhancedBundleSimulationResult
@@ -333,7 +339,24 @@ export function BundleSimulationResults({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Block Number</p>
-              <p className="font-mono text-sm">{result.blockNumber}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-sm">{result.blockNumber}</p>
+                {(() => {
+                  const gasLimit = extractGasLimit(result)
+                  const blockSize = detectBlockSize(gasLimit)
+                  if (blockSize !== 'unknown') {
+                    return (
+                      <Badge
+                        variant={getBlockSizeBadgeVariant(blockSize)}
+                        className="text-xs"
+                      >
+                        {getBlockSizeLabel(blockSize)}
+                      </Badge>
+                    )
+                  }
+                  return null
+                })()}
+              </div>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Gas Used</p>
