@@ -79,7 +79,6 @@ async function storeInRedis(
   simulation: StoredSimulation,
 ): Promise<void> {
   try {
-    console.log('🔄 [Redis Storage] Storing simulation:', id)
     const response = await fetch(`/api/storage/${id}`, {
       method: 'POST',
       headers: {
@@ -88,8 +87,7 @@ async function storeInRedis(
       body: JSON.stringify(simulation),
     })
 
-    if (response.ok) {
-      console.log('✅ [Redis Storage] Successfully stored in Redis:', id)
+    if (!response.ok) {
     } else {
       console.error(
         '❌ [Redis Storage] Failed to store:',
@@ -107,11 +105,9 @@ async function storeInRedis(
  */
 async function retrieveFromRedis(id: string): Promise<StoredSimulation | null> {
   try {
-    console.log('🔍 [Redis Storage] Retrieving simulation:', id)
     const response = await fetch(`/api/storage/${id}`)
     if (response.ok) {
       const data = await response.json()
-      console.log('✅ [Redis Storage] Successfully retrieved from Redis:', id)
 
       // Deserialize the data (convert timestamp string back to Date)
       const simulation = data.simulation

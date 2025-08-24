@@ -21,6 +21,7 @@ import {
   type EnhancedTraceResult,
   executeEnhancedSimulation,
   executeTransactionTrace,
+  fetchContractsForTrace,
   getStateChangesCount,
 } from '@/utils/trace-integration'
 import {
@@ -100,6 +101,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
   const [executing, setExecuting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [contractsLoading, setContractsLoading] = useState(false)
 
   useEffect(() => {
     params.then(setResolvedParams)
@@ -175,6 +177,26 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             hasErrors: !result.success,
           }
           await updateResult(resolvedParams.id, resultData)
+
+          // Start background contract fetching after displaying initial results
+          setContractsLoading(true)
+          fetchContractsForTrace(result)
+            .then((contractData) => {
+              // Update trace result with contract data
+              setTraceResult((prevResult) => {
+                if (!prevResult) return prevResult
+                return {
+                  ...prevResult,
+                  fetchedContracts: contractData.fetchedContracts.length > 0 ? contractData.fetchedContracts : undefined,
+                  combinedABI: contractData.combinedABI || undefined,
+                  decodedEvents: contractData.decodedEvents.length > 0 ? contractData.decodedEvents : undefined,
+                }
+              })
+            })
+            .catch()
+            .finally(() => {
+              setContractsLoading(false)
+            })
         } else {
           // Single simulation
           setRequestType('simulation')
@@ -528,6 +550,8 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 // Include auto-fetched ABI information for enhanced event decoding
                 combinedABI: traceResult.combinedABI,
                 fetchedContracts: traceResult.fetchedContracts,
+                // Add contracts loading state for display
+                contractsLoading,
               } as any
             }
             simulationRequest={undefined}
