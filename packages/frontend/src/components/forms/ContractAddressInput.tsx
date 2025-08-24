@@ -224,19 +224,19 @@ export function ContractAddressInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || isLoading}
-          className={`pr-24 ${!isValid ? 'border-red-500 focus:border-red-500' : ''}`}
+          className={`pr-16 sm:pr-20 ${!isValid ? 'border-red-500 focus:border-red-500' : ''}`}
         />
 
         {/* Fetch Button */}
         {showFetchButton && (
-          <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 gap-0.5 sm:gap-1">
             {inputValue.trim() && isValid && (
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={handleManualFetch}
                 disabled={isLoading}
-                className="h-7 px-2 text-xs"
+                className="h-6 sm:h-7 px-1 sm:px-2 text-xs"
                 title="Fetch contract from explorer"
               >
                 {isLoading ? (
@@ -254,7 +254,7 @@ export function ContractAddressInput({
                 onClick={() =>
                   window.open(getExplorerUrl(inputValue), '_blank')
                 }
-                className="h-7 px-2 text-xs"
+                className="h-6 sm:h-7 px-1 sm:px-2 text-xs"
                 title="View on explorer"
               >
                 <ExternalLinkIcon className="h-3 w-3" />
@@ -352,7 +352,7 @@ export function ContractAddressInput({
                 <Button
                   size="sm"
                   onClick={handleConfirmContract}
-                  className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
+                  className="h-6 sm:h-7 px-2 sm:px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
                 >
                   <CheckIcon className="h-3 w-3 mr-1" />
                   Use Contract
@@ -370,7 +370,7 @@ export function ContractAddressInput({
                     '_blank',
                   )
                 }
-                className="h-7 px-2 text-xs"
+                className="h-6 sm:h-7 px-1 sm:px-2 text-xs"
               >
                 <ExternalLinkIcon className="h-3 w-3 mr-1" />
                 View
@@ -388,7 +388,7 @@ export function ContractAddressInput({
                       '_blank',
                     )
                   }
-                  className="h-7 px-2 text-xs"
+                  className="h-6 sm:h-7 px-1 sm:px-2 text-xs"
                   title="View implementation contract"
                 >
                   <ExternalLinkIcon className="h-3 w-3" />

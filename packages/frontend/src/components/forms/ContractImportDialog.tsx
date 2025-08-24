@@ -8,7 +8,7 @@ import {
   SearchIcon,
   XIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Abi } from 'viem'
 import {
   Alert,
@@ -73,6 +73,23 @@ export function ContractImportDialog({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSavedContract, setSelectedSavedContract] =
     useState<StoredContract | null>(null)
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape)
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -172,8 +189,16 @@ export function ContractImportDialog({
     : contracts
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={(e) => {
+        // Close when clicking on the backdrop
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
+      <Card className="w-full max-w-4xl lg:max-w-4xl md:max-w-2xl sm:max-w-lg max-h-[95vh] overflow-y-auto">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -184,27 +209,27 @@ export function ContractImportDialog({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-8 w-8 p-0"
+              className="h-10 w-10 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <XIcon className="h-4 w-4" />
+              <XIcon className="h-5 w-5" />
             </Button>
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="address">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-0 mb-4 sm:mb-6 h-auto sm:h-10">
+              <TabsTrigger value="address" className="flex-1 py-2 px-3 text-sm">
                 <SearchIcon className="h-4 w-4 mr-2" />
-                From Address
+                <span className="hidden sm:inline">From </span>Address
               </TabsTrigger>
-              <TabsTrigger value="abi">
+              <TabsTrigger value="abi" className="flex-1 py-2 px-3 text-sm">
                 <FileTextIcon className="h-4 w-4 mr-2" />
-                Paste ABI
+                <span className="hidden sm:inline">Paste </span>ABI
               </TabsTrigger>
-              <TabsTrigger value="saved">
+              <TabsTrigger value="saved" className="flex-1 py-2 px-3 text-sm">
                 <CheckIcon className="h-4 w-4 mr-2" />
-                Saved ({contracts.length})
+                <span className="hidden sm:inline">Saved </span>({contracts.length})
               </TabsTrigger>
             </TabsList>
 
@@ -220,14 +245,14 @@ export function ContractImportDialog({
                     onContractFetched={handleContractFetched}
                     onContractSaved={handleContractSaved}
                     autoFetch={true}
-                    placeholder="Enter contract address to auto-fetch ABI"
+                    placeholder="0x"
                     showFetchButton={true}
                   />
                 </div>
 
                 {fetchedContract && savedContractId && (
                   <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1">
                         <h4 className="font-medium text-green-800 dark:text-green-200">
                           ✅ Contract Ready to Import
@@ -244,7 +269,7 @@ export function ContractImportDialog({
                       </div>
                       <Button
                         onClick={handleImportFetchedContract}
-                        className="bg-green-600 hover:bg-green-700 text-white ml-4"
+                        className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                         size="lg"
                       >
                         Import & Use Contract
@@ -308,7 +333,7 @@ export function ContractImportDialog({
 
                 {abiJson.trim() && contractName.trim() && !abiError && (
                   <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1">
                         <h4 className="font-medium text-green-800 dark:text-green-200">
                           ✅ ABI Ready to Import
@@ -326,7 +351,7 @@ export function ContractImportDialog({
                         onClick={handleImportManualAbi}
                         loading={abiLoading}
                         disabled={!abiJson.trim() || !contractName.trim()}
-                        className="bg-green-600 hover:bg-green-700 text-white ml-4"
+                        className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                         size="lg"
                       >
                         {abiLoading ? (
@@ -342,16 +367,16 @@ export function ContractImportDialog({
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     onClick={handleImportManualAbi}
                     loading={abiLoading}
                     disabled={!abiJson.trim() || !contractName.trim()}
-                    className={
+                    className={`flex-1 sm:flex-initial ${
                       abiJson.trim() && contractName.trim()
                         ? 'bg-green-600 hover:bg-green-700 text-white'
                         : ''
-                    }
+                    }`}
                   >
                     {abiLoading ? (
                       <>
@@ -372,6 +397,7 @@ export function ContractImportDialog({
                       setAbiError(null)
                     }}
                     disabled={abiLoading}
+                    className="flex-1 sm:flex-initial"
                   >
                     Clear
                   </Button>
@@ -470,7 +496,7 @@ export function ContractImportDialog({
 
                 {selectedSavedContract && (
                   <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1">
                         <h4 className="font-medium text-blue-800 dark:text-blue-200">
                           ✅ Contract Selected
@@ -492,7 +518,7 @@ export function ContractImportDialog({
                       </div>
                       <Button
                         onClick={handleImportSavedContract}
-                        className="bg-blue-600 hover:bg-blue-700 text-white ml-4"
+                        className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
                         size="lg"
                       >
                         Import & Use Contract
