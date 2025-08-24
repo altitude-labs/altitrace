@@ -44,8 +44,8 @@ export default function Home() {
                 View Simulator
               </Button>
             </Link>
-            <a
-              href="https://altitrace.reachaltitude.xyz/docs"
+            <Link
+              href="/docs"
               className="w-full sm:w-auto"
             >
               <Button
@@ -57,7 +57,7 @@ export default function Home() {
                 <span className="hidden sm:inline">Documentation</span>
                 <span className="sm:hidden">Docs</span>
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
 

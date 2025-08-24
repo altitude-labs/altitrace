@@ -2,7 +2,6 @@
 const nextConfig = {
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL
-    const docsUrl = process.env.NEXT_PUBLIC_DOCS_URL || 'https://altitrace-docs.vercel.app'
     const isProduction = process.env.NODE_ENV === 'production'
 
     const rewrites = []
@@ -26,15 +25,6 @@ const nextConfig = {
       })
     }
 
-    // Docs rewrites
-    rewrites.push({
-      source: '/docs',
-      destination: `${docsUrl}/docs`,
-    })
-    rewrites.push({
-      source: '/docs/:path*',
-      destination: `${docsUrl}/docs/:path*`,
-    })
 
     return rewrites
   },
