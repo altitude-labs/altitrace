@@ -168,11 +168,11 @@ export function CallTraceTree({
       {/* Call tree visualization */}
       {useEnhanced ? (
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'enhanced' | 'legacy')}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 className="text-lg font-medium">Call Stack</h3>
-            <TabsList>
-              <TabsTrigger value="enhanced">Enhanced</TabsTrigger>
-              <TabsTrigger value="legacy">Legacy</TabsTrigger>
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="enhanced" className="flex-1 sm:flex-none">Enhanced</TabsTrigger>
+              <TabsTrigger value="legacy" className="flex-1 sm:flex-none">Legacy</TabsTrigger>
             </TabsList>
           </div>
           
