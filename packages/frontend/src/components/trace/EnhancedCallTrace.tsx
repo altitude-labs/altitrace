@@ -50,8 +50,61 @@ export function EnhancedCallTrace({
   }
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-4">
+    <>
+      <style jsx>{`
+        .call-trace-container {
+          /* Custom scrollbar styles for the global container */
+          scrollbar-width: thin;
+          scrollbar-color: #3b82f6 transparent;
+        }
+        
+        .call-trace-container::-webkit-scrollbar {
+          height: 8px;
+        }
+        
+        .call-trace-container::-webkit-scrollbar-track {
+          background: hsl(var(--muted) / 0.1);
+          border-radius: 4px;
+          margin: 0 12px;
+        }
+        
+        .call-trace-container::-webkit-scrollbar-thumb {
+          background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+          border-radius: 4px;
+          border: 1px solid #1e40af;
+          transition: all 0.3s ease;
+          box-shadow: 0 1px 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .call-trace-container::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(90deg, #2563eb, #1e40af);
+          border-color: #1e3a8a;
+          box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+          transform: scaleY(1.1);
+        }
+        
+        .call-trace-container::-webkit-scrollbar-thumb:active {
+          background: linear-gradient(90deg, #1d4ed8, #1e3a8a);
+          border-color: #172554;
+          box-shadow: 0 1px 2px rgba(59, 130, 246, 0.6);
+        }
+        
+        /* Firefox custom scrollbar */
+        @supports (scrollbar-color: auto) {
+          .call-trace-container {
+            scrollbar-color: #3b82f6 hsl(var(--muted) / 0.1);
+            scrollbar-width: thin;
+          }
+        }
+        
+        /* Ensure content width is at least the sum of all fixed columns */
+        .call-trace-container .call-node-content {
+          min-width: ${showGas ? '192px' : '112px'}; /* Minimum width for fixed columns */
+        }
+      `}</style>
+      
+      <Card className={className}>
+        <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <SettingsIcon className="h-5 w-5" />
@@ -95,20 +148,33 @@ export function EnhancedCallTrace({
             {showGas && <div className="text-right text-center">Gas</div>}
             <div />
             <div className="text-left">Call Details</div>
-            <div className="text-right">Actions</div>
           </div>
           
-          <CallNode
-            frame={rootCall}
-            depth={0}
-            index={0}
-            isRoot={true}
-            showGas={showGas}
-            showFullTrace={showFullTrace}
-          />
+          {/* Scrollable container for all call nodes */}
+          <div 
+            className="call-trace-container overflow-x-auto"
+            onWheel={(e) => {
+              // Allow horizontal scrolling with mouse wheel on the entire trace
+              if (e.deltaY !== 0) {
+                e.currentTarget.scrollLeft += e.deltaY;
+                e.preventDefault();
+              }
+            }}
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            <CallNode
+              frame={rootCall}
+              depth={0}
+              index={0}
+              isRoot={true}
+              showGas={showGas}
+              showFullTrace={showFullTrace}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
+    </>
   )
 }
 
@@ -186,7 +252,7 @@ function CallNode({
         {/* Call type column - always aligned */}
         <div className="flex justify-center px-1">
           <Badge 
-            className={`text-xs font-mono px-2 py-0.5 w-full max-w-[88px] justify-center ${getCallTypeColor(frame.callType, isSuccess)}`}
+            className={`text-xs font-mono px-2 py-0.5 w-full max-w-[96px] justify-center ${getCallTypeColor(frame.callType, isSuccess)}`}
             variant="outline"
           >
             {frame.callType}
@@ -224,12 +290,17 @@ function CallNode({
         </div>
         
         {/* Call information - indented based on depth */}
-        <div className="flex items-center gap-1 min-w-0 px-3 whitespace-nowrap overflow-hidden" style={{ paddingLeft: `${indentLevel + 12}px` }}>
+        <div 
+          className="flex items-center gap-1 min-w-0 px-3 whitespace-nowrap call-node-content" 
+          style={{ 
+            paddingLeft: `${indentLevel + 12}px`,
+          }}
+        >
           {/* From address */}
           <span className="text-muted-foreground text-sm flex-shrink-0">
             [CALLER]
           </span>
-          <span className="text-muted-foreground text-sm truncate">
+          <span className="text-muted-foreground text-sm flex-shrink-0">
             {formatAddress(frame.from)}
           </span>
           
@@ -242,7 +313,7 @@ function CallNode({
               <span className="text-muted-foreground text-sm flex-shrink-0">
                 [RECEIVER]
               </span>
-              <span className="text-muted-foreground text-sm truncate">
+              <span className="text-muted-foreground text-sm flex-shrink-0">
                 {formatAddress(frame.to)}
               </span>
             </>
@@ -264,8 +335,8 @@ function CallNode({
           
           {/* Data (if full trace mode and has input beyond selector) */}
           {showFullTrace && frame.input && frame.input.length > 10 && (
-            <span className="text-xs text-muted-foreground ml-1 truncate">
-              ({frame.input.length > 50 ? `${frame.input.slice(0, 50)}...` : frame.input})
+            <span className="text-xs text-muted-foreground ml-1 flex-shrink-0">
+              ({frame.input})
             </span>
           )}
         </div>
@@ -330,7 +401,7 @@ function CallNode({
               <div className="text-muted-foreground">
                 <span className="font-medium">Output:</span>{' '}
                 <span className="font-mono break-all">
-                  {frame.output.length > 40 ? `${frame.output.slice(0, 40)}...` : frame.output}
+                  {frame.output}
                 </span>
               </div>
             )}
