@@ -1030,7 +1030,7 @@ function RequestParametersView({
             State Overrides ({stateOverrides.length})
           </h3>
           <div className="space-y-4">
-            {stateOverrides.map((override, index) => (
+            {stateOverrides.map((override: StateOverride, index: number) => (
               <Card key={index} className="border-l-4 border-l-orange-500">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -1044,8 +1044,8 @@ function RequestParametersView({
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Address</label>
                     <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
-                      <span className="sm:hidden">{`${override.address.slice(0, 10)}...${override.address.slice(-8)}`}</span>
-                      <span className="hidden sm:inline">{override.address}</span>
+                    <span className="sm:hidden">{`${override.address?.slice(0, 10)}...${override.address?.slice(-8)}`}</span>
+                    <span className="hidden sm:inline">{override.address || 'N/A'}</span>
                     </p>
                   </div>
                   
@@ -1087,7 +1087,7 @@ function RequestParametersView({
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Storage Overrides</label>
                       <div className="mt-1 space-y-2">
-                        {override.state.map((slot, slotIndex) => (
+                        {override.state.map((slot: { slot: string; value: string }, slotIndex: number) => (
                           <div key={slotIndex} className="border rounded p-2 bg-muted/30">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                               <div>
