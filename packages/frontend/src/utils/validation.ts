@@ -41,16 +41,57 @@ export function validateHex(value: string, fieldName = 'hex'): Hex {
   return value as Hex
 }
 
-// Validate optional hex string
+// Validate optional hex string (allows both hex and decimal for data field)
 export function validateOptionalHex(
   value: string,
   fieldName = 'hex',
+  allowDecimal = false,
 ): Hex | undefined {
   if (!value || value.trim() === '') {
     return undefined
   }
 
+  // Special handling for data field - allow decimal conversion
+  if (allowDecimal && fieldName === 'data' && !value.startsWith('0x')) {
+    try {
+      // Try to parse as decimal and convert to hex
+      const num = BigInt(value)
+      return `0x${num.toString(16)}` as Hex
+    } catch {
+      // If parsing fails, fall through to normal hex validation
+    }
+  }
+
   return validateHex(value, fieldName)
+}
+
+// Validate data field (hex or decimal)
+export function validateOptionalData(
+  value: string,
+  fieldName = 'data',
+): Hex | undefined {
+  if (!value || value.trim() === '') {
+    return undefined
+  }
+
+  try {
+    // Handle hex format
+    if (value.startsWith('0x')) {
+      return validateHex(value, fieldName)
+    }
+    
+    // Handle decimal format - convert to hex
+    const num = BigInt(value)
+    if (num < 0n) {
+      throw new ValidationError('Data value cannot be negative', fieldName)
+    }
+    return `0x${num.toString(16)}` as Hex
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw error
+    }
+    throw new ValidationError('Invalid data format - must be hex (0x...) or decimal', fieldName)
+  }
 }
 
 // Validate optional block number (hex or decimal)
@@ -267,4 +308,61 @@ export function collectValidationErrors(
   }
 
   return errors
+}
+
+// Convert hex to decimal string for display
+export function hexToDecimal(hexValue: string): string {
+  if (!hexValue || !hexValue.startsWith('0x')) {
+    return '0'
+  }
+  try {
+    return BigInt(hexValue).toString()
+  } catch {
+    return '0'
+  }
+}
+
+// Convert decimal string to hex for internal use
+export function decimalToHex(decimalValue: string): string {
+  if (!decimalValue || decimalValue === '0') {
+    return '0x0'
+  }
+  try {
+    const num = BigInt(decimalValue)
+    return `0x${num.toString(16)}`
+  } catch {
+    return '0x0'
+  }
+}
+
+// Check if a value is in hex format
+export function isHexFormat(value: string): boolean {
+  return value.startsWith('0x')
+}
+
+// Convert wei hex to ETH decimal for display
+export function weiToEth(weiHex: string): string {
+  if (!weiHex || !weiHex.startsWith('0x')) {
+    return '0'
+  }
+  try {
+    const wei = BigInt(weiHex)
+    const eth = Number(wei) / 1e18
+    return eth.toString()
+  } catch {
+    return '0'
+  }
+}
+
+// Convert ETH decimal to wei hex
+export function ethToWei(ethValue: string): string {
+  if (!ethValue || ethValue === '0') {
+    return '0x0'
+  }
+  try {
+    const wei = Math.floor(parseFloat(ethValue) * 1e18)
+    return `0x${wei.toString(16)}`
+  } catch {
+    return '0x0'
+  }
 }
