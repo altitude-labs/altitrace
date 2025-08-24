@@ -36,8 +36,8 @@ export function EnhancedCallTrace({
   className = '',
 }: EnhancedCallTraceProps) {
   const [showGas, setShowGas] = useState(true)
-  const [showFullTrace, setShowFullTrace] = useState(false)
-  const [showStorage, setShowStorage] = useState(false)
+  const [showFullTrace, setShowFullTrace] = useState(true)
+  const [showStorage, setShowStorage] = useState(true)
   const rootCall = traceData.callTracer?.rootCall
 
   if (!rootCall) {
@@ -223,7 +223,7 @@ function CallNode({
   allStorageOperations = [],
   parentCallContext = '',
 }: CallNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(depth < 3) // Auto-expand first 3 levels
+  const [isExpanded, setIsExpanded] = useState(true) // Auto-expand all levels
   
   const hasSubcalls = frame.calls && frame.calls.length > 0
   const gasUsed = Number.parseInt(frame.gasUsed, 16)
@@ -441,8 +441,7 @@ function CallNode({
       
       {/* Inline storage operations display for this specific call */}
       {showStorage && callStorageOperations.length > 0 && (
-        <>
-          {callStorageOperations.map((op, index) => (
+        callStorageOperations.map((op, index) => (
             <div
               key={`storage-${op.pc}-${index}`}
               className={`
@@ -525,16 +524,14 @@ function CallNode({
                 </span>
               </div>
             </div>
-          ))}
-        </>
+          ))
       )}
       
       {/* Render subcalls */}
       {hasSubcalls && isExpanded && frame.calls && (
-        <>
-          {frame.calls.map((subcall, subIndex) => (
+        frame.calls.map((subcall, subIndex) => (
             <CallNode
-              key={`${depth}-${subIndex}`}
+              key={`${depth}-${subIndex}-${subcall.from}-${subcall.to}`}
               frame={subcall}
               depth={depth + 1}
               index={subIndex}
@@ -545,8 +542,7 @@ function CallNode({
               allStorageOperations={storageOpsForPassing}
               parentCallContext={currentCallContext}
             />
-          ))}
-        </>
+          ))
       )}
     </div>
   )
