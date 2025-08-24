@@ -25,7 +25,7 @@ interface EnhancedCallTraceProps {
 }
 
 /**
- * Enhanced call trace component inspired by Tenderly's interface
+ * Enhanced call trace componen
  * Features gas mode and full trace mode with improved UI/UX
  */
 export function EnhancedCallTrace({
@@ -148,20 +148,24 @@ export function EnhancedCallTrace({
                 e.preventDefault();
               }
             }}
-            style={{ scrollBehavior: 'smooth' }}
+            style={{ 
+              scrollBehavior: 'smooth',
+             }}
           >
             {/* Header row for column alignment - now inside scrollable container */}
             <div 
-              className={`
-                grid items-center py-2 px-3 border-b bg-muted/20 text-xs font-medium text-muted-foreground call-node-content
-                ${showGas ? 'grid-cols-[96px_80px_16px_1fr]' : 'grid-cols-[96px_16px_1fr]'}
-              `}
-              style={{ paddingLeft: '12px' }}
+              className="flex items-center py-2 px-3 border-b bg-muted/20 text-xs font-medium text-muted-foreground whitespace-nowrap"
+              style={{ 
+                paddingLeft: '12px',
+                minWidth: '100vw',
+                width: 'max-content',
+              }}
             >
-              <div className="text-left text-center">Type</div>
-              {showGas && <div className="text-right text-center">Gas</div>}
-              <div />
-              <div className="text-left">Call Details</div>
+              <div className="w-24 text-center">Type</div>
+              {showGas && <div className="w-20 text-right pr-2">Gas</div>}
+              <div className="w-4" />
+              <div className="flex-1 text-left">Call Details</div>
+              <div className="w-48" />
             </div>
             <CallNode
               frame={rootCall}
