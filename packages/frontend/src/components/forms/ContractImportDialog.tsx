@@ -189,7 +189,7 @@ export function ContractImportDialog({
     : contracts
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={(e) => {
         // Close when clicking on the backdrop
@@ -229,7 +229,8 @@ export function ContractImportDialog({
               </TabsTrigger>
               <TabsTrigger value="saved" className="flex-1 py-2 px-3 text-sm">
                 <CheckIcon className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Saved </span>({contracts.length})
+                <span className="hidden sm:inline">Saved </span>(
+                {contracts.length})
               </TabsTrigger>
             </TabsList>
 

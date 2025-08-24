@@ -13,7 +13,8 @@ const nextConfig = {
         destination: `${apiUrl}/v1/:path*`,
       })
     } else if (isProduction) {
-      const internalApiUrl = process.env.INTERNAL_API_URL || 'http://127.0.0.1:8080'
+      const internalApiUrl =
+        process.env.INTERNAL_API_URL || 'http://127.0.0.1:8080'
       rewrites.push({
         source: '/api/altitrace/:path*',
         destination: `${internalApiUrl}/v1/:path*`,
@@ -24,7 +25,6 @@ const nextConfig = {
         destination: 'https://api.altitrace.reachaltitude.xyz/v1/:path*',
       })
     }
-
 
     return rewrites
   },

@@ -3,7 +3,6 @@ import { getPreloadStatus, preloadCompilers } from '@/lib/compiler-preload'
 
 export async function POST(_request: NextRequest) {
   try {
-
     await preloadCompilers()
 
     const status = getPreloadStatus()

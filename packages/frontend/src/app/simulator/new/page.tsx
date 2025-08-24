@@ -4,21 +4,36 @@ import type {
   HexString as Hex,
   SimulationRequest as SdkSimulationRequest,
 } from '@altitrace/sdk/types'
-import { ArrowLeftIcon } from 'lucide-react'
+import { ArrowLeftIcon, Layers3Icon, SendIcon } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { ContractManager } from '@/components/forms/ContractManager'
 import { TransactionForm } from '@/components/forms/TransactionForm'
-// Removed unused imports
-import { Alert, AlertDescription, Button } from '@/components/ui'
+import { BundleTransactionForm } from '@/components/forms/BundleTransactionForm'
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui'
 import type { ParsedAbi } from '@/types/api'
+import type { BundleSimulationRequest, BundleFormData } from '@/types/bundle'
 import {
   createContractStateOverride,
   createContractStateOverrideForSimulation,
   requiresStateOverride,
 } from '@/utils/contract-state-override'
 import type { StoredContract } from '@/utils/contract-storage'
-import { getRequest, store } from '@/utils/storage'
+import {
+  getRequest,
+  store,
+  retrieveById,
+  type SingleSimulationRequest,
+  type BundleSimulationRequestStorage,
+} from '@/utils/storage'
 import { hexToDecimal, isHexFormat } from '@/utils/validation'
 
 const generateSimulationId = () => crypto.randomUUID()
@@ -46,7 +61,7 @@ function NewSimulationPageContent() {
     parameters: Record<string, string>
   } | null>(null)
 
-  // Form state for pre-filling
+  // Form state for pre-filling (single simulations)
   const [formData, setFormData] = useState<{
     to: string
     from: string
@@ -67,57 +82,161 @@ function NewSimulationPageContent() {
     validation: true,
   })
 
+  // Bundle form state for pre-filling (bundle simulations)
+  const [bundleFormData, setBundleFormData] =
+    useState<Partial<BundleFormData> | null>(null)
+
   // Simulation State
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [simulationMode, setSimulationMode] = useState<'single' | 'bundle'>(
+    'single',
+  )
 
   // Load pre-fill data from URL params (re-run functionality)
   useEffect(() => {
-    const rerunId = searchParams.get('rerun')
-    if (rerunId && !isPreFilled) {
-      const storedRequest = getRequest(rerunId)
-      if (storedRequest) {
-        const call = storedRequest.params.calls[0]
-        if (call) {
-          // Set basic transaction data - convert hex values to decimal for display
-          setFormData((prev) => ({
-            ...prev,
-            to: call.to || '',
-            from: call.from || '',
-            data: call.data || '',
-            value: call.value && isHexFormat(call.value) ? hexToDecimal(call.value) : call.value || '0',
-            gas: call.gas && isHexFormat(call.gas) ? hexToDecimal(call.gas) : call.gas || '',
-          }))
+    const loadRerunData = async () => {
+      const rerunId = searchParams.get('rerun')
+      if (rerunId && !isPreFilled) {
+        const storedSimulation = await retrieveById(rerunId)
 
-          // Set simulation options - convert hex block number to decimal
-          setFormData((prev) => ({
-            ...prev,
-            validation: storedRequest.params.validation ?? true,
-            blockTag:
-              (storedRequest.params.blockTag as
-                | 'latest'
-                | 'earliest'
-                | 'safe'
-                | 'finalized') || 'latest',
-            blockNumber: storedRequest.params.blockNumber && isHexFormat(storedRequest.params.blockNumber) 
-              ? hexToDecimal(storedRequest.params.blockNumber)
-              : storedRequest.params.blockNumber || '',
-            // Include state overrides with decimal balance conversion
-            stateOverrides: storedRequest.options?.stateOverrides?.map(override => ({
-              ...override,
-              balance: override.balance && isHexFormat(override.balance)
-                ? hexToDecimal(override.balance)
-                : override.balance
-            })) || [],
-          }))
+        if (storedSimulation) {
+          // Pre-fill form with stored simulation data
 
-          // TODO: Pre-fill ABI and function data if available
-          // This would require storing additional metadata about the original function call
+          // Handle different stored request formats
+          if (
+            storedSimulation.request &&
+            'type' in storedSimulation.request &&
+            storedSimulation.request.type === 'single'
+          ) {
+            // Extract data from single simulation request with hex/decimal conversion
+            const singleRequest =
+              storedSimulation.request as SingleSimulationRequest
+            const call = singleRequest.params.calls[0]
+
+            if (call) {
+              // Set basic transaction data - convert hex values to decimal for display
+              setFormData((prev) => ({
+                ...prev,
+                to: call.to || '',
+                from: call.from || '',
+                data: call.data || '',
+                value:
+                  call.value && isHexFormat(call.value)
+                    ? hexToDecimal(call.value)
+                    : call.value || '0',
+                gas:
+                  call.gas && isHexFormat(call.gas)
+                    ? hexToDecimal(call.gas)
+                    : call.gas || '',
+              }))
+
+              // Set simulation options - convert hex block number to decimal
+              setFormData((prev) => ({
+                ...prev,
+                validation: singleRequest.params.validation ?? true,
+                blockTag:
+                  (singleRequest.params.blockTag as
+                    | 'latest'
+                    | 'earliest'
+                    | 'safe'
+                    | 'finalized') || 'latest',
+                blockNumber:
+                  singleRequest.params.blockNumber &&
+                  isHexFormat(singleRequest.params.blockNumber)
+                    ? hexToDecimal(singleRequest.params.blockNumber)
+                    : singleRequest.params.blockNumber || '',
+                // Include state overrides with decimal balance conversion
+                stateOverrides:
+                  singleRequest.options?.stateOverrides?.map((override) => ({
+                    ...override,
+                    balance:
+                      override.balance && isHexFormat(override.balance)
+                        ? hexToDecimal(override.balance)
+                        : override.balance,
+                  })) || [],
+              }))
+            }
+          } else if (
+            storedSimulation.request &&
+            'type' in storedSimulation.request &&
+            storedSimulation.request.type === 'bundle'
+          ) {
+            // For bundle simulations, switch to bundle mode and pre-fill bundle data
+            setSimulationMode('bundle')
+
+            const bundleRequest =
+              storedSimulation.request as BundleSimulationRequestStorage
+            const bundleData: BundleFormData = {
+              transactions: bundleRequest.bundleRequest.transactions.map(
+                (tx) => ({
+                  ...tx,
+                  // Ensure all required properties are present
+                  id: tx.id || crypto.randomUUID(),
+                  enabled: tx.enabled !== undefined ? tx.enabled : true,
+                  continueOnFailure:
+                    tx.continueOnFailure !== undefined
+                      ? tx.continueOnFailure
+                      : false,
+                  label: tx.label || '',
+                }),
+              ),
+              blockTag: bundleRequest.bundleRequest.blockTag || 'latest',
+              blockNumber: bundleRequest.bundleRequest.blockNumber || '',
+              validation: bundleRequest.bundleRequest.validation ?? true,
+              account: bundleRequest.bundleRequest.account,
+              stateOverrides:
+                bundleRequest.bundleRequest.stateOverrides?.map((override) => ({
+                  ...override,
+                  balance:
+                    override.balance && isHexFormat(override.balance)
+                      ? hexToDecimal(override.balance)
+                      : override.balance,
+                })) || [],
+            }
+
+            setBundleFormData(bundleData)
+            console.log(
+              '🔗 [Bundle Pre-fill] Loaded bundle with',
+              bundleData.transactions.length,
+              'transactions',
+            )
+          } else {
+            // Handle legacy format (backward compatibility) - pre-bundle implementation
+            const legacyRequest = storedSimulation.request as any
+            if (legacyRequest && legacyRequest.params?.calls) {
+              const call = legacyRequest.params.calls[0]
+              if (call) {
+                setFormData((prev) => ({
+                  ...prev,
+                  to: call.to || '',
+                  from: call.from || '',
+                  data: call.data || '',
+                  value: call.value || '0x0',
+                  gas: call.gas || '',
+                  validation: legacyRequest.params.validation ?? true,
+                  blockTag: legacyRequest.params.blockTag || 'latest',
+                  blockNumber: legacyRequest.params.blockNumber || '',
+                }))
+              }
+            } else {
+              // If we can't parse the stored format, show an error but don't crash
+              console.warn(
+                'Unable to parse stored simulation format:',
+                storedSimulation,
+              )
+              setError(
+                'Stored simulation format is incompatible. Please start a new simulation.',
+              )
+            }
+          }
+
+          setIsPreFilled(true)
         }
-
-        setIsPreFilled(true)
       }
     }
+
+    loadRerunData()
   }, [searchParams, isPreFilled])
 
   const handleAbiImport = (parsedAbi: ParsedAbi, rawAbiJson: string) => {
@@ -166,22 +285,62 @@ function NewSimulationPageContent() {
     setFunctionData(null)
   }
 
+  const handleBundleSimulation = async (request: BundleSimulationRequest) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      console.log('\n🔗 [Bundle Simulation Setup] Preparing bundle request...')
+      console.log('📦 Bundle transactions:', request.transactions.length)
+
+      // Store bundle simulation parameters for execution on results page
+      const simulationId = generateSimulationId()
+
+      // Convert bundle request to storage format
+      const bundleRequest = {
+        type: 'bundle' as const,
+        bundleRequest: request,
+      }
+
+      await store(simulationId, bundleRequest, {
+        title: `Bundle Simulation (${request.transactions.length} txs)`,
+        tags: ['recent', 'bundle'],
+      })
+
+      console.log(
+        `📋 [Storage] Saved bundle parameters with ID: ${simulationId}`,
+      )
+      console.log(
+        '🚀 [Navigation] Navigating to bundle results page for execution...',
+      )
+
+      // Navigate to results page for bundle execution
+      router.push(`/simulator/${simulationId}`)
+    } catch (err) {
+      setError(`Failed to prepare bundle simulation: ${err}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleTraceTransaction = async (txHash: string) => {
     // Generate a unique ID for the trace result
     const traceId = generateSimulationId()
-    
+
     // Store trace parameters for execution on results page
-    store(
+    await store(
       traceId,
-      { 
-        params: { 
-          calls: [{
-            to: '0x0000000000000000000000000000000000000000',
-            data: '0x',
-            value: '0x0'
-          }],
-          blockTag: 'latest'
-        }
+      {
+        params: {
+          calls: [
+            {
+              to: '0x0000000000000000000000000000000000000000',
+              data: '0x',
+              value: '0x0',
+            },
+          ],
+          blockTag: 'latest',
+        },
       },
       {
         title: `Transaction Trace: ${txHash.slice(0, 10)}...`,
@@ -190,7 +349,7 @@ function NewSimulationPageContent() {
         traceHash: txHash,
       },
     )
-    
+
     // Navigate to results page - trace execution happens there
     router.push(`/simulator/${traceId}`)
   }
@@ -212,7 +371,6 @@ function NewSimulationPageContent() {
           )
 
           if (stateOverride.requiresOverride && stateOverride.stateOverride) {
-
             // Convert to array format expected by API
             const stateOverrideArray = Object.entries(
               stateOverride.stateOverride,
@@ -268,11 +426,11 @@ function NewSimulationPageContent() {
       // Store simulation parameters for execution on results page
       const simulationId = generateSimulationId()
 
-      store(
+      await store(
         simulationId,
-        { 
-          params: request.params, 
-          options: finalOptions 
+        {
+          params: request.params,
+          options: finalOptions,
         },
         {
           title: `${functionData?.functionName || 'Transaction'} Simulation`,
@@ -315,16 +473,39 @@ function NewSimulationPageContent() {
             <div>
               <h1 className="text-lg sm:text-xl font-bold">
                 <span className="hidden sm:inline">
-                  New Transaction Simulation
+                  {simulationMode === 'bundle'
+                    ? 'New Bundle Simulation'
+                    : 'New Transaction Simulation'}
                 </span>
                 <span className="sm:hidden">New Simulation</span>
               </h1>
               <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-                Build and simulate HyperEVM transactions with detailed tracing
-                and gas analysis
+                {simulationMode === 'bundle'
+                  ? 'Build and simulate sequential transaction bundles with state dependencies'
+                  : 'Build and simulate HyperEVM transactions with detailed tracing and gas analysis'}
               </p>
             </div>
           </div>
+
+          {/* Mode Selector */}
+          <Tabs
+            value={simulationMode}
+            onValueChange={(value) =>
+              setSimulationMode(value as 'single' | 'bundle')
+            }
+            className="w-full max-w-md"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="single" className="flex items-center gap-2">
+                <SendIcon className="h-4 w-4" />
+                Single Transaction
+              </TabsTrigger>
+              <TabsTrigger value="bundle" className="flex items-center gap-2">
+                <Layers3Icon className="h-4 w-4" />
+                Bundle Transactions
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Error Display */}
@@ -333,92 +514,6 @@ function NewSimulationPageContent() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-
-        {/* Quick Actions and Get Started at the top - constrained width */}
-        <div className="max-w-4xl mx-auto mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Get Started Tips - First on mobile */}
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 order-1 md:order-2">
-              <h3 className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
-                💡 {!formData.to ? 'Get Started' : abi ? 'Pro Tips' : 'Quick Tips'}
-              </h3>
-              <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
-                {!formData.to ? (
-                  <>
-                    <p>• Enter contract address to auto-fetch ABI</p>
-                    <p>• Import from saved contracts library</p>
-                    <p>• Or paste ABI manually for any contract</p>
-                  </>
-                ) : !abi ? (
-                  <>
-                    <p>• Contract Manager auto-fetches from HyperScan</p>
-                    <p>• Saved contracts available in library</p>
-                    <p>• Use "from" field for account impersonation</p>
-                  </>
-                ) : (
-                  <>
-                    <p>• Contract saved automatically for reuse</p>
-                    <p>• Function builder validates parameter types</p>
-                    <p>• Leave gas empty for automatic estimation</p>
-                    <p>• Results include enhanced call traces</p>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Actions - Second on mobile */}
-            <div className="bg-card border rounded-lg p-4 order-2 md:order-1">
-              <h3 className="text-sm font-medium mb-3">Quick Actions</h3>
-              <div className="space-y-2">
-                {!formData.to && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                    Set target address
-                  </div>
-                )}
-
-                {formData.to && !abi && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const contractSection = document.querySelector('[data-section="contract-management"]')
-                      contractSection?.scrollIntoView({ behavior: 'smooth' })
-                    }}
-                    className="w-full justify-start text-xs h-8"
-                  >
-                    📝 Import Contract & ABI
-                  </Button>
-                )}
-
-                {(!formData.to || (!formData.data && !functionData && !abi)) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        to: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
-                        value: '0x0',
-                        data: '0xa9059cbb000000000000000000000000742d35cc6634c0532925a3b844bc9e7595f06e8c0000000000000000000000000000000000000000000000000de0b6b3a7640000',
-                      }))
-                    }}
-                    className="w-full justify-start text-xs h-8"
-                  >
-                    ⚡ Try Example (ERC-20 Transfer)
-                  </Button>
-                )}
-
-                {formData.to && (formData.data || functionData) && (
-                  <div className="flex items-center gap-2 text-xs text-green-600">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                    Ready to simulate!
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Single column layout with full width */}
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
@@ -436,20 +531,33 @@ function NewSimulationPageContent() {
             />
           </div>
 
-          {/* Transaction Form */}
-          <TransactionForm
-            onSubmit={handleSimulation}
-            onTraceTransaction={handleTraceTransaction}
-            loading={loading}
-            abi={abi}
-            functionData={functionData}
-            initialData={isPreFilled ? formData : undefined}
-            compact={true}
-            onManualDataChange={handleManualDataChange}
-          />
+          {/* Transaction Form - Conditional based on mode */}
+          {simulationMode === 'single' ? (
+            <TransactionForm
+              onSubmit={handleSimulation}
+              onTraceTransaction={handleTraceTransaction}
+              loading={loading}
+              abi={abi}
+              functionData={functionData}
+              initialData={isPreFilled ? formData : undefined}
+              compact={true}
+              onManualDataChange={handleManualDataChange}
+            />
+          ) : (
+            <BundleTransactionForm
+              onSubmit={handleBundleSimulation}
+              loading={loading}
+              abi={abi}
+              functionData={functionData}
+              initialData={bundleFormData || undefined}
+              compact={true}
+              onManualDataChange={handleManualDataChange}
+            />
+          )}
 
           {/* Status Card - Only show when there's meaningful status */}
-          {(loading || (selectedContract && requiresStateOverride(selectedContract))) && (
+          {(loading ||
+            (selectedContract && requiresStateOverride(selectedContract))) && (
             <div className="bg-card border rounded-lg p-4">
               <h3 className="text-sm font-medium mb-3">Status</h3>
 
@@ -460,7 +568,8 @@ function NewSimulationPageContent() {
                     🔄 State Override Active
                   </div>
                   <div className="text-orange-600 dark:text-orange-400">
-                    Contract has modified bytecode - using state override for simulation
+                    Contract has modified bytecode - using state override for
+                    simulation
                   </div>
                 </div>
               )}
@@ -469,7 +578,9 @@ function NewSimulationPageContent() {
                 <div className="text-center py-3">
                   <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-foreground">Running Enhanced Simulation</p>
+                    <p className="text-xs font-medium text-foreground">
+                      Running Enhanced Simulation
+                    </p>
                     <div className="text-xs text-muted-foreground space-y-1">
                       <div>• Executing transaction simulation</div>
                       <div>• Generating call trace data</div>

@@ -2,6 +2,13 @@ import type { Address, HexString as Hex } from '@altitrace/sdk/types'
 import { isAddress, isHex } from 'viem'
 import type { BlockNumber } from '@/types/api'
 
+/**
+ * Utility function to ensure hex strings have even length
+ */
+function padHexString(hexString: string): string {
+  return hexString.length % 2 === 0 ? hexString : `0${hexString}`
+}
+
 export class ValidationError extends Error {
   constructor(
     message: string,
@@ -36,6 +43,15 @@ export function validateHex(value: string, fieldName = 'hex'): Hex {
       'Invalid hex format - must start with 0x',
       fieldName,
     )
+  }
+
+  // Check for odd number of hex digits and pad if necessary
+  const hexPart = value.startsWith('0x') ? value.slice(2) : value
+  if (hexPart.length % 2 !== 0) {
+    // Auto-pad with leading zero instead of throwing error
+    const paddedHex = padHexString(hexPart)
+    const fixedValue = value.startsWith('0x') ? `0x${paddedHex}` : paddedHex
+    return fixedValue as Hex
   }
 
   return value as Hex
@@ -79,7 +95,7 @@ export function validateOptionalData(
     if (value.startsWith('0x')) {
       return validateHex(value, fieldName)
     }
-    
+
     // Handle decimal format - convert to hex
     const num = BigInt(value)
     if (num < 0n) {
@@ -90,7 +106,10 @@ export function validateOptionalData(
     if (error instanceof ValidationError) {
       throw error
     }
-    throw new ValidationError('Invalid data format - must be hex (0x...) or decimal', fieldName)
+    throw new ValidationError(
+      'Invalid data format - must be hex (0x...) or decimal',
+      fieldName,
+    )
   }
 }
 
@@ -120,7 +139,10 @@ export function validateOptionalBlockNumber(
     if (blockNum < 0n) {
       throw new ValidationError('Block number cannot be negative', fieldName)
     }
-    return `0x${blockNum.toString(16)}` as BlockNumber
+    // Ensure even-length hex string by padding with 0 if needed
+    const hexString = blockNum.toString(16)
+    const paddedHex = padHexString(hexString)
+    return `0x${paddedHex}` as BlockNumber
   } catch (error) {
     if (error instanceof ValidationError) {
       throw error
@@ -151,7 +173,10 @@ export function validateOptionalGas(
       if (gasAmount <= 0n) {
         throw new ValidationError('Gas must be greater than 0', fieldName)
       }
-      gasHex = `0x${gasAmount.toString(16)}` as Hex
+      // Ensure even-length hex string by padding with 0 if needed
+      const hexString = gasAmount.toString(16)
+      const paddedHex = padHexString(hexString)
+      gasHex = `0x${paddedHex}` as Hex
     }
 
     // Validate gas amount limits
@@ -232,7 +257,10 @@ export function validateValue(value: string, fieldName = 'value'): Hex {
     if (wei < 0n) {
       throw new ValidationError('Value cannot be negative', fieldName)
     }
-    return `0x${wei.toString(16)}` as Hex
+    // Ensure even-length hex string by padding with 0 if needed
+    const hexString = wei.toString(16)
+    const paddedHex = padHexString(hexString)
+    return `0x${paddedHex}` as Hex
   } catch (error) {
     if (error instanceof ValidationError) {
       throw error

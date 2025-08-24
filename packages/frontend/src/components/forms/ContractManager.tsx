@@ -93,7 +93,6 @@ export function ContractManager({
 
   const handleContractImport = useCallback(
     (contract: StoredContract) => {
-
       setSelectedContract(contract)
       setContractSource('saved')
       onContractSelect?.(contract)

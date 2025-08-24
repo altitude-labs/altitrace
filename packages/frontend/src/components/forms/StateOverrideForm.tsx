@@ -70,7 +70,9 @@ const overrideConfigs: OverrideConfig[] = [
     type: 'storage',
     label: 'Storage',
     description: 'Modify contract storage slots',
-    icon: ({ className }) => <div className={`text-center ${className}`}>🗄️</div>,
+    icon: ({ className }) => (
+      <div className={`text-center ${className}`}>🗄️</div>
+    ),
   },
 ]
 
@@ -254,9 +256,7 @@ export function StateOverrideForm({
             <UserIcon className="h-5 w-5" />
             State Overrides
             {hasStateOverrides && (
-              <Badge variant="secondary">
-                {stateOverrides.length}
-              </Badge>
+              <Badge variant="secondary">{stateOverrides.length}</Badge>
             )}
           </div>
           <Button
@@ -378,7 +378,9 @@ function StateOverrideContent({
               placeholder="Choose preset..."
               className="w-full"
             />
-            <div className={`flex gap-2 ${compact ? 'flex-col' : 'flex-col sm:flex-row'}`}>
+            <div
+              className={`flex gap-2 ${compact ? 'flex-col' : 'flex-col sm:flex-row'}`}
+            >
               <Button
                 type="button"
                 variant="outline"
@@ -389,15 +391,17 @@ function StateOverrideContent({
               >
                 Apply Template
               </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={onAddOverride}
                 className="flex-1"
               >
                 <PlusIcon className="h-4 w-4 mr-1" />
-                <span className={compact ? 'text-xs' : ''}>Custom Override</span>
+                <span className={compact ? 'text-xs' : ''}>
+                  Custom Override
+                </span>
               </Button>
             </div>
           </div>
@@ -449,7 +453,10 @@ interface StateOverrideCardProps {
   onUpdate: (updates: Partial<StateOverride>) => void
   onRemove: () => void
   onAddStorageSlot: () => void
-  onUpdateStorageSlot: (slotIndex: number, updates: Partial<StorageSlot>) => void
+  onUpdateStorageSlot: (
+    slotIndex: number,
+    updates: Partial<StorageSlot>,
+  ) => void
   onRemoveStorageSlot: (slotIndex: number) => void
   onClearError: (field: string) => void
   onValidateAndSetError: (field: string, validator: () => void) => boolean
@@ -472,7 +479,9 @@ function StateOverrideCard({
   compact,
   errors,
 }: StateOverrideCardProps) {
-  const [activeOverrideTypes, setActiveOverrideTypes] = useState<Set<OverrideType>>(
+  const [activeOverrideTypes, setActiveOverrideTypes] = useState<
+    Set<OverrideType>
+  >(
     new Set(
       Object.entries(override)
         .filter(([key, value]) => key !== 'address' && value != null)
@@ -565,7 +574,9 @@ function StateOverrideCard({
               >
                 <div className="flex items-center gap-2 mb-1">
                   <config.icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="font-medium text-sm leading-tight">{config.label}</span>
+                  <span className="font-medium text-sm leading-tight">
+                    {config.label}
+                  </span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-tight">
                   {config.description}
@@ -652,7 +663,10 @@ function StateOverrideCard({
             </div>
 
             {override.state?.map((slot, slotIndex) => (
-              <div key={slotIndex} className="border rounded-lg p-3 sm:p-4 space-y-3">
+              <div
+                key={slotIndex}
+                className="border rounded-lg p-3 sm:p-4 space-y-3"
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">
                     Slot #{slotIndex + 1}

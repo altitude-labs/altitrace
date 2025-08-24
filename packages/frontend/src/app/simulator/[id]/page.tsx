@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { EnhancedSimulationResults } from '@/components/simulation/EnhancedSimulationResults'
 import { InlineTitleEditor } from '@/components/simulation/InlineTitleEditor'
-import { Alert, AlertDescription, Button } from '@/components/ui'
+import { Alert, AlertDescription, Button, useToast } from '@/components/ui'
 import { createAltitraceClient } from '@/utils/client'
 import type { StoredSimulation } from '@/utils/storage'
 import { exportSimulation, retrieveById, updateResult } from '@/utils/storage'
@@ -22,6 +22,54 @@ import {
   executeEnhancedSimulation,
   executeTransactionTrace,
 } from '@/utils/trace-integration'
+import {
+  executeBundleSimulation,
+  enhanceBundleSimulationResult,
+  type EnhancedBundleSimulationResult,
+} from '@/utils/bundle-execution'
+import { BundleSimulationResults } from '@/components/simulation/BundleSimulationResults'
+
+/**
+ * Create synthetic "calls" from trace data so EventsBreakdown can display logs
+ */
+function createCallsFromTraceData(traceData: any): any[] {
+  if (!traceData?.callTracer?.rootCall) {
+    return []
+  }
+
+  // Recursively collect all logs from all nested calls
+  function collectAllLogs(call: any): any[] {
+    const logs = [...(call.logs || [])]
+
+    if (call.calls && call.calls.length > 0) {
+      for (const nestedCall of call.calls) {
+        logs.push(...collectAllLogs(nestedCall))
+      }
+    }
+
+    return logs
+  }
+
+  const rootCall = traceData.callTracer.rootCall
+  const allLogs = collectAllLogs(rootCall)
+
+  // Create a call object that mimics the CallResult interface
+  const call = {
+    callIndex: 0,
+    status: rootCall.reverted ? 'failed' : 'success',
+    gasUsed: rootCall.gasUsed || '0',
+    to: rootCall.to || '',
+    from: rootCall.from || '',
+    input: rootCall.input || '0x',
+    output: rootCall.output || '0x',
+    value: rootCall.value || '0x0',
+    logs: allLogs, // Use all collected logs instead of just rootCall.logs
+    calls: [],
+    error: rootCall.error || undefined,
+  }
+
+  return [call]
+}
 
 interface ResultsViewerProps {
   params: Promise<{
@@ -31,15 +79,21 @@ interface ResultsViewerProps {
 
 export default function ResultsViewer({ params }: ResultsViewerProps) {
   const router = useRouter()
+  const { addToast, ToastContainer } = useToast()
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(
     null,
   )
   const [simulation, setSimulation] = useState<StoredSimulation | null>(null)
   const [simulationResult, setSimulationResult] =
     useState<EnhancedSimulationResult | null>(null)
-  const [traceResult, setTraceResult] =
-    useState<EnhancedTraceResult | null>(null)
-  const [requestType, setRequestType] = useState<'simulation' | 'trace'>('simulation')
+  const [bundleResult, setBundleResult] =
+    useState<EnhancedBundleSimulationResult | null>(null)
+  const [traceResult, setTraceResult] = useState<EnhancedTraceResult | null>(
+    null,
+  )
+  const [requestType, setRequestType] = useState<
+    'simulation' | 'trace' | 'bundle'
+  >('simulation')
 
   const [loading, setLoading] = useState(true)
   const [executing, setExecuting] = useState(false)
@@ -59,7 +113,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
 
       try {
         // Load simulation parameters
-        const storedSimulation = retrieveById(resolvedParams.id)
+        const storedSimulation = await retrieveById(resolvedParams.id)
 
         if (!storedSimulation) {
           setError('Simulation not found')
@@ -71,20 +125,47 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         setExecuting(true)
 
         const client = createAltitraceClient()
-        
-        // Check if this is a trace request or simulation request
-        const isTraceRequest = !!storedSimulation.metadata.traceHash
-        setRequestType(isTraceRequest ? 'trace' : 'simulation')
-        
-        if (isTraceRequest && storedSimulation.metadata.traceHash) {
-          
+
+        // Check request type: bundle simulation, trace request, or single simulation
+        const isTraceRequest = !!storedSimulation.metadata?.traceHash
+        const isBundleRequest = storedSimulation.request.type === 'bundle'
+
+        if (isBundleRequest) {
+          // Bundle simulation
+          setRequestType('bundle')
+          const bundleReq = storedSimulation.request as any
+
+          const bundleResult = await executeBundleSimulation(
+            client,
+            bundleReq.bundleRequest,
+          )
+
+          const enhancedBundleResult =
+            enhanceBundleSimulationResult(bundleResult)
+
+          setBundleResult(enhancedBundleResult)
+
+          // Save result data to storage for status display in the history
+          const resultData: StoredSimulation['result'] = {
+            status: enhancedBundleResult.bundleStatus as any,
+            gasUsed: enhancedBundleResult.getTotalGasUsed(),
+            callsCount: enhancedBundleResult.transactionResults.length,
+            hasErrors:
+              enhancedBundleResult.isFailed() ||
+              enhancedBundleResult.isPartialSuccess(),
+          }
+          await updateResult(resolvedParams.id, resultData)
+        } else if (isTraceRequest && storedSimulation.metadata?.traceHash) {
+          // Transaction trace
+          setRequestType('trace')
+
           const result = await executeTransactionTrace(
             client,
-            storedSimulation.metadata.traceHash,
+            storedSimulation.metadata!.traceHash!,
           )
-          
+
           setTraceResult(result)
-          
+
           // Save result data to storage for status display in the history
           const resultData: StoredSimulation['result'] = {
             status: result.status as any,
@@ -92,16 +173,16 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             callsCount: result.traceData.callTracer?.rootCall ? 1 : 0,
             hasErrors: !result.success,
           }
-          updateResult(resolvedParams.id, resultData)
+          await updateResult(resolvedParams.id, resultData)
         } else {
-          // Execute simulation with trace data on results page
-          
-          const result = await executeEnhancedSimulation(
-            client,
-            storedSimulation.request,
-          )
+          // Single simulation
+          setRequestType('simulation')
+          const singleReq = storedSimulation.request as any
+
+          const result = await executeEnhancedSimulation(client, singleReq)
+
           setSimulationResult(result)
-          
+
           // Save result data to storage for status display in the history
           const resultData: StoredSimulation['result'] = {
             status: result.status,
@@ -109,7 +190,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             callsCount: result.calls?.length || 0,
             hasErrors: result.isFailed(),
           }
-          updateResult(resolvedParams.id, resultData)
+          await updateResult(resolvedParams.id, resultData)
         }
 
         // Auto-switch to trace tab if we have call hierarchy
@@ -129,9 +210,10 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
     const url = `${window.location.origin}/simulator/${resolvedParams.id}`
     try {
       await navigator.clipboard.writeText(url)
-      // TODO: Add toast notification
-
-    } catch (_e) {}
+      addToast('Link copied to clipboard!')
+    } catch (error) {
+      addToast('Failed to copy link', 'error')
+    }
   }
 
   const handleRerun = () => {
@@ -202,16 +284,17 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
               <div>
                 <h3 className="text-base sm:text-lg font-semibold">
-                  {executing 
-                    ? (requestType === 'trace' ? 'Tracing Transaction' : 'Executing Simulation')
-                    : 'Loading Request'
-                  }
+                  {executing
+                    ? requestType === 'trace'
+                      ? 'Tracing Transaction'
+                      : 'Executing Simulation'
+                    : 'Loading Request'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {executing
-                    ? (requestType === 'trace' 
-                        ? 'Tracing original transaction execution...' 
-                        : 'Running fresh simulation with trace data...')
+                    ? requestType === 'trace'
+                      ? 'Tracing original transaction execution...'
+                      : 'Running fresh simulation with trace data...'
                     : 'Loading request parameters...'}
                 </p>
               </div>
@@ -222,7 +305,11 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
     )
   }
 
-  if (error || !simulation || (!simulationResult && !traceResult)) {
+  if (
+    error ||
+    !simulation ||
+    (!simulationResult && !bundleResult && !traceResult)
+  ) {
     return (
       <div className="p-4 sm:p-6">
         <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
@@ -278,14 +365,22 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 {isEditingTitle && resolvedParams ? (
                   <InlineTitleEditor
                     simulationId={resolvedParams.id}
-                    currentTitle={simulation.metadata?.title || (requestType === 'trace' ? 'Transaction Trace Results' : 'Simulation Results')}
+                    currentTitle={
+                      simulation.metadata?.title ||
+                      (requestType === 'trace'
+                        ? 'Transaction Execution Results'
+                        : 'Simulation Results')
+                    }
                     onTitleUpdated={handleTitleUpdated}
                     onCancel={handleCancelEdit}
                   />
                 ) : (
                   <>
                     <h1 className="text-lg sm:text-xl font-bold truncate min-w-0 flex-1">
-                      {simulation.metadata?.title || (requestType === 'trace' ? 'Transaction Trace Results' : 'Simulation Results')}
+                      {simulation.metadata?.title ||
+                        (requestType === 'trace'
+                          ? 'Transaction Execution Results'
+                          : 'Simulation Results')}
                     </h1>
                     <button
                       onClick={handleEditTitle}
@@ -312,12 +407,30 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 </div>
                 <div
                   className={`px-2 py-1 rounded-full text-xs self-start ${
-                    (simulationResult?.isSuccess() || traceResult?.success)
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                    bundleResult
+                      ? bundleResult.isSuccess()
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                        : bundleResult.isPartialSuccess()
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                      : (simulationResult?.isSuccess() || traceResult?.success)
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
                   }`}
                 >
-                  {(simulationResult?.isSuccess() || traceResult?.success) ? 'Success' : 'Failed'}
+                  {bundleResult
+                    ? bundleResult.isSuccess()
+                      ? 'Bundle Success'
+                      : bundleResult.isPartialSuccess()
+                        ? 'Partial Success'
+                        : 'Bundle Failed'
+                    : traceResult
+                      ? traceResult.success
+                        ? 'Trace Success'
+                        : 'Trace Failed'
+                      : simulationResult?.isSuccess()
+                        ? 'Success'
+                        : 'Failed'}
                 </div>
               </div>
             </div>
@@ -354,35 +467,18 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
           </div>
         </div>
 
-        {/* Results Display */}
-        {simulationResult && (
-          <EnhancedSimulationResults 
-            result={simulationResult} 
-            simulationRequest={simulation?.request ? {
-              ...simulation.request,
-              params: {
-                ...simulation.request.params,
-                calls: simulation.request.params.calls?.map(call => ({
-                  to: call.to || '',
-                  from: call.from || undefined,
-                  data: call.data || undefined,
-                  value: call.value || undefined,
-                  gas: call.gas || undefined
-                })).filter(call => call.to) || []
-              }
-            } : undefined}
-          />
-        )}
-        
-        {traceResult && (() => {
-          return (
-            <EnhancedSimulationResults 
-              result={{
+        {/* Results Display - Conditional based on simulation type */}
+        {bundleResult ? (
+          <BundleSimulationResults result={bundleResult} />
+        ) : traceResult ? (
+          <EnhancedSimulationResults
+            result={
+              {
                 ...traceResult.traceData,
                 // Map trace result to simulation result interface for display compatibility
                 status: traceResult.status,
                 gasUsed: traceResult.gasUsed.toString(),
-                calls: [],
+                calls: createCallsFromTraceData(traceResult.traceData),
                 errors: traceResult.errors,
                 traceData: traceResult.traceData,
                 hasCallHierarchy: traceResult.hasCallHierarchy,
@@ -392,19 +488,53 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 isFailed: () => !traceResult.success,
                 getTotalGasUsed: () => traceResult.gasUsed,
                 getErrors: () => traceResult.errors,
-                getAllLogs: traceResult.traceData.getAllLogs?.bind(traceResult.traceData) || (() => []),
-                getLogCount: () => traceResult.traceData.getAllLogs?.()?.length || 0,
+                getAllLogs:
+                  traceResult.traceData.getAllLogs?.bind(
+                    traceResult.traceData,
+                  ) || (() => []),
+                getLogCount: () =>
+                  traceResult.traceData.getAllLogs?.()?.length || 0,
                 getAssetChangesSummary: () => [],
                 // Include receipt data from trace result
                 receipt: traceResult.receipt,
-                blockNumber: traceResult.receipt?.blockNumber ? `0x${traceResult.receipt.blockNumber.toString(16)}` : undefined,
-              } as any}
-              simulationRequest={undefined}
-              isTraceOnly={true}
-            />
-          )
-        })()}
+                blockNumber: traceResult.receipt?.blockNumber
+                  ? `0x${traceResult.receipt.blockNumber.toString(16)}`
+                  : undefined,
+                // Include auto-fetched ABI information for enhanced event decoding
+                combinedABI: traceResult.combinedABI,
+                fetchedContracts: traceResult.fetchedContracts,
+              } as any
+            }
+            simulationRequest={undefined}
+            isTraceOnly={true}
+          />
+        ) : simulationResult ? (
+          <EnhancedSimulationResults
+            result={simulationResult}
+            simulationRequest={
+              simulation?.request && requestType === 'simulation'
+                ? {
+                    ...(simulation.request as any),
+                    params: {
+                      ...(simulation.request as any).params,
+                      calls:
+                        (simulation.request as any).params?.calls
+                          ?.map((call: any) => ({
+                            to: call.to || '',
+                            from: call.from || undefined,
+                            data: call.data || undefined,
+                            value: call.value || undefined,
+                            gas: call.gas || undefined,
+                          }))
+                          .filter((call: any) => call.to) || [],
+                    },
+                  }
+                : undefined
+            }
+          />
+        ) : null}
       </div>
+      <ToastContainer />
     </div>
   )
 }

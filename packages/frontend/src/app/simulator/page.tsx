@@ -17,7 +17,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { InlineTitleEditor } from '@/components/simulation/InlineTitleEditor'
-import { Button, Card, Spinner } from '@/components/ui'
+import { Button, Card, Spinner, useToast } from '@/components/ui'
 import {
   deleteSimulation,
   getStats,
@@ -27,6 +27,7 @@ import {
 
 export default function SimulatorDashboard() {
   const router = useRouter()
+  const { addToast, ToastContainer } = useToast()
   const [simulations, setSimulations] = useState<StoredSimulation[]>([])
   const [stats, setStats] = useState({ total: 0, today: 0 })
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
@@ -56,9 +57,10 @@ export default function SimulatorDashboard() {
     const url = `${window.location.origin}/simulator/${id}`
     try {
       await navigator.clipboard.writeText(url)
-      // TODO: Add toast notification
-
-    } catch (_e) {}
+      addToast('Link copied to clipboard!')
+    } catch (error) {
+      addToast('Failed to copy link', 'error')
+    }
   }
 
   const handleEditSimulation = (id: string) => {
@@ -98,27 +100,72 @@ export default function SimulatorDashboard() {
   }
 
   const getSimulationType = (request: StoredSimulation['request']) => {
-    const callsCount = request.params.calls?.length || 0
-    const hasValue = request.params.calls?.some(
-      (call) => call.value && call.value !== '0x0',
-    )
+    // Handle bundle simulations
+    if (request.type === 'bundle') {
+      const transactionCount = request.bundleRequest.transactions.length
+      return {
+        label: `Bundle (${transactionCount})`,
+        color:
+          'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300',
+      }
+    }
 
-    if (callsCount > 1)
+    // Handle single simulations (new format)
+    if (request.type === 'single') {
+      const callsCount = request.params.calls?.length || 0
+      const hasValue = request.params.calls?.some(
+        (call) => call.value && call.value !== '0x0',
+      )
+
+      if (callsCount > 1)
+        return {
+          label: 'Batch',
+          color:
+            'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+        }
+      if (hasValue)
+        return {
+          label: 'Transfer',
+          color:
+            'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+        }
       return {
-        label: 'Batch',
+        label: 'Call',
         color:
-          'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
       }
-    if (hasValue)
+    }
+
+    // Handle legacy format (backward compatibility)
+    const legacyRequest = request as any
+    if (legacyRequest.params?.calls) {
+      const callsCount = legacyRequest.params.calls?.length || 0
+      const hasValue = legacyRequest.params.calls?.some(
+        (call: any) => call.value && call.value !== '0x0',
+      )
+
+      if (callsCount > 1)
+        return {
+          label: 'Batch',
+          color:
+            'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+        }
+      if (hasValue)
+        return {
+          label: 'Transfer',
+          color:
+            'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+        }
       return {
-        label: 'Transfer',
+        label: 'Call',
         color:
-          'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
       }
+    }
+
     return {
-      label: 'Call',
-      color:
-        'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+      label: 'Unknown',
+      color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300',
     }
   }
 
@@ -309,28 +356,39 @@ export default function SimulatorDashboard() {
                           {formatTimestamp(simulation.timestamp)}
                         </div>
                         <div>
-                          Calls: {simulation.request.params.calls?.length || 0}
+                          {simulation.request.type === 'bundle'
+                            ? `Transactions: ${simulation.request.bundleRequest.transactions.length}`
+                            : simulation.request.type === 'single'
+                              ? `Calls: ${simulation.request.params.calls?.length || 0}`
+                              : `Calls: ${(simulation.request as any).params?.calls?.length || 0}`}
                         </div>
                         {simulation.result?.gasUsed && (
                           <div className="hidden sm:block">
                             Gas: {simulation.result.gasUsed.toLocaleString()}
                           </div>
                         )}
-                        {simulation.request.params.blockNumber && (
-                          <div className="hidden md:block">
-                            Block:{' '}
-                            {typeof simulation.request.params.blockNumber ===
-                              'string' &&
-                            simulation.request.params.blockNumber.startsWith(
-                              '0x',
-                            )
-                              ? Number.parseInt(
-                                  simulation.request.params.blockNumber,
-                                  16,
-                                ).toLocaleString()
-                              : simulation.request.params.blockNumber}
-                          </div>
-                        )}
+                        {(() => {
+                          const blockNumber =
+                            simulation.request.type === 'bundle'
+                              ? simulation.request.bundleRequest.blockNumber
+                              : simulation.request.type === 'single'
+                                ? simulation.request.params.blockNumber
+                                : (simulation.request as any).params
+                                    ?.blockNumber
+
+                          return blockNumber ? (
+                            <div className="hidden md:block">
+                              Block:{' '}
+                              {typeof blockNumber === 'string' &&
+                              blockNumber.startsWith('0x')
+                                ? Number.parseInt(
+                                    blockNumber,
+                                    16,
+                                  ).toLocaleString()
+                                : blockNumber}
+                            </div>
+                          ) : null
+                        })()}
                       </div>
                     </div>
 
@@ -396,6 +454,7 @@ export default function SimulatorDashboard() {
       </div>
 
       {/* Inline editing is now handled directly in the simulation cards */}
+      <ToastContainer />
     </div>
   )
 }

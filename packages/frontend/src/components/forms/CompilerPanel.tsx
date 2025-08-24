@@ -22,7 +22,7 @@ interface CompilerPanelProps {
   }) => void
   compilerVersion?: string
   optimization?: { enabled: boolean; runs: number }
-  filePath?: string 
+  filePath?: string
   additionalSources?: Array<{
     filePath: string
     sourceCode: string
