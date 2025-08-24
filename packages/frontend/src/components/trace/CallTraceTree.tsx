@@ -10,20 +10,28 @@ import {
   TrendingUpIcon,
   XCircleIcon,
 } from 'lucide-react'
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@/components/ui'
 import { parseBlockchainError } from '@/utils/error-parser'
 import { CallFrameNode } from './CallFrameNode'
+import { EnhancedCallTrace } from './EnhancedCallTrace'
 
 interface CallTraceTreeProps {
   traceData: ExtendedTracerResponse
   className?: string
+  /** Use enhanced Tenderly-style trace by default */
+  useEnhanced?: boolean
 }
 
 /**
@@ -32,7 +40,9 @@ interface CallTraceTreeProps {
 export function CallTraceTree({
   traceData,
   className = '',
+  useEnhanced = true,
 }: CallTraceTreeProps) {
+  const [viewMode, setViewMode] = useState<'enhanced' | 'legacy'>('enhanced')
   const rootCall = traceData.callTracer?.rootCall
 
   if (!rootCall) {
@@ -156,30 +166,73 @@ export function CallTraceTree({
       </Card>
 
       {/* Call tree visualization */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Call Stack</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Mobile: Horizontal scrolling */}
-          <div className="block sm:hidden">
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              <CallFrameNode
-                frame={rootCall}
-                depth={0}
-                index={0}
-                isRoot={true}
-                isHorizontal={true}
-              />
-            </div>
+      {useEnhanced ? (
+        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'enhanced' | 'legacy')}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium">Call Stack</h3>
+            <TabsList>
+              <TabsTrigger value="enhanced">Enhanced</TabsTrigger>
+              <TabsTrigger value="legacy">Legacy</TabsTrigger>
+            </TabsList>
           </div>
+          
+          <TabsContent value="enhanced" className="space-y-0">
+            <EnhancedCallTrace traceData={traceData} />
+          </TabsContent>
+          
+          <TabsContent value="legacy" className="space-y-0">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Call Stack (Legacy)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Mobile: Horizontal scrolling */}
+                <div className="block sm:hidden">
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    <CallFrameNode
+                      frame={rootCall}
+                      depth={0}
+                      index={0}
+                      isRoot={true}
+                      isHorizontal={true}
+                    />
+                  </div>
+                </div>
 
-          {/* Desktop: Vertical layout */}
-          <div className="hidden sm:block space-y-2">
-            <CallFrameNode frame={rootCall} depth={0} index={0} isRoot={true} />
-          </div>
-        </CardContent>
-      </Card>
+                {/* Desktop: Vertical layout */}
+                <div className="hidden sm:block space-y-2">
+                  <CallFrameNode frame={rootCall} depth={0} index={0} isRoot={true} />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Call Stack</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Mobile: Horizontal scrolling */}
+            <div className="block sm:hidden">
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <CallFrameNode
+                  frame={rootCall}
+                  depth={0}
+                  index={0}
+                  isRoot={true}
+                  isHorizontal={true}
+                />
+              </div>
+            </div>
+
+            {/* Desktop: Vertical layout */}
+            <div className="hidden sm:block space-y-2">
+              <CallFrameNode frame={rootCall} depth={0} index={0} isRoot={true} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Error summary (if any) */}
       {processedErrors.length > 0 && (
