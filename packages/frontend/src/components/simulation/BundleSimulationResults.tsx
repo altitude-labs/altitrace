@@ -244,6 +244,37 @@ export function BundleSimulationResults({
     })
   }
 
+  // Create simulation request for individual transaction to show in Request tab
+  const createSimulationRequestForTransaction = (
+    txResult: BundleTransactionResult,
+    txIndex: number,
+  ) => {
+    if (!txResult.originalTransaction) return undefined
+
+    return {
+      params: {
+        calls: [
+          {
+            to: txResult.originalTransaction.to || '',
+            from: txResult.originalTransaction.from || '',
+            data: txResult.originalTransaction.data || '0x',
+            value: txResult.originalTransaction.value || '0x0',
+            gas: txResult.originalTransaction.gas || undefined,
+          },
+        ],
+        account: txResult.originalTransaction.from || '',
+        blockNumber: result.blockNumber,
+        blockTag: result.blockNumber,
+      },
+      options: {
+        // Include bundle context information
+        bundleIndex: txIndex,
+        bundleId: result.bundleId,
+        bundleContext: true,
+      },
+    }
+  }
+
   const getBundleStatusIcon = () => {
     if (result.isSuccess()) {
       return <CheckCircleIcon className="h-5 w-5 text-green-600" />
@@ -420,6 +451,10 @@ export function BundleSimulationResults({
                           index,
                           result.bundleId,
                           result.blockNumber,
+                        )}
+                        simulationRequest={createSimulationRequestForTransaction(
+                          txResult,
+                          index,
                         )}
                       />
                     </div>

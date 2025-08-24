@@ -1105,6 +1105,7 @@ function RequestParametersView({
   const stateOverrides = options?.stateOverrides || params.stateOverrides || []
   const hasStateOverrides = stateOverrides.length > 0
   const transactionCalls = params.calls || []
+  const isBundleContext = options?.bundleContext === true
 
   // Format transaction value for display
   const formatTransactionValue = (value?: string) => {
@@ -1117,7 +1118,7 @@ function RequestParametersView({
         eth: valueInEth.toFixed(6),
         formatted:
           valueInEth > 0.001
-            ? `${valueInEth.toFixed(4)} ETH`
+            ? `${valueInEth.toFixed(4)} HYPE`
             : `${Number(valueInWei)} wei`,
       }
     } catch {
@@ -1139,10 +1140,60 @@ function RequestParametersView({
 
   return (
     <div className="space-y-6">
+      {/* Bundle Context Information */}
+      {isBundleContext && (
+        <div>
+          <h3 className="font-semibold text-lg mb-4">Bundle Context</h3>
+          <Card className="border-l-4 border-l-orange-500">
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                {options?.bundleId && (
+                  <div>
+                    <label className="font-medium text-muted-foreground">
+                      Bundle ID
+                    </label>
+                    <p className="font-mono text-xs break-all mt-1">
+                      {options.bundleId}
+                    </p>
+                  </div>
+                )}
+                {options?.bundleIndex !== undefined && (
+                  <div>
+                    <label className="font-medium text-muted-foreground">
+                      Transaction Position
+                    </label>
+                    <p className="mt-1">
+                      Transaction #{options.bundleIndex + 1} in bundle
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <label className="font-medium text-muted-foreground">
+                    Execution Context
+                  </label>
+                  <p className="mt-1">
+                    Part of sequential bundle execution with state dependency
+                  </p>
+                </div>
+                <div>
+                  <label className="font-medium text-muted-foreground">
+                    Block Context
+                  </label>
+                  <p className="font-mono text-sm mt-1">
+                    {params.blockNumber || params.blockTag || 'latest'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Transaction Calls */}
       <div>
         <h3 className="font-semibold text-lg mb-4">
-          Transaction Calls ({transactionCalls.length})
+          {isBundleContext ? 'Transaction Details' : 'Transaction Calls'} (
+          {transactionCalls.length})
         </h3>
         <div className="space-y-4">
           {transactionCalls.map((call, index) => {
