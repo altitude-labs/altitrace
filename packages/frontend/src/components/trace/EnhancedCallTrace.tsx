@@ -2,8 +2,6 @@
 
 import type { CallFrame, ExtendedTracerResponse } from '@altitrace/sdk/types'
 import {
-  AlertTriangleIcon,
-  CheckCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   CopyIcon,
@@ -11,13 +9,8 @@ import {
   EyeIcon,
   FuelIcon,
   SettingsIcon,
-  XCircleIcon,
 } from 'lucide-react'
 import { useState } from 'react'
-import {
-  CallTypeIcon,
-  CallTypeIconOnly,
-} from '@/components/shared/CallTypeIcon'
 import {
   Badge,
   Button,
@@ -44,7 +37,8 @@ export function EnhancedCallTrace({
   traceData,
   className = '',
 }: EnhancedCallTraceProps) {
-  const [traceMode, setTraceMode] = useState<TraceMode>('gas')
+  const [showGas, setShowGas] = useState(true)
+  const [showFullTrace, setShowFullTrace] = useState(false)
   const rootCall = traceData.callTracer?.rootCall
 
   if (!rootCall) {
@@ -66,20 +60,20 @@ export function EnhancedCallTrace({
             Call Trace
           </CardTitle>
           
-          <div className="flex border rounded-lg p-1 gap-1">
+          <div className="flex gap-2">
             <Button
-              variant={traceMode === 'gas' ? 'primary' : 'ghost'}
+              variant={showGas ? 'primary' : 'ghost'}
               size="sm"
-              onClick={() => setTraceMode('gas')}
+              onClick={() => setShowGas(!showGas)}
               className="h-8"
             >
               <FuelIcon className="h-4 w-4 mr-1" />
               Gas
             </Button>
             <Button
-              variant={traceMode === 'full' ? 'primary' : 'ghost'}
+              variant={showFullTrace ? 'primary' : 'ghost'}
               size="sm"
-              onClick={() => setTraceMode('full')}
+              onClick={() => setShowFullTrace(!showFullTrace)}
               className="h-8"
             >
               <EyeIcon className="h-4 w-4 mr-1" />
@@ -90,13 +84,14 @@ export function EnhancedCallTrace({
       </CardHeader>
       
       <CardContent className="p-0">
-        <div className="border-t">
-          <EnhancedCallNode
+        <div className="border-t font-mono text-sm">
+          <TenderlyCallNode
             frame={rootCall}
             depth={0}
             index={0}
             isRoot={true}
-            mode={traceMode}
+            showGas={showGas}
+            showFullTrace={showFullTrace}
           />
         </div>
       </CardContent>
@@ -104,39 +99,40 @@ export function EnhancedCallTrace({
   )
 }
 
-interface EnhancedCallNodeProps {
+interface TenderlyCallNodeProps {
   frame: CallFrame
   depth: number
   index: number
   isRoot?: boolean
-  mode: TraceMode
+  showGas: boolean
+  showFullTrace: boolean
 }
 
-function EnhancedCallNode({
+function TenderlyCallNode({
   frame,
   depth,
   index,
   isRoot = false,
-  mode,
-}: EnhancedCallNodeProps) {
+  showGas,
+  showFullTrace,
+}: TenderlyCallNodeProps) {
   const { getCopyState, copyToClipboard } = useMultipleCopyToClipboard()
-  const [isExpanded, setIsExpanded] = useState(depth < 2) // Auto-expand first 2 levels
+  const [isExpanded, setIsExpanded] = useState(depth < 3) // Auto-expand first 3 levels
   
   const hasSubcalls = frame.calls && frame.calls.length > 0
   const gasUsed = Number.parseInt(frame.gasUsed, 16)
-  const gasProvided = Number.parseInt(frame.gas, 16)
   const isSuccess = !frame.reverted
   
   // Calculate indentation
-  const indentLevel = depth * 24 // 24px per level
+  const indentLevel = depth * 16 // 16px per level
   
-  // Format addresses
-  const formatAddress = (address: string, short = true) => {
+  // Format addresses - short format for display
+  const formatAddress = (address: string) => {
     if (!address) return 'N/A'
-    return short ? `${address.slice(0, 6)}...${address.slice(-4)}` : address
+    return `${address.slice(0, 8)}...${address.slice(-6)}`
   }
   
-  // Get function selector
+  // Get function selector and format it
   const getFunctionSelector = () => {
     if (!frame.input || frame.input === '0x' || frame.input.length < 10) {
       return null
@@ -146,35 +142,57 @@ function EnhancedCallNode({
   
   const functionSelector = getFunctionSelector()
   
-  // Determine call type color
-  const getCallTypeColor = (callType: string) => {
+  // Get call type color similar to Tenderly
+  const getCallTypeColor = (callType: string, success: boolean) => {
+    if (!success) return 'bg-red-500/10 text-red-700 dark:text-red-400'
+    
     const colors = {
-      CALL: 'text-blue-600',
-      DELEGATECALL: 'text-purple-600', 
-      STATICCALL: 'text-green-600',
-      CREATE: 'text-orange-600',
-      CREATE2: 'text-orange-600',
-      CALLCODE: 'text-gray-600',
+      CALL: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+      DELEGATECALL: 'bg-purple-500/10 text-purple-700 dark:text-purple-400', 
+      STATICCALL: 'bg-green-500/10 text-green-700 dark:text-green-400',
+      CREATE: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+      CREATE2: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+      CALLCODE: 'bg-gray-500/10 text-gray-700 dark:text-gray-400',
     }
-    return colors[callType as keyof typeof colors] || 'text-gray-600'
+    return colors[callType as keyof typeof colors] || 'bg-gray-500/10 text-gray-700 dark:text-gray-400'
   }
+  
 
   return (
     <div>
       {/* Main call row */}
       <div 
         className={`
-          flex items-center py-2 px-4 hover:bg-muted/50 transition-colors border-b border-border/50
-          ${!isSuccess ? 'bg-red-50 dark:bg-red-950/20' : ''}
+          group flex items-center py-1.5 px-3 hover:bg-muted/30 transition-colors
+          ${!isSuccess ? 'bg-red-50/50 dark:bg-red-950/10' : ''}
         `}
-        style={{ paddingLeft: `${16 + indentLevel}px` }}
+        style={{ paddingLeft: `${12 + indentLevel}px` }}
       >
-        {/* Expand/collapse button */}
-        <div className="w-6 flex justify-center">
+        {/* Fixed-width call type column (like Tenderly) */}
+        <div className="w-24 flex-shrink-0">
+          <Badge 
+            className={`text-xs font-mono px-1 py-0.5 w-full justify-center ${getCallTypeColor(frame.callType, isSuccess)}`}
+            variant="outline"
+          >
+            {frame.callType}
+          </Badge>
+        </div>
+        
+        {/* Fixed-width gas cost column (if enabled) */}
+        {showGas && (
+          <div className="w-20 flex-shrink-0 text-right pr-2">
+            <span className="text-muted-foreground text-xs font-mono">
+              {gasUsed.toLocaleString()}
+            </span>
+          </div>
+        )}
+        
+        {/* Expand/collapse button (positioned after gas) */}
+        <div className="w-4 flex justify-center mr-2 flex-shrink-0">
           {hasSubcalls ? (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1 rounded hover:bg-muted transition-colors"
+              className="p-0.5 rounded hover:bg-muted transition-colors"
             >
               {isExpanded ? (
                 <ChevronDownIcon className="h-3 w-3" />
@@ -187,171 +205,118 @@ function EnhancedCallNode({
           )}
         </div>
         
-        {/* Call type icon and method */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <CallTypeIconOnly callType={frame.callType} size="sm" />
+        {/* Call information */}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* From address */}
+          <span className="text-muted-foreground text-sm">
+            {formatAddress(frame.from)}
+          </span>
           
-          <Badge 
-            variant="outline" 
-            className={`text-xs font-medium ${getCallTypeColor(frame.callType)}`}
-          >
-            {frame.callType}
-          </Badge>
-          
-          {/* Function selector or method name */}
-          {functionSelector && (
-            <Badge variant="secondary" className="text-xs font-mono">
-              {functionSelector}
-            </Badge>
-          )}
-        </div>
-        
-        {/* Address information */}
-        <div className="flex items-center gap-2 text-sm min-w-0">
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground">from</span>
-            <button
-              onClick={() => copyToClipboard(`from-${depth}-${index}`, frame.from)}
-              className="font-mono text-xs bg-muted hover:bg-muted/80 px-2 py-1 rounded transition-colors"
-              title={frame.from}
-            >
-              {formatAddress(frame.from)}
-            </button>
-            <a
-              href={`https://hyperevmscan.io/address/${frame.from}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1 hover:bg-muted rounded transition-colors"
-            >
-              <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
-            </a>
-          </div>
-          
+          {/* Arrow */}
           <span className="text-muted-foreground">→</span>
           
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground">to</span>
-            {frame.to ? (
-              <>
-                <button
-                  onClick={() => frame.to && copyToClipboard(`to-${depth}-${index}`, frame.to)}
-                  className="font-mono text-xs bg-muted hover:bg-muted/80 px-2 py-1 rounded transition-colors"
-                  title={frame.to}
-                >
-                  {formatAddress(frame.to)}
-                </button>
-                <a
-                  href={`https://hyperevmscan.io/address/${frame.to}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1 hover:bg-muted rounded transition-colors"
-                >
-                  <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
-                </a>
-              </>
-            ) : (
-              <Badge variant="outline" className="text-xs">
-                CREATE
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        {/* Gas information */}
-        <div className="flex items-center gap-3 text-sm">
-          <div className="flex items-center gap-1">
-            <FuelIcon className="h-3 w-3 text-orange-500" />
-            <span className="font-mono text-xs">
-              {gasUsed.toLocaleString()}
+          {/* To address or CREATE */}
+          {frame.to ? (
+            <span className="text-muted-foreground text-sm">
+              {formatAddress(frame.to)}
             </span>
-          </div>
+          ) : (
+            <span className="text-orange-600 dark:text-orange-400 font-medium text-sm">
+              CREATE
+            </span>
+          )}
           
-          {mode === 'full' && (
-            <div className="text-xs text-muted-foreground">
-              / {gasProvided.toLocaleString()}
-            </div>
+          {/* Function selector */}
+          {frame.to && functionSelector && (
+            <>
+              <span className="text-muted-foreground">.</span>
+              <span className="text-blue-600 dark:text-blue-400 font-medium text-sm">
+                {functionSelector}
+              </span>
+            </>
+          )}
+          
+          {/* Data (if full trace mode and has input beyond selector) */}
+          {showFullTrace && frame.input && frame.input.length > 10 && (
+            <span className="text-xs text-muted-foreground ml-1">
+              ({(() => {
+                const inputData = frame.input.slice(10)
+                return inputData.length > 20 ? `${inputData.slice(0, 20)}...` : inputData
+              })()})
+            </span>
           )}
         </div>
         
-        {/* Status indicator */}
-        <div className="w-6 flex justify-center">
-          {isSuccess ? (
-            <CheckCircleIcon className="h-4 w-4 text-green-500" />
-          ) : (
-            <XCircleIcon className="h-4 w-4 text-red-500" />
+        {/* Action buttons */}
+        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100">
+          {/* Copy from address */}
+          <button
+            onClick={() => copyToClipboard(`from-${depth}-${index}`, frame.from)}
+            className="p-1 hover:bg-muted rounded transition-colors"
+            title="Copy from address"
+          >
+            <CopyIcon className="h-3 w-3 text-muted-foreground" />
+          </button>
+          
+          {/* Copy to address */}
+          {frame.to && (
+            <button
+              onClick={() => copyToClipboard(`to-${depth}-${index}`, frame.to!)}
+              className="p-1 hover:bg-muted rounded transition-colors"
+              title="Copy to address"
+            >
+              <CopyIcon className="h-3 w-3 text-muted-foreground" />
+            </button>
           )}
+          
+          {/* External link */}
+          <a
+            href={`https://hyperevmscan.io/address/${frame.to || frame.from}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 hover:bg-muted rounded transition-colors"
+            title="Open in explorer"
+          >
+            <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
+          </a>
         </div>
       </div>
       
       {/* Full trace mode additional details */}
-      {mode === 'full' && (
+      {showFullTrace && (frame.value !== '0x0' || (frame.output && frame.output !== '0x') || (!isSuccess && frame.error)) && (
         <div 
-          className="bg-muted/20 border-b border-border/50"
-          style={{ paddingLeft: `${40 + indentLevel}px` }}
+          className="bg-muted/10 border-l-2 border-muted/50 text-xs"
+          style={{ 
+            paddingLeft: `${12 + indentLevel + 96 + (showGas ? 80 : 0) + 16 + 8}px` // Align with call details (w-24=96px, w-20=80px)
+          }}
         >
-          <div className="py-2 px-4 space-y-2">
+          <div className="py-1 px-3 space-y-1">
             {/* Value transfer */}
             {frame.value && frame.value !== '0x0' && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground">
                 <span className="font-medium">Value:</span>{' '}
                 <span className="font-mono">{BigInt(frame.value).toLocaleString()} wei</span>
               </div>
             )}
             
-            {/* Gas details */}
-            <div className="text-xs text-muted-foreground">
-              <span className="font-medium">Gas:</span>{' '}
-              <span className="font-mono">
-                Used: {gasUsed.toLocaleString()}, 
-                Remaining: {(gasProvided - gasUsed).toLocaleString()}
-              </span>
-            </div>
-            
-            {/* Input/Output data */}
-            {frame.input && frame.input !== '0x' && (
-              <div className="text-xs">
-                <span className="font-medium text-muted-foreground">Input:</span>
-                <div className="mt-1 bg-background border rounded p-2 font-mono text-xs break-all">
-                  {frame.input}
-                </div>
-              </div>
-            )}
-            
+            {/* Output data */}
             {frame.output && frame.output !== '0x' && (
-              <div className="text-xs">
-                <span className="font-medium text-muted-foreground">Output:</span>
-                <div className="mt-1 bg-background border rounded p-2 font-mono text-xs break-all">
-                  {frame.output}
-                </div>
+              <div className="text-muted-foreground">
+                <span className="font-medium">Output:</span>{' '}
+                <span className="font-mono break-all">
+                  {frame.output.length > 40 ? `${frame.output.slice(0, 40)}...` : frame.output}
+                </span>
               </div>
             )}
             
             {/* Error information */}
             {!isSuccess && frame.error && (
-              <div className="flex gap-2 p-2 rounded bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
-                <AlertTriangleIcon className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <div className="space-y-1">
-                  <div className="font-medium text-sm text-red-800 dark:text-red-200">
-                    {(() => {
-                      const parsedError = parseBlockchainError(frame.error)
-                      const isContractError = parsedError.type === 'revert' && 
-                        parsedError.details && 
-                        parsedError.details !== 'The transaction was reverted by the contract'
-                      return isContractError ? 'Contract Error' : parsedError.title
-                    })()}
-                  </div>
-                  {(() => {
-                    const parsedError = parseBlockchainError(frame.error)
-                    const isContractError = parsedError.type === 'revert' && 
-                      parsedError.details && 
-                      parsedError.details !== 'The transaction was reverted by the contract'
-                    return parsedError.details ? (
-                      <div className={`text-xs ${isContractError ? 'font-mono text-red-700 dark:text-red-300' : 'text-muted-foreground'}`}>
-                        {parsedError.details}
-                      </div>
-                    ) : null
-                  })()}
-                </div>
+              <div className="text-red-600 dark:text-red-400">
+                <span className="font-medium">Error:</span>{' '}
+                {(() => {
+                  const parsedError = parseBlockchainError(frame.error)
+                  return parsedError.details || parsedError.title || frame.error
+                })()}
               </div>
             )}
           </div>
@@ -362,12 +327,13 @@ function EnhancedCallNode({
       {hasSubcalls && isExpanded && frame.calls && (
         <>
           {frame.calls.map((subcall, subIndex) => (
-            <EnhancedCallNode
+            <TenderlyCallNode
               key={`${depth}-${subIndex}`}
               frame={subcall}
               depth={depth + 1}
               index={subIndex}
-              mode={mode}
+              showGas={showGas}
+              showFullTrace={showFullTrace}
             />
           ))}
         </>

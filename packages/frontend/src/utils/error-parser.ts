@@ -76,7 +76,7 @@ export function parseBlockchainError(error: string | { reason?: string; message?
     return {
       type: 'revert',
       title: 'Transaction reverted',
-      details: null // No specific details, might be paired with actual error data
+      details: undefined // No specific details, might be paired with actual error data
     }
   }
   
