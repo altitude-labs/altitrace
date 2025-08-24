@@ -10,7 +10,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await params
-  const simulation = retrieveById(resolvedParams.id)
+  const simulation = await retrieveById(resolvedParams.id)
 
   if (!simulation) {
     return {

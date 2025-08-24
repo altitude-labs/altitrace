@@ -54,7 +54,9 @@ export function InlineTitleEditor({
 
     setIsLoading(true)
     try {
-      const success = updateMetadata(simulationId, { title: title.trim() })
+      const success = await updateMetadata(simulationId, {
+        title: title.trim(),
+      })
       if (success) {
         onTitleUpdated(title.trim())
       }

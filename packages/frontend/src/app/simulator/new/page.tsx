@@ -95,143 +95,148 @@ function NewSimulationPageContent() {
 
   // Load pre-fill data from URL params (re-run functionality)
   useEffect(() => {
-    const rerunId = searchParams.get('rerun')
-    if (rerunId && !isPreFilled) {
-      const storedSimulation = retrieveById(rerunId)
-      if (storedSimulation) {
-        // Pre-fill form with stored simulation data
-        console.log('Pre-filling form with:', storedSimulation)
+    const loadRerunData = async () => {
+      const rerunId = searchParams.get('rerun')
+      if (rerunId && !isPreFilled) {
+        const storedSimulation = await retrieveById(rerunId)
 
-        // Handle different stored request formats
-        if (
-          storedSimulation.request &&
-          'type' in storedSimulation.request &&
-          storedSimulation.request.type === 'single'
-        ) {
-          // Extract data from single simulation request with hex/decimal conversion
-          const singleRequest =
-            storedSimulation.request as SingleSimulationRequest
-          const call = singleRequest.params.calls[0]
-          if (call) {
-            // Set basic transaction data - convert hex values to decimal for display
-            setFormData((prev) => ({
-              ...prev,
-              to: call.to || '',
-              from: call.from || '',
-              data: call.data || '',
-              value:
-                call.value && isHexFormat(call.value)
-                  ? hexToDecimal(call.value)
-                  : call.value || '0',
-              gas:
-                call.gas && isHexFormat(call.gas)
-                  ? hexToDecimal(call.gas)
-                  : call.gas || '',
-            }))
+        if (storedSimulation) {
+          // Pre-fill form with stored simulation data
 
-            // Set simulation options - convert hex block number to decimal
-            setFormData((prev) => ({
-              ...prev,
-              validation: singleRequest.params.validation ?? true,
-              blockTag:
-                (singleRequest.params.blockTag as
-                  | 'latest'
-                  | 'earliest'
-                  | 'safe'
-                  | 'finalized') || 'latest',
-              blockNumber:
-                singleRequest.params.blockNumber &&
-                isHexFormat(singleRequest.params.blockNumber)
-                  ? hexToDecimal(singleRequest.params.blockNumber)
-                  : singleRequest.params.blockNumber || '',
-              // Include state overrides with decimal balance conversion
+          // Handle different stored request formats
+          if (
+            storedSimulation.request &&
+            'type' in storedSimulation.request &&
+            storedSimulation.request.type === 'single'
+          ) {
+            // Extract data from single simulation request with hex/decimal conversion
+            const singleRequest =
+              storedSimulation.request as SingleSimulationRequest
+            const call = singleRequest.params.calls[0]
+
+            if (call) {
+              // Set basic transaction data - convert hex values to decimal for display
+              setFormData((prev) => ({
+                ...prev,
+                to: call.to || '',
+                from: call.from || '',
+                data: call.data || '',
+                value:
+                  call.value && isHexFormat(call.value)
+                    ? hexToDecimal(call.value)
+                    : call.value || '0',
+                gas:
+                  call.gas && isHexFormat(call.gas)
+                    ? hexToDecimal(call.gas)
+                    : call.gas || '',
+              }))
+
+              // Set simulation options - convert hex block number to decimal
+              setFormData((prev) => ({
+                ...prev,
+                validation: singleRequest.params.validation ?? true,
+                blockTag:
+                  (singleRequest.params.blockTag as
+                    | 'latest'
+                    | 'earliest'
+                    | 'safe'
+                    | 'finalized') || 'latest',
+                blockNumber:
+                  singleRequest.params.blockNumber &&
+                  isHexFormat(singleRequest.params.blockNumber)
+                    ? hexToDecimal(singleRequest.params.blockNumber)
+                    : singleRequest.params.blockNumber || '',
+                // Include state overrides with decimal balance conversion
+                stateOverrides:
+                  singleRequest.options?.stateOverrides?.map((override) => ({
+                    ...override,
+                    balance:
+                      override.balance && isHexFormat(override.balance)
+                        ? hexToDecimal(override.balance)
+                        : override.balance,
+                  })) || [],
+              }))
+            }
+          } else if (
+            storedSimulation.request &&
+            'type' in storedSimulation.request &&
+            storedSimulation.request.type === 'bundle'
+          ) {
+            // For bundle simulations, switch to bundle mode and pre-fill bundle data
+            setSimulationMode('bundle')
+
+            const bundleRequest =
+              storedSimulation.request as BundleSimulationRequestStorage
+            const bundleData: BundleFormData = {
+              transactions: bundleRequest.bundleRequest.transactions.map(
+                (tx) => ({
+                  ...tx,
+                  // Ensure all required properties are present
+                  id: tx.id || crypto.randomUUID(),
+                  enabled: tx.enabled !== undefined ? tx.enabled : true,
+                  continueOnFailure:
+                    tx.continueOnFailure !== undefined
+                      ? tx.continueOnFailure
+                      : false,
+                  label: tx.label || '',
+                }),
+              ),
+              blockTag: bundleRequest.bundleRequest.blockTag || 'latest',
+              blockNumber: bundleRequest.bundleRequest.blockNumber || '',
+              validation: bundleRequest.bundleRequest.validation ?? true,
+              account: bundleRequest.bundleRequest.account,
               stateOverrides:
-                singleRequest.options?.stateOverrides?.map((override) => ({
+                bundleRequest.bundleRequest.stateOverrides?.map((override) => ({
                   ...override,
                   balance:
                     override.balance && isHexFormat(override.balance)
                       ? hexToDecimal(override.balance)
                       : override.balance,
                 })) || [],
-            }))
-          }
-        } else if (
-          storedSimulation.request &&
-          'type' in storedSimulation.request &&
-          storedSimulation.request.type === 'bundle'
-        ) {
-          // For bundle simulations, switch to bundle mode and pre-fill bundle data
-          setSimulationMode('bundle')
-
-          const bundleRequest =
-            storedSimulation.request as BundleSimulationRequestStorage
-          const bundleData: BundleFormData = {
-            transactions: bundleRequest.bundleRequest.transactions.map(
-              (tx) => ({
-                ...tx,
-                // Ensure all required properties are present
-                id: tx.id || crypto.randomUUID(),
-                enabled: tx.enabled !== undefined ? tx.enabled : true,
-                continueOnFailure:
-                  tx.continueOnFailure !== undefined
-                    ? tx.continueOnFailure
-                    : false,
-                label: tx.label || '',
-              }),
-            ),
-            blockTag: bundleRequest.bundleRequest.blockTag || 'latest',
-            blockNumber: bundleRequest.bundleRequest.blockNumber || '',
-            validation: bundleRequest.bundleRequest.validation ?? true,
-            account: bundleRequest.bundleRequest.account,
-            stateOverrides:
-              bundleRequest.bundleRequest.stateOverrides?.map((override) => ({
-                ...override,
-                balance:
-                  override.balance && isHexFormat(override.balance)
-                    ? hexToDecimal(override.balance)
-                    : override.balance,
-              })) || [],
-          }
-
-          setBundleFormData(bundleData)
-          console.log(
-            '🔗 [Bundle Pre-fill] Loaded bundle with',
-            bundleData.transactions.length,
-            'transactions',
-          )
-        } else {
-          // Handle legacy format (backward compatibility) - pre-bundle implementation
-          const legacyRequest = storedSimulation.request as any
-          if (legacyRequest && legacyRequest.params?.calls) {
-            const call = legacyRequest.params.calls[0]
-            if (call) {
-              setFormData((prev) => ({
-                ...prev,
-                to: call.to || '',
-                from: call.from || '',
-                data: call.data || '',
-                value: call.value || '0x0',
-                gas: call.gas || '',
-                validation: legacyRequest.params.validation ?? true,
-                blockTag: legacyRequest.params.blockTag || 'latest',
-                blockNumber: legacyRequest.params.blockNumber || '',
-              }))
             }
-          } else {
-            // If we can't parse the stored format, show an error but don't crash
-            console.warn(
-              'Unable to parse stored simulation format:',
-              storedSimulation,
-            )
-            setError(
-              'Stored simulation format is incompatible. Please start a new simulation.',
-            )
-          }
-        }
 
-        setIsPreFilled(true)
+            setBundleFormData(bundleData)
+            console.log(
+              '🔗 [Bundle Pre-fill] Loaded bundle with',
+              bundleData.transactions.length,
+              'transactions',
+            )
+          } else {
+            // Handle legacy format (backward compatibility) - pre-bundle implementation
+            const legacyRequest = storedSimulation.request as any
+            if (legacyRequest && legacyRequest.params?.calls) {
+              const call = legacyRequest.params.calls[0]
+              if (call) {
+                setFormData((prev) => ({
+                  ...prev,
+                  to: call.to || '',
+                  from: call.from || '',
+                  data: call.data || '',
+                  value: call.value || '0x0',
+                  gas: call.gas || '',
+                  validation: legacyRequest.params.validation ?? true,
+                  blockTag: legacyRequest.params.blockTag || 'latest',
+                  blockNumber: legacyRequest.params.blockNumber || '',
+                }))
+              }
+            } else {
+              // If we can't parse the stored format, show an error but don't crash
+              console.warn(
+                'Unable to parse stored simulation format:',
+                storedSimulation,
+              )
+              setError(
+                'Stored simulation format is incompatible. Please start a new simulation.',
+              )
+            }
+          }
+
+          setIsPreFilled(true)
+        }
       }
     }
+
+    loadRerunData()
   }, [searchParams, isPreFilled])
 
   const handleAbiImport = (parsedAbi: ParsedAbi, rawAbiJson: string) => {
@@ -297,7 +302,7 @@ function NewSimulationPageContent() {
         bundleRequest: request,
       }
 
-      store(simulationId, bundleRequest, {
+      await store(simulationId, bundleRequest, {
         title: `Bundle Simulation (${request.transactions.length} txs)`,
         tags: ['recent', 'bundle'],
       })
@@ -323,7 +328,7 @@ function NewSimulationPageContent() {
     const traceId = generateSimulationId()
 
     // Store trace parameters for execution on results page
-    store(
+    await store(
       traceId,
       {
         params: {
@@ -421,7 +426,7 @@ function NewSimulationPageContent() {
       // Store simulation parameters for execution on results page
       const simulationId = generateSimulationId()
 
-      store(
+      await store(
         simulationId,
         {
           params: request.params,

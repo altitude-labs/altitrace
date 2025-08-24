@@ -17,7 +17,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { InlineTitleEditor } from '@/components/simulation/InlineTitleEditor'
-import { Button, Card, Spinner } from '@/components/ui'
+import { Button, Card, Spinner, useToast } from '@/components/ui'
 import {
   deleteSimulation,
   getStats,
@@ -27,6 +27,7 @@ import {
 
 export default function SimulatorDashboard() {
   const router = useRouter()
+  const { addToast, ToastContainer } = useToast()
   const [simulations, setSimulations] = useState<StoredSimulation[]>([])
   const [stats, setStats] = useState({ total: 0, today: 0 })
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
@@ -56,8 +57,10 @@ export default function SimulatorDashboard() {
     const url = `${window.location.origin}/simulator/${id}`
     try {
       await navigator.clipboard.writeText(url)
-      // TODO: Add toast notification
-    } catch (_e) {}
+      addToast('Link copied to clipboard!')
+    } catch (error) {
+      addToast('Failed to copy link', 'error')
+    }
   }
 
   const handleEditSimulation = (id: string) => {
@@ -423,6 +426,7 @@ export default function SimulatorDashboard() {
       </div>
 
       {/* Inline editing is now handled directly in the simulation cards */}
+      <ToastContainer />
     </div>
   )
 }

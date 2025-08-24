@@ -72,9 +72,72 @@ const STORAGE_KEY = 'altitrace_simulations'
 const MAX_STORED_SIMULATIONS = 50
 
 /**
+ * Store simulation in Redis (for sharing)
+ */
+async function storeInRedis(
+  id: string,
+  simulation: StoredSimulation,
+): Promise<void> {
+  try {
+    console.log('🔄 [Redis Storage] Storing simulation:', id)
+    const response = await fetch(`/api/storage/${id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(simulation),
+    })
+
+    if (response.ok) {
+      console.log('✅ [Redis Storage] Successfully stored in Redis:', id)
+    } else {
+      console.error(
+        '❌ [Redis Storage] Failed to store:',
+        response.status,
+        response.statusText,
+      )
+    }
+  } catch (error) {
+    console.error('❌ [Redis Storage] Network error:', error)
+  }
+}
+
+/**
+ * Retrieve simulation from Redis (for sharing)
+ */
+async function retrieveFromRedis(id: string): Promise<StoredSimulation | null> {
+  try {
+    console.log('🔍 [Redis Storage] Retrieving simulation:', id)
+    const response = await fetch(`/api/storage/${id}`)
+    if (response.ok) {
+      const data = await response.json()
+      console.log('✅ [Redis Storage] Successfully retrieved from Redis:', id)
+
+      // Deserialize the data (convert timestamp string back to Date)
+      const simulation = data.simulation
+      if (simulation.timestamp && typeof simulation.timestamp === 'string') {
+        simulation.timestamp = new Date(simulation.timestamp)
+      }
+
+      return simulation
+    } else {
+      console.log(
+        '⚠️ [Redis Storage] Simulation not found in Redis:',
+        id,
+        response.status,
+      )
+    }
+    return null
+  } catch (error) {
+    console.error('❌ [Redis Storage] Network error during retrieval:', error)
+    return null
+  }
+}
+
+/**
  * Store a simulation request with UUID
  */
-export function store(
+export async function store(
   id: string,
   request:
     | StoredSimulationRequest
@@ -83,7 +146,7 @@ export function store(
         options?: SimulationRequest['options']
       },
   metadata: StoredSimulation['metadata'] = {},
-): void {
+): Promise<void> {
   try {
     // Normalize request to new format if it's the old format
     const normalizedRequest: StoredSimulationRequest =
@@ -120,6 +183,11 @@ export function store(
     }))
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
+
+    // Also store in Redis for sharing (don't await to avoid blocking UI)
+    storeInRedis(id, storedSimulation).catch((error) => {
+      console.warn('Failed to store in Redis, but continuing:', error)
+    })
   } catch (_error) {}
 }
 
@@ -153,12 +221,43 @@ export function retrieveAll(): StoredSimulation[] {
 
 /**
  * Retrieve a specific simulation request by ID
+ * Tries localStorage first, then Redis for shared simulations
  */
-export function retrieveById(id: string): StoredSimulation | null {
+export async function retrieveById(
+  id: string,
+): Promise<StoredSimulation | null> {
   try {
+    // Try localStorage first (fast)
     const allSimulations = retrieveAll()
-    return allSimulations.find((sim) => sim.id === id) || null
-  } catch (_error) {
+    const localSim = allSimulations.find((sim) => sim.id === id)
+    if (localSim) {
+      return localSim
+    }
+
+    // Fallback to Redis for shared simulations
+    const sharedSim = await retrieveFromRedis(id)
+    if (sharedSim) {
+      // Cache in localStorage for faster future access
+      const existing = retrieveAll()
+      existing.unshift(sharedSim)
+      const trimmed = existing.slice(0, MAX_STORED_SIMULATIONS)
+      const serialized: SerializedStoredSimulation[] = trimmed.map((sim) => ({
+        ...sim,
+        timestamp: sim.timestamp.toISOString(),
+        result: sim.result
+          ? {
+              ...sim.result,
+              gasUsed: sim.result.gasUsed?.toString(),
+            }
+          : undefined,
+      }))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
+      return sharedSim
+    }
+
+    return null
+  } catch (error) {
+    console.error('❌ [Storage] Error in retrieveById:', error)
     return null
   }
 }
@@ -167,11 +266,11 @@ export function retrieveById(id: string): StoredSimulation | null {
  * Get just the request parameters for a simulation (legacy function)
  * Note: This function is deprecated for new code. Use retrieveById instead.
  */
-export function getRequest(id: string): {
+export async function getRequest(id: string): Promise<{
   params: SimulationRequest['params']
   options?: SimulationRequest['options']
-} | null {
-  const simulation = retrieveById(id)
+} | null> {
+  const simulation = await retrieveById(id)
   if (!simulation?.request) return null
 
   // Handle different request types
@@ -225,10 +324,10 @@ export function deleteSimulation(id: string): boolean {
 /**
  * Update simulation result data
  */
-export function updateResult(
+export async function updateResult(
   id: string,
   result: StoredSimulation['result'],
-): boolean {
+): Promise<boolean> {
   try {
     const existing = retrieveAll()
     const index = existing.findIndex((sim) => sim.id === id)
@@ -259,10 +358,10 @@ export function updateResult(
 /**
  * Update simulation metadata
  */
-export function updateMetadata(
+export async function updateMetadata(
   id: string,
   metadata: Partial<StoredSimulation['metadata']>,
-): boolean {
+): Promise<boolean> {
   try {
     const existing = retrieveAll()
     const index = existing.findIndex((sim) => sim.id === id)
@@ -326,7 +425,7 @@ export async function exportSimulation(
     options?: SimulationRequest['options']
   }) => Promise<EnhancedSimulationResult>,
 ): Promise<string | null> {
-  const simulation = retrieveById(id)
+  const simulation = await retrieveById(id)
   if (!simulation) return null
 
   try {

@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { EnhancedSimulationResults } from '@/components/simulation/EnhancedSimulationResults'
 import { InlineTitleEditor } from '@/components/simulation/InlineTitleEditor'
-import { Alert, AlertDescription, Button } from '@/components/ui'
+import { Alert, AlertDescription, Button, useToast } from '@/components/ui'
 import { createAltitraceClient } from '@/utils/client'
 import type { StoredSimulation } from '@/utils/storage'
 import { exportSimulation, retrieveById, updateResult } from '@/utils/storage'
@@ -79,6 +79,7 @@ interface ResultsViewerProps {
 
 export default function ResultsViewer({ params }: ResultsViewerProps) {
   const router = useRouter()
+  const { addToast, ToastContainer } = useToast()
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(
     null,
   )
@@ -112,7 +113,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
 
       try {
         // Load simulation parameters
-        const storedSimulation = retrieveById(resolvedParams.id)
+        const storedSimulation = await retrieveById(resolvedParams.id)
 
         if (!storedSimulation) {
           setError('Simulation not found')
@@ -126,7 +127,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         const client = createAltitraceClient()
 
         // Check request type: bundle simulation, trace request, or single simulation
-        const isTraceRequest = !!storedSimulation.metadata.traceHash
+        const isTraceRequest = !!storedSimulation.metadata?.traceHash
         const isBundleRequest = storedSimulation.request.type === 'bundle'
 
         if (isBundleRequest) {
@@ -173,19 +174,19 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
               enhancedBundleResult.isFailed() ||
               enhancedBundleResult.isPartialSuccess(),
           }
-          updateResult(resolvedParams.id, resultData)
-        } else if (isTraceRequest && storedSimulation.metadata.traceHash) {
+          await updateResult(resolvedParams.id, resultData)
+        } else if (isTraceRequest && storedSimulation.metadata?.traceHash) {
           // Transaction trace
           setRequestType('trace')
           console.log('🔍 [Results Page] Executing transaction trace...')
           console.log(
             '   Transaction hash:',
-            storedSimulation.metadata.traceHash,
+            storedSimulation.metadata?.traceHash,
           )
 
           const result = await executeTransactionTrace(
             client,
-            storedSimulation.metadata.traceHash,
+            storedSimulation.metadata!.traceHash!,
           )
 
           setTraceResult(result)
@@ -197,7 +198,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             callsCount: result.traceData.callTracer?.rootCall ? 1 : 0,
             hasErrors: !result.success,
           }
-          updateResult(resolvedParams.id, resultData)
+          await updateResult(resolvedParams.id, resultData)
         } else {
           // Single simulation
           setRequestType('simulation')
@@ -228,7 +229,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             callsCount: result.calls?.length || 0,
             hasErrors: result.isFailed(),
           }
-          updateResult(resolvedParams.id, resultData)
+          await updateResult(resolvedParams.id, resultData)
         }
 
         // Auto-switch to trace tab if we have call hierarchy
@@ -248,8 +249,10 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
     const url = `${window.location.origin}/simulator/${resolvedParams.id}`
     try {
       await navigator.clipboard.writeText(url)
-      // TODO: Add toast notification
-    } catch (_e) {}
+      addToast('Link copied to clipboard!')
+    } catch (error) {
+      addToast('Failed to copy link', 'error')
+    }
   }
 
   const handleRerun = () => {
@@ -570,6 +573,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
           />
         ) : null}
       </div>
+      <ToastContainer />
     </div>
   )
 }

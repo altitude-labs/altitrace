@@ -22,6 +22,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
     "clsx": "^2.1.1",
+    "ioredis": "^5.7.0",
     "lru-cache": "^11.1.0",
     "lucide-react": "^0.454.0",
     "monaco-editor": "^0.52.2",
