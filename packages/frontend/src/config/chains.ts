@@ -1,4 +1,4 @@
-import { type Chain, defineChain } from 'viem'
+import { type Chain, createPublicClient, defineChain, http } from 'viem'
 
 export const hyperevm = defineChain({
   id: 999,
@@ -21,3 +21,9 @@ export const hyperevm = defineChain({
   },
   testnet: false,
 }) satisfies Chain
+
+
+export const viemClient = createPublicClient({
+  chain: hyperevm,
+  transport: http(),
+})

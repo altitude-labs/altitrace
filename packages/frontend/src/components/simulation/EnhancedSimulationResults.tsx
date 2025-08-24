@@ -5,6 +5,7 @@ import {
   AlertTriangleIcon,
   CheckCircleIcon,
   CoinsIcon,
+  CopyIcon,
   FuelIcon,
   HashIcon,
   KeyIcon,
@@ -56,11 +57,13 @@ interface EnhancedSimulationResultsProps {
     }
     options?: any
   }
+  isTraceOnly?: boolean
 }
 
 export function EnhancedSimulationResults({
   result,
   simulationRequest,
+  isTraceOnly = false,
 }: EnhancedSimulationResultsProps) {
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -86,7 +89,6 @@ export function EnhancedSimulationResults({
 
   const stateOverrides = simulationRequest?.options?.stateOverrides || simulationRequest?.params?.stateOverrides || []
   const hasStateOverrides = stateOverrides.length > 0
-  const hasTransactionValue = simulationRequest?.params?.calls?.some((call) => call.value && call.value !== '0x0')
 
   const tabConfig = [
     {
@@ -130,7 +132,7 @@ export function EnhancedSimulationResults({
       label: 'Asset Changes',
       icon: CoinsIcon,
       count: assetChanges.length,
-      disabled: false, // Always enabled since asset tracking is auto-enabled
+      disabled: isTraceOnly, // Disable for trace-only results since they don't have asset tracking
     },
     {
       id: 'request',
@@ -275,7 +277,15 @@ function SimulationQuickStats({
   result: EnhancedSimulationResult
   simulationRequest?: EnhancedSimulationResultsProps['simulationRequest']
 }) {
-  const blockNumberDecimal = Number.parseInt(result.blockNumber, 16)
+  // For trace results with receipt, use receipt block number, otherwise parse hex
+  const traceResult = (result as any)
+  const receiptData = traceResult.receipt
+  const blockNumberDecimal = receiptData?.blockNumber 
+    ? Number(receiptData.blockNumber) 
+    : result.blockNumber 
+      ? Number.parseInt(result.blockNumber, 16)
+      : 0
+      
   const gasUsedDecimal = Number(result.getTotalGasUsed())
 
   // Smart call count: use trace data if available, fallback to simulation calls
@@ -283,12 +293,13 @@ function SimulationQuickStats({
     ? result.traceData?.getCallCount() || result.calls?.length || 0
     : result.calls?.length || 0
 
-  // Event count from simulation data
-  const eventCount =
-    result.calls?.reduce(
-      (sum: number, call) => sum + (call.logs?.length || 0),
-      0,
-    ) || 0
+  // Event count: prioritize trace data logs, then simulation calls
+  const eventCount = result.hasCallHierarchy && result.traceData
+    ? result.traceData.getAllLogs?.()?.length || 0
+    : result.calls?.reduce(
+        (sum: number, call) => sum + (call.logs?.length || 0),
+        0,
+      ) || 0
 
   // Transaction value from the first call
   const transactionValue = simulationRequest?.params?.calls?.[0]?.value
@@ -304,9 +315,16 @@ function SimulationQuickStats({
   const allStateOverrides = simulationRequest?.options?.stateOverrides || simulationRequest?.params?.stateOverrides || []
   const stateOverridesCount = allStateOverrides.length
 
-  // Grid columns: show 5 columns if we have transaction value or state overrides, otherwise 4
-  const shouldShow5Columns = hasTransactionValue || stateOverridesCount > 0
-  const gridCols = shouldShow5Columns ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-4'
+  // Block gas information from receipt (for trace results)
+  const hasReceiptData = !!receiptData
+  const blockGasUsed = receiptData?.blockGasUsed
+  
+  
+  // Grid columns: show more columns based on what data we have
+  const extraColumns = [hasTransactionValue, stateOverridesCount > 0, hasReceiptData].filter(Boolean).length
+  const totalColumns = Math.min(4 + extraColumns, 6) // Max 6 columns
+  const gridCols = totalColumns <= 4 ? 'grid-cols-2 lg:grid-cols-4' : 
+                   totalColumns === 5 ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-6'
 
   return (
     <div className={`grid ${gridCols} gap-3 sm:gap-4`}>
@@ -429,6 +447,28 @@ function SimulationQuickStats({
           </CardContent>
         </Card>
       )}
+
+      {/* Block Gas Card (for trace results with receipt data) */}
+      {hasReceiptData && blockGasUsed && (
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-start justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">
+                  Block Gas Used
+                </p>
+                <p className="text-sm sm:text-lg font-bold">
+                  {Number(blockGasUsed).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Cumulative in block
+                </p>
+              </div>
+              <FuelIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0 mt-1" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
@@ -436,6 +476,10 @@ function SimulationQuickStats({
 function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
   const errors = result.getErrors()
   const assetChanges = result.getAssetChangesSummary()
+  
+  // Get transaction hash from receipt data (for trace results)
+  const receiptData = (result as any).receipt
+  const transactionHash = receiptData?.transactionHash
 
   return (
     <div className="space-y-6">
@@ -449,6 +493,29 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
             <CardTitle className="text-base">Block Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {transactionHash && (
+              <div>
+                <label
+                  htmlFor="transaction-hash"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  Transaction Hash
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <code className="flex-1 text-xs font-mono bg-muted px-2 py-1 rounded break-all">
+                    {transactionHash}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigator.clipboard.writeText(transactionHash)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <CopyIcon className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
             <div>
               <label
                 htmlFor="block-number"
@@ -961,28 +1028,27 @@ function RequestParametersView({
                   <CardTitle className="text-base">Call #{index + 1}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">To Address</label>
-                      <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
-                        <span className="sm:hidden">{`${call.to.slice(0, 10)}...${call.to.slice(-8)}`}</span>
-                        <span className="hidden sm:inline">{call.to}</span>
-                      </p>
-                    </div>
-                    
                     {call.from && (
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">From Address</label>
+                        <label htmlFor="from-address" className="text-sm font-medium text-muted-foreground">From Address</label>
                         <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
                           <span className="sm:hidden">{`${call.from.slice(0, 10)}...${call.from.slice(-8)}`}</span>
                           <span className="hidden sm:inline">{call.from}</span>
                         </p>
                       </div>
                     )}
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label htmlFor="to-address" className="text-sm font-medium text-muted-foreground">To Address</label>
+                      <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
+                        <span className="sm:hidden">{`${call.to.slice(0, 10)}...${call.to.slice(-8)}`}</span>
+                        <span className="hidden sm:inline">{call.to}</span>
+                      </p>
+                    </div>
                     
                     {call.data && (
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Call Data</label>
+                        <label htmlFor="call-data" className="text-sm font-medium text-muted-foreground">Call Data</label>
                         <p className="font-mono text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
                           <span className="sm:hidden">
                             {call.data.length > 50 ? `${call.data.slice(0, 50)}...` : call.data}
@@ -996,7 +1062,7 @@ function RequestParametersView({
                     
                     {value && (
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Value</label>
+                        <label htmlFor="value" className="text-sm font-medium text-muted-foreground">Value</label>
                         <div className="mt-1">
                           <p className="font-semibold text-sm">{value.formatted}</p>
                           <p className="font-mono text-xs text-muted-foreground break-all">{value.wei}</p>
@@ -1006,7 +1072,7 @@ function RequestParametersView({
                     
                     {call.gas && (
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Gas Limit</label>
+                        <label htmlFor="gas-limit" className="text-sm font-medium text-muted-foreground">Gas Limit</label>
                         <div className="mt-1">
                           <DecHexToggle 
                             value={call.gas} 
@@ -1042,7 +1108,7 @@ function RequestParametersView({
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Address</label>
+                    <label htmlFor="address" className="text-sm font-medium text-muted-foreground">Address</label>
                     <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
                     <span className="sm:hidden">{`${override.address?.slice(0, 10)}...${override.address?.slice(-8)}`}</span>
                     <span className="hidden sm:inline">{override.address || 'N/A'}</span>
@@ -1051,7 +1117,7 @@ function RequestParametersView({
                   
                   {override.balance && (
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Balance Override</label>
+                      <label htmlFor="balance-override" className="text-sm font-medium text-muted-foreground">Balance Override</label>
                       <div className="mt-1">
                         <DecHexToggle 
                           value={override.balance} 
@@ -1066,14 +1132,14 @@ function RequestParametersView({
                   
                   {override.nonce !== null && override.nonce !== undefined && (
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Nonce Override</label>
+                      <label htmlFor="nonce-override" className="text-sm font-medium text-muted-foreground">Nonce Override</label>
                       <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">{override.nonce}</p>
                     </div>
                   )}
                   
                   {override.code && (
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Code Override</label>
+                      <label htmlFor="code-override" className="text-sm font-medium text-muted-foreground">Code Override</label>
                       <p className="font-mono text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
                         {override.code.length > 100 ? `${override.code.slice(0, 100)}...` : override.code}
                       </p>
@@ -1085,7 +1151,7 @@ function RequestParametersView({
                   
                   {override.state && override.state.length > 0 && (
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Storage Overrides</label>
+                      <label htmlFor="storage-overrides" className="text-sm font-medium text-muted-foreground">Storage Overrides</label>
                       <div className="mt-1 space-y-2">
                         {override.state.map((slot: { slot: string; value: string }, slotIndex: number) => (
                           <div key={slotIndex} className="border rounded p-2 bg-muted/30">
@@ -1122,7 +1188,7 @@ function RequestParametersView({
           <CardContent className="p-4 space-y-3">
             {params.blockNumber && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Block Number</label>
+                <label htmlFor="block-number" className="text-sm font-medium text-muted-foreground">Block Number</label>
                 <div className="mt-1">
                   <DecHexToggle 
                     value={params.blockNumber} 
@@ -1134,14 +1200,14 @@ function RequestParametersView({
             
             {params.blockTag && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Block Tag</label>
+                <label htmlFor="block-tag" className="text-sm font-medium text-muted-foreground">Block Tag</label>
                 <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">{params.blockTag}</p>
               </div>
             )}
             
             {params.account && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Account (for asset tracking)</label>
+                <label htmlFor="account" className="text-sm font-medium text-muted-foreground">Account (for asset tracking)</label>
                 <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
                   <span className="sm:hidden">{`${params.account.slice(0, 10)}...${params.account.slice(-8)}`}</span>
                   <span className="hidden sm:inline">{params.account}</span>

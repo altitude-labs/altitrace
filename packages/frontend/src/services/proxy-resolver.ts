@@ -47,9 +47,6 @@ export class ProxyResolver {
 
     // For now, return null as we don't have RPC access
     // This could be enhanced to use the HyperEVM RPC when available
-    console.log(
-      `ProxyResolver: Would attempt to resolve implementation for ${proxyAddress} (type: ${proxyType})`,
-    )
     return null
   }
 

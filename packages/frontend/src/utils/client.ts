@@ -1,4 +1,5 @@
 import { AltitraceClient } from '@altitrace/sdk'
+import { viemClient } from '@/config/chains'
 
 export function createAltitraceClient(): InstanceType<typeof AltitraceClient> {
   const isProduction = process.env.NODE_ENV === 'production'
@@ -9,5 +10,6 @@ export function createAltitraceClient(): InstanceType<typeof AltitraceClient> {
     baseUrl,
     debug: !isProduction,
     timeout: 30000,
+    viemClient,
   })
 }

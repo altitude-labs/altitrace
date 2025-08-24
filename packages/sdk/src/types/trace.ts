@@ -78,6 +78,35 @@ export interface ExtendedTracerResponse extends TracerResponse {
 
   /** Get function signatures that were called (from 4byte tracer) */
   getFunctionSignatures(): string[]
+
+  /** Optional enhanced receipt data with block information (when using withReceipt) */
+  enhancedReceipt?: TransactionReceiptData
+}
+
+// Transaction receipt data interface (viem-compatible)
+export interface TransactionReceiptData {
+  /** Transaction hash */
+  transactionHash: string
+  /** Block number */
+  blockNumber: bigint
+  /** Block hash */
+  blockHash: string
+  /** Transaction index within the block */
+  transactionIndex: number
+  /** Gas used by this transaction */
+  gasUsed: bigint
+  /** Effective gas price */
+  effectiveGasPrice: bigint
+  /** Status (1 for success, 0 for failure) */
+  status: 'success' | 'reverted'
+  /** Contract address (if this was a contract creation) */
+  contractAddress?: string
+  /** Total gas used by the entire block*/
+  blockGasUsed?: bigint
+  /** Block gas limit*/
+  blockGasLimit?: bigint
+  /** Base fee per gas */
+  baseFeePerGas?: bigint
 }
 
 // Builder interfaces for fluent API
@@ -107,6 +136,9 @@ export interface TraceTransactionBuilder {
 
   /** Enable 4byte tracer */
   with4ByteTracer(): TraceTransactionBuilder
+
+  /** Fetch transaction receipt data using viem (requires viemClient in AltitraceClient config) */
+  withReceipt(): TraceTransactionBuilder
 
   /** Execute the trace request */
   execute(): Promise<ExtendedTracerResponse>

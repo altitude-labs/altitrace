@@ -8,7 +8,7 @@ import type {
   SimulationRequest,
   StateOverride,
 } from '@altitrace/sdk/types'
-import { HashIcon, Loader2Icon, PlayIcon, SendIcon } from 'lucide-react'
+import { HashIcon, Loader2Icon, PlayIcon, SendIcon, ZapIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Hash } from 'viem'
 import {
@@ -26,26 +26,27 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui'
-import { StateOverrideForm } from './StateOverrideForm'
 import {
   isValidTransactionHash,
   loadTransactionFromHash,
 } from '@/services/transaction-loader'
-import { cleanStateOverride } from '@/utils/state-overrides'
 import type { ParsedAbi } from '@/types/api'
+import { cleanStateOverride } from '@/utils/state-overrides'
 import {
+  hexToDecimal,
+  isHexFormat,
   ValidationError,
   validateAddress,
   validateOptionalBlockNumber,
   validateOptionalData,
   validateOptionalGas,
   validateValue,
-  hexToDecimal,
-  isHexFormat,
 } from '@/utils/validation'
+import { StateOverrideForm } from './StateOverrideForm'
 
 interface TransactionFormProps {
   onSubmit: (request: SimulationRequest) => void
+  onTraceTransaction?: (txHash: string) => void
   loading?: boolean
   abi?: ParsedAbi | null
   functionData?: {
@@ -84,6 +85,7 @@ const initialFormData: FormData = {
 
 export function TransactionForm({
   onSubmit,
+  onTraceTransaction,
   loading,
   functionData,
   initialData,
@@ -103,6 +105,7 @@ export function TransactionForm({
   const [txHash, setTxHash] = useState('')
   const [loadingTx, setLoadingTx] = useState(false)
   const [txLoadError, setTxLoadError] = useState<string | null>(null)
+  const [tracingTx, setTracingTx] = useState(false)
 
   // Update data field when function data is generated
   useEffect(() => {
@@ -176,6 +179,18 @@ export function TransactionForm({
       if (txData.blockNumber) {
         setUseBlockNumber(true)
       }
+
+
+
+
+
+
+
+
+
+
+
+
 
       // Switch to manual tab to show the loaded data
       setActiveTab('manual')
@@ -393,30 +408,76 @@ export function TransactionForm({
                 />
               </div>
 
-              <Button
-                onClick={handleLoadTransaction}
-                loading={loadingTx}
-                disabled={!txHash || loadingTx}
-                className="w-full"
-              >
-                {loadingTx ? (
-                  <>
-                    <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
-                    Loading Transaction...
-                  </>
-                ) : (
-                  <>
-                    <HashIcon className="h-4 w-4 mr-2" />
-                    Load Transaction Data
-                  </>
+              <div className="grid gap-2">
+                <Button
+                  onClick={handleLoadTransaction}
+                  loading={loadingTx}
+                  disabled={!txHash || loadingTx || tracingTx}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {loadingTx ? (
+                    <>
+                      <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                      Loading Transaction...
+                    </>
+                  ) : (
+                    <>
+                      <HashIcon className="h-4 w-4 mr-2" />
+                      Load Transaction Data
+                    </>
+                  )}
+                </Button>
+                
+                {onTraceTransaction && (
+                  <Button
+                    onClick={async () => {
+                      if (!isValidTransactionHash(txHash)) {
+                        setTxLoadError('Invalid transaction hash format')
+                        return
+                      }
+                      
+                      setTracingTx(true)
+                      setTxLoadError(null)
+                      
+                      try {
+                        await onTraceTransaction(txHash)
+                      } catch (error) {
+                        setTxLoadError(
+                          error instanceof Error
+                            ? error.message
+                            : 'Failed to trace transaction'
+                        )
+                      } finally {
+                        setTracingTx(false)
+                      }
+                    }}
+                    loading={tracingTx}
+                    disabled={!txHash || loadingTx || tracingTx}
+                    className="w-full"
+                  >
+                    {tracingTx ? (
+                      <>
+                        <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                        Tracing Transaction...
+                      </>
+                    ) : (
+                      <>
+                        <ZapIcon className="h-4 w-4 mr-2" />
+                        Trace Transaction
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
 
-              {!loadingTx && !txLoadError && (
+              {!loadingTx && !tracingTx && !txLoadError && (
                 <Alert>
                   <AlertDescription>
-                    This will load the transaction parameters from the
-                    blockchain and populate the manual form for simulation.
+                    <strong>Load:</strong> Import transaction parameters to simulate with modifications.<br/>
+                    {onTraceTransaction && (
+                      <><strong>Trace:</strong> Directly trace the original transaction without simulation.</>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}

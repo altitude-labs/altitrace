@@ -22,7 +22,7 @@ interface CompilerPanelProps {
   }) => void
   compilerVersion?: string
   optimization?: { enabled: boolean; runs: number }
-  filePath?: string
+  filePath?: string 
   additionalSources?: Array<{
     filePath: string
     sourceCode: string
@@ -141,8 +141,8 @@ export function CompilerPanel({
             totalVersions: status.totalVersions,
           })
         }
-      } catch (error) {
-        console.log('Could not check preload status:', error)
+      } catch {
+        console.log('Could not check preload status')
       }
     }
 

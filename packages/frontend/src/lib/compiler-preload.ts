@@ -68,19 +68,13 @@ function getCacheStatus() {
  * Dynamically load a specific solc version using solc's built-in capabilities
  */
 async function loadSolcVersion(version: string): Promise<any> {
-  console.log(`🔧 loadSolcVersion called with version: ${version}`)
-
   try {
     // For version format conversion (e.g., "0.8.19" -> "v0.8.19+commit.7dd6d404")
     const fullVersionString = getFullVersionString(version)
-    console.log(`🔧 Full version string: ${fullVersionString}`)
 
     // Load the remote version with timeout using solc.loadRemoteVersion
     const compiler = await new Promise((resolve, reject) => {
-      console.log(`🔧 Starting loadRemoteVersion for: ${fullVersionString}`)
-
       const timeout = setTimeout(() => {
-        console.log(`🔧 Timeout reached for: ${fullVersionString}`)
         reject(
           new Error(`Timeout loading compiler version ${fullVersionString}`),
         )
@@ -89,9 +83,6 @@ async function loadSolcVersion(version: string): Promise<any> {
       solc.loadRemoteVersion(
         fullVersionString,
         (err: any, solcSnapshot: any) => {
-          console.log(
-            `🔧 loadRemoteVersion callback called for ${fullVersionString}`,
-          )
           clearTimeout(timeout)
 
           if (err) {
@@ -103,16 +94,12 @@ async function loadSolcVersion(version: string): Promise<any> {
               ),
             )
           } else {
-            console.log(
-              `🔧 Successfully got compiler snapshot for ${fullVersionString}, version: ${solcSnapshot.version?.() || 'unknown'}`,
-            )
             resolve(solcSnapshot)
           }
         },
       )
     })
 
-    console.log(`🔧 Returning compiler for ${version}`)
     return compiler
   } catch (_error) {
     return null
@@ -128,33 +115,23 @@ export async function preloadCompilers(): Promise<void> {
   }
 
   isPreloading = true
-  console.log('🚀 Starting compiler preloading...')
 
   preloadingPromise = (async () => {
     const loadPromises = SUPPORTED_LEGACY_VERSIONS.map(async (version) => {
       try {
         const fullVersion = getFullVersionString(version)
-        console.log(`📦 Preloading compiler ${fullVersion}...`)
 
         const compiler = await loadSolcVersion(version)
         if (compiler) {
           // Cache both the version string and the full version string
           compilerCache.set(version, { compiler, usedFallback: false })
           compilerCache.set(fullVersion, { compiler, usedFallback: false })
-          console.log(`✅ Cached compiler ${fullVersion}`)
         } else {
         }
       } catch (_error) {}
     })
 
     await Promise.allSettled(loadPromises)
-
-    const successCount = SUPPORTED_LEGACY_VERSIONS.filter((v) =>
-      compilerCache.has(v),
-    ).length
-    console.log(
-      `🎉 Preloading complete: ${successCount}/${SUPPORTED_LEGACY_VERSIONS.length} compilers loaded`,
-    )
   })()
 
   await preloadingPromise

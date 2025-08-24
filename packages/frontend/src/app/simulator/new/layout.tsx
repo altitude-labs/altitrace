@@ -7,14 +7,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'New Simulation - Altitrace',
     description: 'Create a new HyperEVM transaction simulation.',
-    images: ['/banner.png'],
+    images: ['/altitrace-embedded.png'],
     url: 'https://altitrace.reachaltitude.xyz/simulator/new',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'New Simulation - Altitrace',
     description: 'Create a new HyperEVM transaction simulation.',
-    images: ['/banner.png'],
+    images: ['/altitrace-embedded.png'],
   },
 }
 
