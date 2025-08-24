@@ -57,7 +57,6 @@ export default function SimulatorDashboard() {
     try {
       await navigator.clipboard.writeText(url)
       // TODO: Add toast notification
-
     } catch (_e) {}
   }
 
@@ -137,24 +136,6 @@ export default function SimulatorDashboard() {
     }
 
     return { label: 'Unknown', color: 'bg-gray-100 text-gray-800' }
-=======
-    if (callsCount > 1)
-      return {
-        label: 'Batch',
-        color:
-          'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
-      }
-    if (hasValue)
-      return {
-        label: 'Transfer',
-        color:
-          'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
-      }
-    return {
-      label: 'Call',
-      color:
-        'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
-    }
   }
 
   const getStatusIcon = (result?: StoredSimulation['result']) => {
@@ -197,7 +178,6 @@ export default function SimulatorDashboard() {
           tooltip: 'Unknown status',
         }
     }
->>>>>>> origin/develop
   }
 
   return (

@@ -109,7 +109,8 @@ function NewSimulationPageContent() {
           storedSimulation.request.type === 'single'
         ) {
           // Extract data from single simulation request with hex/decimal conversion
-          const singleRequest = storedSimulation.request as SingleSimulationRequest
+          const singleRequest =
+            storedSimulation.request as SingleSimulationRequest
           const call = singleRequest.params.calls[0]
           if (call) {
             // Set basic transaction data - convert hex values to decimal for display
@@ -118,8 +119,14 @@ function NewSimulationPageContent() {
               to: call.to || '',
               from: call.from || '',
               data: call.data || '',
-              value: call.value && isHexFormat(call.value) ? hexToDecimal(call.value) : call.value || '0',
-              gas: call.gas && isHexFormat(call.gas) ? hexToDecimal(call.gas) : call.gas || '',
+              value:
+                call.value && isHexFormat(call.value)
+                  ? hexToDecimal(call.value)
+                  : call.value || '0',
+              gas:
+                call.gas && isHexFormat(call.gas)
+                  ? hexToDecimal(call.gas)
+                  : call.gas || '',
             }))
 
             // Set simulation options - convert hex block number to decimal
@@ -132,16 +139,20 @@ function NewSimulationPageContent() {
                   | 'earliest'
                   | 'safe'
                   | 'finalized') || 'latest',
-              blockNumber: singleRequest.params.blockNumber && isHexFormat(singleRequest.params.blockNumber) 
-                ? hexToDecimal(singleRequest.params.blockNumber)
-                : singleRequest.params.blockNumber || '',
+              blockNumber:
+                singleRequest.params.blockNumber &&
+                isHexFormat(singleRequest.params.blockNumber)
+                  ? hexToDecimal(singleRequest.params.blockNumber)
+                  : singleRequest.params.blockNumber || '',
               // Include state overrides with decimal balance conversion
-              stateOverrides: singleRequest.options?.stateOverrides?.map(override => ({
-                ...override,
-                balance: override.balance && isHexFormat(override.balance)
-                  ? hexToDecimal(override.balance)
-                  : override.balance
-              })) || [],
+              stateOverrides:
+                singleRequest.options?.stateOverrides?.map((override) => ({
+                  ...override,
+                  balance:
+                    override.balance && isHexFormat(override.balance)
+                      ? hexToDecimal(override.balance)
+                      : override.balance,
+                })) || [],
             }))
           }
         } else if (
@@ -172,6 +183,14 @@ function NewSimulationPageContent() {
             blockNumber: bundleRequest.bundleRequest.blockNumber || '',
             validation: bundleRequest.bundleRequest.validation ?? true,
             account: bundleRequest.bundleRequest.account,
+            stateOverrides:
+              bundleRequest.bundleRequest.stateOverrides?.map((override) => ({
+                ...override,
+                balance:
+                  override.balance && isHexFormat(override.balance)
+                    ? hexToDecimal(override.balance)
+                    : override.balance,
+              })) || [],
           }
 
           setBundleFormData(bundleData)
@@ -302,19 +321,21 @@ function NewSimulationPageContent() {
   const handleTraceTransaction = async (txHash: string) => {
     // Generate a unique ID for the trace result
     const traceId = generateSimulationId()
-    
+
     // Store trace parameters for execution on results page
     store(
       traceId,
-      { 
-        params: { 
-          calls: [{
-            to: '0x0000000000000000000000000000000000000000',
-            data: '0x',
-            value: '0x0'
-          }],
-          blockTag: 'latest'
-        }
+      {
+        params: {
+          calls: [
+            {
+              to: '0x0000000000000000000000000000000000000000',
+              data: '0x',
+              value: '0x0',
+            },
+          ],
+          blockTag: 'latest',
+        },
       },
       {
         title: `Transaction Trace: ${txHash.slice(0, 10)}...`,
@@ -323,7 +344,7 @@ function NewSimulationPageContent() {
         traceHash: txHash,
       },
     )
-    
+
     // Navigate to results page - trace execution happens there
     router.push(`/simulator/${traceId}`)
   }
@@ -345,7 +366,6 @@ function NewSimulationPageContent() {
           )
 
           if (stateOverride.requiresOverride && stateOverride.stateOverride) {
-
             // Convert to array format expected by API
             const stateOverrideArray = Object.entries(
               stateOverride.stateOverride,
@@ -403,9 +423,9 @@ function NewSimulationPageContent() {
 
       store(
         simulationId,
-        { 
-          params: request.params, 
-          options: finalOptions 
+        {
+          params: request.params,
+          options: finalOptions,
         },
         {
           title: `${functionData?.functionName || 'Transaction'} Simulation`,
@@ -496,7 +516,8 @@ function NewSimulationPageContent() {
             {/* Get Started Tips - First on mobile */}
             <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 order-1 md:order-2">
               <h3 className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
-                💡 {!formData.to ? 'Get Started' : abi ? 'Pro Tips' : 'Quick Tips'}
+                💡{' '}
+                {!formData.to ? 'Get Started' : abi ? 'Pro Tips' : 'Quick Tips'}
               </h3>
               <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
                 {!formData.to ? (
@@ -538,7 +559,9 @@ function NewSimulationPageContent() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const contractSection = document.querySelector('[data-section="contract-management"]')
+                      const contractSection = document.querySelector(
+                        '[data-section="contract-management"]',
+                      )
                       contractSection?.scrollIntoView({ behavior: 'smooth' })
                     }}
                     className="w-full justify-start text-xs h-8"
@@ -547,7 +570,8 @@ function NewSimulationPageContent() {
                   </Button>
                 )}
 
-                {(!formData.to || (!formData.data && !functionData && !abi)) && (
+                {(!formData.to ||
+                  (!formData.data && !functionData && !abi)) && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -617,7 +641,8 @@ function NewSimulationPageContent() {
           )}
 
           {/* Status Card - Only show when there's meaningful status */}
-          {(loading || (selectedContract && requiresStateOverride(selectedContract))) && (
+          {(loading ||
+            (selectedContract && requiresStateOverride(selectedContract))) && (
             <div className="bg-card border rounded-lg p-4">
               <h3 className="text-sm font-medium mb-3">Status</h3>
 
@@ -628,7 +653,8 @@ function NewSimulationPageContent() {
                     🔄 State Override Active
                   </div>
                   <div className="text-orange-600 dark:text-orange-400">
-                    Contract has modified bytecode - using state override for simulation
+                    Contract has modified bytecode - using state override for
+                    simulation
                   </div>
                 </div>
               )}
@@ -637,7 +663,9 @@ function NewSimulationPageContent() {
                 <div className="text-center py-3">
                   <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-foreground">Running Enhanced Simulation</p>
+                    <p className="text-xs font-medium text-foreground">
+                      Running Enhanced Simulation
+                    </p>
                     <div className="text-xs text-muted-foreground space-y-1">
                       <div>• Executing transaction simulation</div>
                       <div>• Generating call trace data</div>

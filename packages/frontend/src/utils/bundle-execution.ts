@@ -130,6 +130,11 @@ export async function executeBundleSimulation(
       },
       callTracer: true,
       fourByteTracer: true,
+      // Add state overrides if provided
+      ...(request.stateOverrides &&
+        request.stateOverrides.length > 0 && {
+          stateOverrides: request.stateOverrides,
+        }),
     })
 
     // Extend the raw responses with helper methods

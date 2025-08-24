@@ -8,6 +8,7 @@ import type {
   HexString as Hex,
   SimulationParams,
   SimulationRequest,
+  StateOverride,
   TransactionCall,
 } from '@altitrace/sdk/types'
 import type { ExtendedTracerResponse } from '@altitrace/sdk/types'
@@ -45,6 +46,8 @@ export interface BundleSimulationRequest {
   traceAssetChanges: boolean
   /** Enable transfer tracking */
   traceTransfers: boolean
+  /** State overrides to apply during bundle execution */
+  stateOverrides?: StateOverride[]
 }
 
 /**
@@ -116,6 +119,8 @@ export interface BundleFormData {
   validation: boolean
   /** Account for tracking */
   account?: string
+  /** State overrides for bundle simulation */
+  stateOverrides: StateOverride[]
 }
 
 /**
@@ -145,4 +150,5 @@ export const createDefaultBundleFormData = (): BundleFormData => ({
   blockTag: 'latest',
   blockNumber: '',
   validation: true,
+  stateOverrides: [],
 })

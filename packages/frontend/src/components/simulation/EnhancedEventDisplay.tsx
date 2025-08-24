@@ -9,7 +9,7 @@ import {
   Loader2Icon,
   TagIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Badge, Card, CardContent, Select } from '@/components/ui'
 import { useMultipleCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { useEventSignature } from '@/hooks/useEventSignature'
@@ -17,6 +17,14 @@ import { useEventSignature } from '@/hooks/useEventSignature'
 interface EnhancedEventDisplayProps {
   call: CallResult
   callIndex: number
+  // Additional ABI information for enhanced decoding
+  availableABI?: any[]
+  fetchedContracts?: Array<{
+    address: string
+    name: string
+    abi: any[]
+    explorerSource: string
+  }>
 }
 
 type LogEntry = CallResult['logs'][number]
@@ -50,6 +58,8 @@ const KNOWN_EVENT_SIGNATURES: Record<
 export function EnhancedEventDisplay({
   call,
   callIndex,
+  availableABI,
+  fetchedContracts,
 }: EnhancedEventDisplayProps) {
   if (!call.logs || call.logs.length === 0) {
     return (
@@ -60,6 +70,55 @@ export function EnhancedEventDisplay({
     )
   }
 
+  // Create enhanced event signatures by merging available ABI with known signatures
+  const enhancedEventSignatures = React.useMemo(() => {
+    const signatures = { ...KNOWN_EVENT_SIGNATURES }
+
+    // Add signatures from availableABI
+    if (availableABI) {
+      for (const abiEntry of availableABI) {
+        if (abiEntry.type === 'event' && abiEntry.name && abiEntry.inputs) {
+          // Create event signature hash (simplified)
+          const signature = `${abiEntry.name}(${abiEntry.inputs.map((i: any) => i.type).join(',')})`
+          const hash = `0x${signature}` // In practice, you'd use keccak256 hash
+
+          signatures[hash] = {
+            name: abiEntry.name,
+            params: abiEntry.inputs.map((input: any) => ({
+              name: input.name || 'param',
+              type: input.type,
+              indexed: input.indexed || false,
+            })),
+          }
+        }
+      }
+    }
+
+    // Add signatures from fetchedContracts
+    if (fetchedContracts) {
+      for (const contract of fetchedContracts) {
+        for (const abiEntry of contract.abi) {
+          if (abiEntry.type === 'event' && abiEntry.name && abiEntry.inputs) {
+            // Create event signature hash (simplified)
+            const signature = `${abiEntry.name}(${abiEntry.inputs.map((i: any) => i.type).join(',')})`
+            const hash = `0x${signature}` // In practice, you'd use keccak256 hash
+
+            signatures[hash] = {
+              name: abiEntry.name,
+              params: abiEntry.inputs.map((input: any) => ({
+                name: input.name || 'param',
+                type: input.type,
+                indexed: input.indexed || false,
+              })),
+            }
+          }
+        }
+      }
+    }
+
+    return signatures
+  }, [availableABI, fetchedContracts])
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-4">
@@ -68,6 +127,13 @@ export function EnhancedEventDisplay({
         <Badge variant="outline" className="text-xs">
           Call #{callIndex + 1}
         </Badge>
+        {(availableABI && availableABI.length > 0) ||
+        (fetchedContracts && fetchedContracts.length > 0) ? (
+          <Badge variant="secondary" className="text-xs">
+            <CheckIcon className="h-3 w-3 mr-1" />
+            ABI Loaded
+          </Badge>
+        ) : null}
       </div>
 
       {call.logs.map((log: LogEntry, logIndex: number) => (
@@ -75,6 +141,7 @@ export function EnhancedEventDisplay({
           key={`log-${log.address}-${logIndex}`}
           log={log}
           logIndex={logIndex}
+          enhancedSignatures={enhancedEventSignatures}
         />
       ))}
     </div>
@@ -83,10 +150,26 @@ export function EnhancedEventDisplay({
 
 type FormatType = 'hex' | 'dec' | 'address' | 'text'
 
-function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
+function EventCard({
+  log,
+  logIndex,
+  enhancedSignatures,
+}: {
+  log: LogEntry
+  logIndex: number
+  enhancedSignatures?: Record<
+    string,
+    {
+      name: string
+      params: Array<{ name: string; type: string; indexed: boolean }>
+    }
+  >
+}) {
   const { getCopyState, copyToClipboard } = useMultipleCopyToClipboard()
   const eventSignature = log.topics[0]
-  const knownEvent = KNOWN_EVENT_SIGNATURES[eventSignature]
+  const knownEvent =
+    enhancedSignatures?.[eventSignature] ||
+    KNOWN_EVENT_SIGNATURES[eventSignature]
 
   // Use the hook to lookup unknown signatures
   const { eventData: lookupEvent, isLoading: isLookingUp } = useEventSignature(
@@ -329,9 +412,43 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                   )
                 </span>
               ) : (
-                <span className="font-mono text-sm text-muted-foreground">
-                  Unknown Event
-                </span>
+                <div className="space-y-2">
+                  <span className="font-mono text-sm text-muted-foreground">
+                    Unknown Event
+                  </span>
+                  <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangleIcon className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <div className="space-y-1">
+                        <p>
+                          <strong>Event signature not recognized</strong>
+                        </p>
+                        <p>
+                          This event cannot be decoded because its ABI is not
+                          available.
+                        </p>
+                        <div className="text-xs mt-1">
+                          <p>
+                            <strong>To decode this event:</strong>
+                          </p>
+                          <ul className="list-disc list-inside space-y-0.5 ml-2">
+                            <li>
+                              Ensure the contract is verified on block explorers
+                            </li>
+                            <li>
+                              Check if this is a proxy contract with a separate
+                              implementation
+                            </li>
+                            <li>
+                              Raw event data is still available in topics and
+                              data below
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>

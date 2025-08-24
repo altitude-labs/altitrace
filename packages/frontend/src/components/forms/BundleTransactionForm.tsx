@@ -1,6 +1,11 @@
 'use client'
 
-import type { Address, BlockTag, HexString as Hex } from '@altitrace/sdk/types'
+import type {
+  Address,
+  BlockTag,
+  HexString as Hex,
+  StateOverride,
+} from '@altitrace/sdk/types'
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -28,6 +33,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui'
+import { StateOverrideForm } from './StateOverrideForm'
 import {
   isValidTransactionHash,
   loadTransactionFromHash,
@@ -49,6 +55,8 @@ import {
   validateOptionalGas,
   validateOptionalHex,
   validateValue,
+  hexToDecimal,
+  isHexFormat,
 } from '@/utils/validation'
 
 interface BundleTransactionFormProps {
@@ -107,6 +115,15 @@ export function BundleTransactionForm({
       setFormData((prev) => ({
         ...prev,
         ...initialData,
+        // Convert state override balance values from hex to decimal for display
+        stateOverrides:
+          initialData.stateOverrides?.map((override) => ({
+            ...override,
+            balance:
+              override.balance && isHexFormat(override.balance)
+                ? hexToDecimal(override.balance)
+                : override.balance,
+          })) || prev.stateOverrides,
       }))
       setUseBlockNumber(!!initialData.blockNumber)
     }
@@ -365,6 +382,19 @@ export function BundleTransactionForm({
         (enabledTransactions[0]?.transaction.to as Address),
       traceAssetChanges: true,
       traceTransfers: true,
+      // Include state overrides if any are defined
+      ...(formData.stateOverrides.length > 0 && {
+        stateOverrides: formData.stateOverrides
+          .filter((override) => override.address) // Only include overrides with addresses
+          .map((override) => ({
+            ...override,
+            // Convert balance back to hex for API
+            balance:
+              override.balance && !isHexFormat(override.balance)
+                ? `0x${BigInt(override.balance).toString(16)}`
+                : override.balance,
+          })),
+      }),
     }
 
     onSubmit(request)
@@ -655,6 +685,20 @@ export function BundleTransactionForm({
                     />
                   )}
                 </div>
+              )}
+
+              {/* State Overrides */}
+              {showAdvanced && (
+                <StateOverrideForm
+                  stateOverrides={formData.stateOverrides}
+                  onChange={(stateOverrides) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      stateOverrides,
+                    }))
+                  }
+                  compact={compact}
+                />
               )}
 
               {/* Advanced Options Toggle */}
