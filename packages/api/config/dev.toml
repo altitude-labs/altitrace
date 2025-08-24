@@ -11,6 +11,7 @@ port = 8080
 rate_limit_requests = 100
 rate_limit_duration = 60
 auth_token = ""
+base_url = "http://localhost:8080"
 
 [api.cors]
 allowed_origins = ["*"]

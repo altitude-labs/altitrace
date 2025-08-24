@@ -6,8 +6,9 @@ import type {
   HexString as Hex,
   SimulationParams,
   SimulationRequest,
+  StateOverride,
 } from '@altitrace/sdk/types'
-import { HashIcon, Loader2Icon, PlayIcon, SendIcon } from 'lucide-react'
+import { HashIcon, Loader2Icon, PlayIcon, SendIcon, ZapIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Hash } from 'viem'
 import {
@@ -30,17 +31,22 @@ import {
   loadTransactionFromHash,
 } from '@/services/transaction-loader'
 import type { ParsedAbi } from '@/types/api'
+import { cleanStateOverride } from '@/utils/state-overrides'
 import {
+  hexToDecimal,
+  isHexFormat,
   ValidationError,
   validateAddress,
   validateOptionalBlockNumber,
+  validateOptionalData,
   validateOptionalGas,
-  validateOptionalHex,
   validateValue,
 } from '@/utils/validation'
+import { StateOverrideForm } from './StateOverrideForm'
 
 interface TransactionFormProps {
   onSubmit: (request: SimulationRequest) => void
+  onTraceTransaction?: (txHash: string) => void
   loading?: boolean
   abi?: ParsedAbi | null
   functionData?: {
@@ -62,21 +68,24 @@ interface FormData {
   blockTag: SimulationParams['blockTag']
   blockNumber: string
   validation: boolean
+  stateOverrides: StateOverride[]
 }
 
 const initialFormData: FormData = {
   to: '',
   from: '',
   data: '',
-  value: '0x0',
+  value: '0', // Use decimal format for display
   gas: '',
   blockTag: 'latest',
   blockNumber: '',
   validation: true,
+  stateOverrides: [],
 }
 
 export function TransactionForm({
   onSubmit,
+  onTraceTransaction,
   loading,
   functionData,
   initialData,
@@ -96,6 +105,7 @@ export function TransactionForm({
   const [txHash, setTxHash] = useState('')
   const [loadingTx, setLoadingTx] = useState(false)
   const [txLoadError, setTxLoadError] = useState<string | null>(null)
+  const [tracingTx, setTracingTx] = useState(false)
 
   // Update data field when function data is generated
   useEffect(() => {
@@ -107,12 +117,29 @@ export function TransactionForm({
     }
   }, [functionData])
 
-  // Update form when initial data changes (for pre-filling)
+  // Update form when initial data changes (for pre-filling) - convert hex values to decimal for display
   useEffect(() => {
     if (initialData) {
       setFormData((prev) => ({
         ...prev,
         ...initialData,
+        // Convert hex values to decimal for display
+        value: initialData.value && isHexFormat(initialData.value) 
+          ? hexToDecimal(initialData.value) 
+          : initialData.value || prev.value,
+        gas: initialData.gas && isHexFormat(initialData.gas)
+          ? hexToDecimal(initialData.gas)
+          : initialData.gas || prev.gas,
+        blockNumber: initialData.blockNumber && isHexFormat(initialData.blockNumber)
+          ? hexToDecimal(initialData.blockNumber)
+          : initialData.blockNumber || prev.blockNumber,
+        // Convert state override balance values from hex to decimal for display
+        stateOverrides: initialData.stateOverrides?.map(override => ({
+          ...override,
+          balance: override.balance && isHexFormat(override.balance)
+            ? hexToDecimal(override.balance)
+            : override.balance
+        })) || prev.stateOverrides,
       }))
       setUseBlockNumber(!!initialData.blockNumber)
     }
@@ -135,22 +162,35 @@ export function TransactionForm({
         return
       }
 
-      // Update form data with loaded transaction data
+      // Update form data with loaded transaction data - convert hex values to decimal for display
       setFormData({
         to: txData.to || '',
         from: txData.from,
         data: txData.data,
-        value: txData.value,
-        gas: txData.gas || '',
+        value: isHexFormat(txData.value) ? hexToDecimal(txData.value) : txData.value, // Convert to decimal
+        gas: txData.gas && isHexFormat(txData.gas) ? hexToDecimal(txData.gas) : txData.gas || '', // Convert to decimal
         blockTag: 'latest',
-        blockNumber: txData.blockNumber || '',
+        blockNumber: txData.blockNumber && isHexFormat(txData.blockNumber) ? hexToDecimal(txData.blockNumber) : txData.blockNumber || '', // Convert to decimal
         validation: true,
+        stateOverrides: [], // Clear any existing state overrides
       })
 
       // Set block number mode if we have a block number
       if (txData.blockNumber) {
         setUseBlockNumber(true)
       }
+
+
+
+
+
+
+
+
+
+
+
+
 
       // Switch to manual tab to show the loaded data
       setActiveTab('manual')
@@ -174,7 +214,7 @@ export function TransactionForm({
 
   const handleInputChange = (
     field: keyof FormData,
-    value: string | boolean,
+    value: string | boolean | StateOverride[],
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -218,7 +258,7 @@ export function TransactionForm({
 
     try {
       if (formData.data) {
-        validateOptionalHex(formData.data, 'data')
+        validateOptionalData(formData.data, 'data')
       }
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -276,28 +316,50 @@ export function TransactionForm({
       return
     }
 
+    // Convert and validate all values to ensure they're in proper hex format for the SDK
+    const validatedData = formData.data ? validateOptionalData(formData.data) : undefined
+    const validatedValue = validateValue(formData.value)
+    const validatedGas = formData.gas ? validateOptionalGas(formData.gas) : undefined
+    const validatedBlockNumber = useBlockNumber && formData.blockNumber 
+      ? validateOptionalBlockNumber(formData.blockNumber) 
+      : undefined
+
     const request: SimulationRequest = {
       params: {
         calls: [
           {
             to: formData.to as Address,
             ...(formData.from && { from: formData.from as Address }),
-            ...(formData.data && { data: formData.data as Hex }),
-            ...(formData.value &&
-              formData.value !== '0x0' && { value: formData.value as Hex }),
-            ...(formData.gas && { gas: formData.gas as Hex }),
+            ...(validatedData && { data: validatedData }),
+            ...(validatedValue && validatedValue !== '0x0' && { value: validatedValue }),
+            ...(validatedGas && { gas: validatedGas }),
           },
         ],
         // Always set account for asset tracking (use 'from' if available, otherwise 'to')
         account: (formData.from || formData.to) as Address,
-        ...(useBlockNumber && formData.blockNumber
-          ? { blockNumber: formData.blockNumber }
+        ...(validatedBlockNumber
+          ? { blockNumber: validatedBlockNumber }
           : { blockTag: formData.blockTag }),
         validation: formData.validation,
         // Auto-enable asset tracking for better UX
         traceAssetChanges: true,
         traceTransfers: true,
       },
+      // State overrides go in options, not params
+      ...(formData.stateOverrides.length > 0 && {
+        options: {
+          stateOverrides: formData.stateOverrides
+            .filter(override => override.address) // Only include overrides with addresses
+            .map(override => cleanStateOverride(override)) // Clean and normalize each override
+            .filter(override => {
+              // Only include overrides that actually override something
+              return override.balance || 
+                     override.nonce !== null && override.nonce !== undefined ||
+                     override.code ||
+                     (override.state && override.state.length > 0)
+            }),
+        },
+      }),
     }
 
     onSubmit(request)
@@ -306,9 +368,10 @@ export function TransactionForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <SendIcon className="h-5 w-5" />
-          Transaction Builder
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <SendIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+          <span className="hidden sm:inline">Transaction Builder</span>
+          <span className="sm:hidden">Transaction</span>
         </CardTitle>
       </CardHeader>
 
@@ -318,13 +381,19 @@ export function TransactionForm({
           onValueChange={(v) => setActiveTab(v as 'manual' | 'hash')}
         >
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="manual">
-              <SendIcon className="h-4 w-4 mr-2" />
-              Manual Input
+            <TabsTrigger value="manual" className="flex items-center gap-1 sm:gap-2">
+              <SendIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Manual Input</span>
+                <span className="sm:hidden">Manual</span>
+              </span>
             </TabsTrigger>
-            <TabsTrigger value="hash">
-              <HashIcon className="h-4 w-4 mr-2" />
-              Load from Hash
+            <TabsTrigger value="hash" className="flex items-center gap-1 sm:gap-2">
+              <HashIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Load from Hash</span>
+                <span className="sm:hidden">From Hash</span>
+              </span>
             </TabsTrigger>
           </TabsList>
 
@@ -345,30 +414,76 @@ export function TransactionForm({
                 />
               </div>
 
-              <Button
-                onClick={handleLoadTransaction}
-                loading={loadingTx}
-                disabled={!txHash || loadingTx}
-                className="w-full"
-              >
-                {loadingTx ? (
-                  <>
-                    <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
-                    Loading Transaction...
-                  </>
-                ) : (
-                  <>
-                    <HashIcon className="h-4 w-4 mr-2" />
-                    Load Transaction Data
-                  </>
+              <div className="grid gap-2">
+                <Button
+                  onClick={handleLoadTransaction}
+                  loading={loadingTx}
+                  disabled={!txHash || loadingTx || tracingTx}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {loadingTx ? (
+                    <>
+                      <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                      Loading Transaction...
+                    </>
+                  ) : (
+                    <>
+                      <HashIcon className="h-4 w-4 mr-2" />
+                      Load Transaction Data
+                    </>
+                  )}
+                </Button>
+                
+                {onTraceTransaction && (
+                  <Button
+                    onClick={async () => {
+                      if (!isValidTransactionHash(txHash)) {
+                        setTxLoadError('Invalid transaction hash format')
+                        return
+                      }
+                      
+                      setTracingTx(true)
+                      setTxLoadError(null)
+                      
+                      try {
+                        await onTraceTransaction(txHash)
+                      } catch (error) {
+                        setTxLoadError(
+                          error instanceof Error
+                            ? error.message
+                            : 'Failed to trace transaction'
+                        )
+                      } finally {
+                        setTracingTx(false)
+                      }
+                    }}
+                    loading={tracingTx}
+                    disabled={!txHash || loadingTx || tracingTx}
+                    className="w-full"
+                  >
+                    {tracingTx ? (
+                      <>
+                        <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                        Tracing Transaction...
+                      </>
+                    ) : (
+                      <>
+                        <ZapIcon className="h-4 w-4 mr-2" />
+                        Trace Transaction
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
 
-              {!loadingTx && !txLoadError && (
+              {!loadingTx && !tracingTx && !txLoadError && (
                 <Alert>
                   <AlertDescription>
-                    This will load the transaction parameters from the
-                    blockchain and populate the manual form for simulation.
+                    <strong>Load:</strong> Import transaction parameters to simulate with modifications.<br/>
+                    {onTraceTransaction && (
+                      <><strong>Trace:</strong> Directly trace the original transaction without simulation.</>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}
@@ -404,7 +519,7 @@ export function TransactionForm({
 
                 <Input
                   label={compact ? 'From' : 'From Address (optional)'}
-                  placeholder="0x..."
+                  placeholder="0x0000000000000000000000000000000000000000"
                   value={formData.from}
                   onChange={(e) => handleInputChange('from', e.target.value)}
                   error={errors.from}
@@ -417,7 +532,7 @@ export function TransactionForm({
 
                 {functionData ? (
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Call Data</label>
+                    <label className="text-sm font-medium">Input Data</label>
                     <div className="bg-muted/50 p-3 rounded border">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-muted-foreground">
@@ -443,8 +558,8 @@ export function TransactionForm({
                   </div>
                 ) : (
                   <Input
-                    label="Call Data"
-                    placeholder="0x... (generate using function builder above)"
+                    label="Input Data"
+                    placeholder="0x"
                     value={formData.data}
                     onChange={(e) => {
                       handleInputChange('data', e.target.value)
@@ -453,40 +568,37 @@ export function TransactionForm({
                       }
                     }}
                     error={errors.data}
-                    description={
-                      compact
-                        ? undefined
-                        : 'Contract function call data (use Contract Manager above for automatic generation)'
-                    }
                     className="font-mono text-sm"
                   />
                 )}
 
                 <Input
                   label={compact ? 'Value' : 'Value (HYPE)'}
-                  placeholder="0x0"
+                  placeholder="0"
                   value={formData.value}
                   onChange={(e) => handleInputChange('value', e.target.value)}
                   error={errors.value}
                   description={
                     compact
                       ? undefined
-                      : 'Amount of HYPE to send with transaction (in wei, hex format)'
+                      : 'Amount of HYPE to send with transaction (in wei, accepts decimal or hex)'
                   }
+                  className="font-mono text-sm"
                 />
 
                 {showAdvanced && (
                   <Input
                     label={compact ? 'Gas' : 'Gas Limit (optional)'}
-                    placeholder="0x5208"
+                    placeholder="21000"
                     value={formData.gas}
                     onChange={(e) => handleInputChange('gas', e.target.value)}
                     error={errors.gas}
                     description={
                       compact
                         ? undefined
-                        : 'Gas limit for transaction (will be estimated if not provided)'
+                        : 'Gas limit for transaction (accepts decimal or hex, will be estimated if not provided)'
                     }
+                    className="font-mono text-sm"
                   />
                 )}
               </div>
@@ -514,7 +626,7 @@ export function TransactionForm({
                   {useBlockNumber ? (
                     <Input
                       label="Block Number"
-                      placeholder="0x123abc"
+                      placeholder="123456"
                       value={formData.blockNumber}
                       onChange={(e) =>
                         handleInputChange('blockNumber', e.target.value)
@@ -522,9 +634,10 @@ export function TransactionForm({
                       error={errors.blockNumber}
                       description={
                         compact
-                          ? undefined
-                          : 'Specific block number in decimal or hex format (e.g., 123456 or 0x1e240)'
+                          ? 'Block number (accepts decimal or hex)'
+                          : 'Specific block number (accepts decimal or hex format, e.g., 123456 or 0x1e240)'
                       }
+                      className="font-mono text-sm"
                     />
                   ) : (
                     <Select
@@ -543,6 +656,17 @@ export function TransactionForm({
                     />
                   )}
                 </div>
+              )}
+
+              {/* State Overrides */}
+              {showAdvanced && (
+                <StateOverrideForm
+                  stateOverrides={formData.stateOverrides}
+                  onChange={(stateOverrides) =>
+                    handleInputChange('stateOverrides', stateOverrides)
+                  }
+                  compact={compact}
+                />
               )}
 
               {/* Advanced Options Toggle */}

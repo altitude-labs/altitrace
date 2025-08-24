@@ -1,6 +1,7 @@
 'use client'
 
-import { ExternalLinkIcon, FlaskConicalIcon, ZapIcon } from 'lucide-react'
+import { ExternalLinkIcon, FlaskConicalIcon } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Badge } from '@/components/ui'
 
@@ -14,8 +15,14 @@ export function Header() {
             href="/"
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-md">
-              <ZapIcon className="h-5 w-5 text-primary-foreground" />
+            <div className="flex items-center justify-center">
+              <Image
+                src="/altitrace.svg"
+                alt="Altitrace"
+                width={120}
+                height={24}
+                className="h-6 w-auto max-w-[120px]"
+              />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-xl">Altitrace</span>

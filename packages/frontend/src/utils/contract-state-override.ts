@@ -132,17 +132,8 @@ export async function requiresStateOverrideAsync(
   contract: StoredContract,
   blockTag = 'latest',
 ): Promise<{ requiresOverride: boolean; comparison?: BytecodeComparison }> {
-  const contractName =
-    contract.metadata?.title || contract.contractData?.name || 'Unknown'
   const hasAddress = !!contract.contractData?.address
   const hasBytecode = !!contract.contractData?.bytecode
-
-  console.log(`🔍 [Smart State Override Check] Contract: ${contractName}`)
-  console.log(
-    `   📍 Has Address: ${hasAddress} (${contract.contractData?.address || 'none'})`,
-  )
-  console.log(`   💾 Has Local Bytecode: ${hasBytecode}`)
-  console.log(`   🏗️ Block Tag: ${blockTag}`)
 
   if (!hasAddress || !hasBytecode) {
     const reason = !hasAddress ? 'No contract address' : 'No local bytecode'
@@ -211,10 +202,6 @@ export async function createContractStateOverrideAsync(
   contract: StoredContract,
   blockTag = 'latest',
 ): Promise<ContractStateOverride> {
-  const contractName =
-    contract.metadata?.title || contract.contractData?.name || 'Unknown'
-  console.log(`\n🛠️ [Smart State Override Creation] Contract: ${contractName}`)
-
   // Use smart comparison to determine if override is actually needed
   const { requiresOverride, comparison } = await requiresStateOverrideAsync(
     contract,
@@ -228,41 +215,16 @@ export async function createContractStateOverrideAsync(
     bytecodeComparison: comparison,
   }
 
-  console.log('   📋 Smart Override Result Summary:')
-  console.log(`      Address: ${result.address}`)
-  console.log(`      Has Modified Code: ${result.hasModifiedCode}`)
-  console.log(`      Requires Override: ${result.requiresOverride}`)
-
-  if (comparison) {
-    console.log(
-      `      Bytecode Comparison: ${comparison.isIdentical ? 'IDENTICAL' : 'DIFFERENT'}`,
-    )
-    console.log(
-      `      Local: ${comparison.localSize} bytes, Deployed: ${comparison.deployedSize} bytes`,
-    )
-  }
-
   if (
     result.requiresOverride &&
     contract.contractData?.address &&
     contract.contractData?.bytecode
   ) {
-    console.log('   🔄 Creating state override with SDK helper...')
-
     // Use SDK helper to create state override with new bytecode
     result.stateOverride = StateOverrideHelpers.setCode(
       contract.contractData.address,
       contract.contractData.bytecode,
     )
-
-    console.log('   ✅ State override created successfully')
-    console.log(
-      `   🎯 Will replace on-chain bytecode at ${contract.contractData.address}`,
-    )
-  } else if (comparison?.isIdentical) {
-    console.log('   💡 Bytecode is identical to deployed - no override needed!')
-  } else {
-    console.log('   ❌ No state override needed or cannot create')
   }
 
   return result

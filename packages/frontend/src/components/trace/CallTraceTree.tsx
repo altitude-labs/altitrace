@@ -121,7 +121,21 @@ export function CallTraceTree({
           <CardTitle className="text-base">Call Stack</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          {/* Mobile: Horizontal scrolling */}
+          <div className="block sm:hidden">
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <CallFrameNode
+                frame={rootCall}
+                depth={0}
+                index={0}
+                isRoot={true}
+                isHorizontal={true}
+              />
+            </div>
+          </div>
+
+          {/* Desktop: Vertical layout */}
+          <div className="hidden sm:block space-y-2">
             <CallFrameNode frame={rootCall} depth={0} index={0} isRoot={true} />
           </div>
         </CardContent>

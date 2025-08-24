@@ -1,6 +1,6 @@
 'use client'
 
-import type { CallResult, ExtendedSimulationResult } from '@altitrace/sdk/types'
+import type { CallResult } from '@altitrace/sdk/types'
 import { BarChart3Icon, FuelIcon } from 'lucide-react'
 import {
   Badge,
@@ -9,9 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui'
+import type { EnhancedSimulationResult } from '@/utils/trace-integration'
 
 interface EnhancedGasAnalysisProps {
-  result: ExtendedSimulationResult
+  result: EnhancedSimulationResult
 }
 
 interface GasData {
@@ -26,11 +27,14 @@ interface GasData {
 
 export function EnhancedGasAnalysis({ result }: EnhancedGasAnalysisProps) {
   const gasData = analyzeGasUsage(result)
+  
+  // Get actual call count from trace data if available
+  const callCount = result.traceData?.getCallCount?.() || gasData.calls.length
 
   return (
     <div className="space-y-6">
       {/* Gas Summary */}
-      <GasSummary gasData={gasData} />
+      <GasSummary gasData={gasData} callCount={callCount} />
 
       {/* Per-Call Breakdown */}
       <CallGasBreakdown gasData={gasData} calls={result.calls || []} />
@@ -38,7 +42,7 @@ export function EnhancedGasAnalysis({ result }: EnhancedGasAnalysisProps) {
   )
 }
 
-function GasSummary({ gasData }: { gasData: GasData }) {
+function GasSummary({ gasData, callCount }: { gasData: GasData; callCount: number }) {
   const totalGas = Number(gasData.totalGasUsed)
   const blockGas = Number(gasData.blockGasUsed)
 
@@ -79,7 +83,7 @@ function GasSummary({ gasData }: { gasData: GasData }) {
               <p className="text-sm font-medium text-muted-foreground">
                 Number of Calls
               </p>
-              <p className="text-2xl font-bold">{gasData.calls.length}</p>
+              <p className="text-2xl font-bold">{callCount}</p>
             </div>
             <BarChart3Icon className="h-8 w-8 text-muted-foreground" />
           </div>
@@ -147,15 +151,36 @@ function CallGasBreakdown({
 }
 
 // Helper function
-function analyzeGasUsage(result: ExtendedSimulationResult): GasData {
+function analyzeGasUsage(result: EnhancedSimulationResult): GasData {
   const totalGasUsed = result.getTotalGasUsed()
-  const blockGasUsed = BigInt(result.blockGasUsed)
+  
+  // Check for block gas in receipt data (for trace results) or direct property
+  const receiptData = (result as any).receipt
+  const blockGasUsed = receiptData?.blockGasUsed 
+    ? BigInt(receiptData.blockGasUsed)
+    : result.blockGasUsed 
+      ? BigInt(result.blockGasUsed) 
+      : 0n
 
-  const calls = (result.calls || []).map((call, index) => ({
-    callIndex: index,
-    gasUsed: BigInt(call.gasUsed),
-    status: call.status,
-  }))
+  // For trace results with call hierarchy, use the trace data call count
+  let calls: Array<{ callIndex: number; gasUsed: bigint; status: string }> = []
+  
+  if (result.hasCallHierarchy && result.traceData?.callTracer?.rootCall) {
+    // For trace results, create a single "call" representing the root transaction
+    const rootCall = result.traceData.callTracer.rootCall
+    calls = [{
+      callIndex: 0,
+      gasUsed: BigInt(rootCall.gasUsed || '0'),
+      status: rootCall.reverted ? 'reverted' : 'success',
+    }]
+  } else {
+    // For simulation results, use the calls array
+    calls = (result.calls || []).map((call: CallResult, index: number) => ({
+      callIndex: index,
+      gasUsed: BigInt(call.gasUsed),
+      status: call.status,
+    }))
+  }
 
   return {
     totalGasUsed,

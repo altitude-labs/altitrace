@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   CopyIcon,
   DatabaseIcon,
+  ExternalLinkIcon,
   FuelIcon,
   HashIcon,
   KeyIcon,
@@ -258,10 +259,38 @@ interface AccessListAccountCardProps {
 function AccessListAccountCard({ account, index }: AccessListAccountCardProps) {
   return (
     <div className="bg-muted p-4 rounded border">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
+      {/* Header with account info */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+        <div className="space-y-2">
           <Badge variant="outline">Account #{index + 1}</Badge>
-          <span className="font-mono text-sm">{account.address}</span>
+          {/* Address with copy and explorer link */}
+          <div className="flex items-center gap-1">
+            <a
+              href={`https://hyperevmscan.io/address/${account.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-background px-2 py-1 rounded font-mono text-xs truncate hover:bg-background/80 transition-colors flex-1"
+              title={account.address}
+            >
+              {account.address}
+            </a>
+            <button
+              onClick={() => navigator.clipboard.writeText(account.address)}
+              className="p-1 hover:bg-background rounded transition-colors"
+              title="Copy address"
+            >
+              <CopyIcon className="h-3 w-3 text-muted-foreground" />
+            </button>
+            <a
+              href={`https://hyperevmscan.io/address/${account.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1 hover:bg-background rounded transition-colors"
+              title="Open in explorer"
+            >
+              <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
+            </a>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <DatabaseIcon className="h-4 w-4" />
@@ -278,9 +307,18 @@ function AccessListAccountCard({ account, index }: AccessListAccountCardProps) {
             {account.storageSlots.map((slot, slotIndex) => (
               <div
                 key={`slot-${slotIndex}-${slot}`}
-                className="font-mono text-xs bg-background p-2 rounded border break-all"
+                className="flex items-center gap-1 bg-background p-2 rounded border"
               >
-                {slot}
+                <span className="font-mono text-xs break-all flex-1">
+                  {slot}
+                </span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(slot)}
+                  className="p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
+                  title="Copy storage slot"
+                >
+                  <CopyIcon className="h-3 w-3 text-muted-foreground" />
+                </button>
               </div>
             ))}
           </div>

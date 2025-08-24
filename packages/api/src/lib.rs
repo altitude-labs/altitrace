@@ -71,7 +71,7 @@ where
         args.log_args.max_log_files,
     );
 
-    init_tracing(LogFormat::Text, Some((args.log_args.logs_format, file_config)))
+    let _file_guard = init_tracing(LogFormat::Text, Some((args.log_args.logs_format, file_config)))
         .map_err(|e| eyre!("Failed to initialize tracing: {e}"))?;
 
     let app_config = AppConfig::default();
@@ -131,7 +131,8 @@ where
                                     .as_ref()
                                     .map(|auth| auth.is_enabled())
                                     .unwrap_or(false);
-                                let openapi_handler = OpenApiHandler::new(api_key_enabled);
+                                let openapi_handler =
+                                    OpenApiHandler::new(api_key_enabled).with_url(&api_config);
                                 cfg.app_data(openapi_handler.into_app_data())
                                     .configure(OpenApiHandler::configure);
                             }),

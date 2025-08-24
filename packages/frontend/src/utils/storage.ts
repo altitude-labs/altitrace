@@ -37,6 +37,13 @@ export interface StoredSimulation {
     title?: string
     tags?: string[]
     description?: string
+    traceHash?: string
+  }
+  result?: {
+    status: 'success' | 'reverted' | 'failed'
+    gasUsed?: bigint
+    callsCount?: number
+    hasErrors?: boolean
   }
 }
 
@@ -51,6 +58,13 @@ interface SerializedStoredSimulation {
     title?: string
     tags?: string[]
     description?: string
+    traceHash?: string // For storing transaction hash when tracing existing transactions
+  }
+  result?: {
+    status: 'success' | 'reverted' | 'failed'
+    gasUsed?: string // bigint serialized as string
+    callsCount?: number
+    hasErrors?: boolean
   }
 }
 
@@ -93,10 +107,16 @@ export function store(
     // Keep only the most recent simulations
     const trimmed = existing.slice(0, MAX_STORED_SIMULATIONS)
 
-    // Serialize for storage (Date -> string)
+    // Serialize for storage (Date -> string, bigint -> string)
     const serialized: SerializedStoredSimulation[] = trimmed.map((sim) => ({
       ...sim,
       timestamp: sim.timestamp.toISOString(),
+      result: sim.result
+        ? {
+            ...sim.result,
+            gasUsed: sim.result.gasUsed?.toString(),
+          }
+        : undefined,
     }))
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
@@ -113,10 +133,18 @@ export function retrieveAll(): StoredSimulation[] {
 
     const serialized: SerializedStoredSimulation[] = JSON.parse(stored)
 
-    // Deserialize (string -> Date) and keep raw results
+    // Deserialize (string -> Date, string -> bigint)
     return serialized.map((sim) => ({
       ...sim,
       timestamp: new Date(sim.timestamp),
+      result: sim.result
+        ? {
+            ...sim.result,
+            gasUsed: sim.result.gasUsed
+              ? BigInt(sim.result.gasUsed)
+              : undefined,
+          }
+        : undefined,
     }))
   } catch (_error) {
     return []
@@ -179,6 +207,46 @@ export function deleteSimulation(id: string): boolean {
     const serialized: SerializedStoredSimulation[] = filtered.map((sim) => ({
       ...sim,
       timestamp: sim.timestamp.toISOString(),
+      result: sim.result
+        ? {
+            ...sim.result,
+            gasUsed: sim.result.gasUsed?.toString(),
+          }
+        : undefined,
+    }))
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
+    return true
+  } catch (_error) {
+    return false
+  }
+}
+
+/**
+ * Update simulation result data
+ */
+export function updateResult(
+  id: string,
+  result: StoredSimulation['result'],
+): boolean {
+  try {
+    const existing = retrieveAll()
+    const index = existing.findIndex((sim) => sim.id === id)
+
+    if (index === -1) return false
+
+    existing[index].result = result
+
+    // Serialize and store updated list
+    const serialized: SerializedStoredSimulation[] = existing.map((sim) => ({
+      ...sim,
+      timestamp: sim.timestamp.toISOString(),
+      result: sim.result
+        ? {
+            ...sim.result,
+            gasUsed: sim.result.gasUsed?.toString(),
+          }
+        : undefined,
     }))
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
@@ -207,6 +275,12 @@ export function updateMetadata(
     const serialized: SerializedStoredSimulation[] = existing.map((sim) => ({
       ...sim,
       timestamp: sim.timestamp.toISOString(),
+      result: sim.result
+        ? {
+            ...sim.result,
+            gasUsed: sim.result.gasUsed?.toString(),
+          }
+        : undefined,
     }))
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
@@ -343,6 +417,12 @@ export function importSimulation(data: string): boolean {
       .map((sim) => ({
         ...sim,
         timestamp: sim.timestamp.toISOString(),
+        result: sim.result
+          ? {
+              ...sim.result,
+              gasUsed: sim.result.gasUsed?.toString(),
+            }
+          : undefined,
       }))
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))

@@ -1,9 +1,17 @@
 'use client'
 
 import type { CallResult } from '@altitrace/sdk/types'
-import { AlertTriangleIcon, Loader2Icon, TagIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  CheckIcon,
+  CopyIcon,
+  ExternalLinkIcon,
+  Loader2Icon,
+  TagIcon,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Badge, Card, CardContent, Select } from '@/components/ui'
+import { useMultipleCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { useEventSignature } from '@/hooks/useEventSignature'
 
 interface EnhancedEventDisplayProps {
@@ -76,6 +84,7 @@ export function EnhancedEventDisplay({
 type FormatType = 'hex' | 'dec' | 'address' | 'text'
 
 function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
+  const { getCopyState, copyToClipboard } = useMultipleCopyToClipboard()
   const eventSignature = log.topics[0]
   const knownEvent = KNOWN_EVENT_SIGNATURES[eventSignature]
 
@@ -153,7 +162,7 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
     return `${explorerUrl}/address/${address}`
   }
 
-  const handleAddressClick = (address: string) => {
+  const _handleAddressClick = (address: string) => {
     window.open(getExplorerUrl(address), '_blank', 'noopener,noreferrer')
   }
 
@@ -251,9 +260,35 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
           <div>
             <span className="text-sm font-medium">Address</span>
             <div className="flex items-center gap-2 mt-1">
-              <code className="text-sm font-mono text-blue-600">
+              <a
+                href={getExplorerUrl(log.address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-mono text-blue-600 hover:text-blue-800 transition-colors"
+                title={log.address}
+              >
                 {log.address}
-              </code>
+              </a>
+              <button
+                onClick={() => copyToClipboard('contract-address', log.address)}
+                className="p-1 hover:bg-muted rounded transition-colors"
+                title="Copy address"
+              >
+                {getCopyState('contract-address') ? (
+                  <CheckIcon className="h-3 w-3 text-green-500" />
+                ) : (
+                  <CopyIcon className="h-3 w-3 text-muted-foreground" />
+                )}
+              </button>
+              <a
+                href={getExplorerUrl(log.address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 hover:bg-muted rounded transition-colors"
+                title="Open in explorer"
+              >
+                <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
+              </a>
               <Badge variant="outline" className="text-xs">
                 Log #{logIndex}
               </Badge>
@@ -356,18 +391,46 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                       />
                       {currentFormat === 'address' &&
                       isValidAddress(formatValue(topic, currentFormat)) ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleAddressClick(
+                        <div className="flex items-center gap-1 flex-1">
+                          <a
+                            href={getExplorerUrl(
                               formatValue(topic, currentFormat),
-                            )
-                          }
-                          className="bg-background px-2 py-1 rounded text-xs font-mono flex-1 text-left text-blue-600 hover:text-blue-800 hover:bg-muted cursor-pointer border-none break-all"
-                          title={`View ${formatValue(topic, currentFormat)} on explorer`}
-                        >
-                          {formatValue(topic, currentFormat)}
-                        </button>
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-background px-2 py-1 rounded text-xs font-mono flex-1 text-left text-blue-600 hover:text-blue-800 hover:bg-muted transition-colors break-all"
+                            title={`View ${formatValue(topic, currentFormat)} on explorer`}
+                          >
+                            {formatValue(topic, currentFormat)}
+                          </a>
+                          <button
+                            onClick={() =>
+                              copyToClipboard(
+                                `topic-${topicIndex}`,
+                                formatValue(topic, currentFormat),
+                              )
+                            }
+                            className="p-1 hover:bg-muted rounded transition-colors"
+                            title="Copy address"
+                          >
+                            {getCopyState(`topic-${topicIndex}`) ? (
+                              <CheckIcon className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <CopyIcon className="h-3 w-3 text-muted-foreground" />
+                            )}
+                          </button>
+                          <a
+                            href={getExplorerUrl(
+                              formatValue(topic, currentFormat),
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 hover:bg-muted rounded transition-colors"
+                            title="Open in explorer"
+                          >
+                            <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
+                          </a>
+                        </div>
                       ) : (
                         <code className="bg-background px-2 py-1 rounded text-xs font-mono flex-1 break-all">
                           {formatValue(topic, currentFormat)}
@@ -407,16 +470,42 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                   </span>
                   {dataFormat === 'address' &&
                   isValidAddress(formatValue(log.data, dataFormat)) ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleAddressClick(formatValue(log.data, dataFormat))
-                      }
-                      className="font-mono text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-none p-0 break-all"
-                      title={`View ${formatValue(log.data, dataFormat)} on explorer`}
-                    >
-                      {formatValue(log.data, dataFormat)}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={getExplorerUrl(formatValue(log.data, dataFormat))}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-blue-600 hover:text-blue-800 hover:underline transition-colors break-all"
+                        title={`View ${formatValue(log.data, dataFormat)} on explorer`}
+                      >
+                        {formatValue(log.data, dataFormat)}
+                      </a>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            'data-address',
+                            formatValue(log.data, dataFormat),
+                          )
+                        }
+                        className="p-1 hover:bg-muted rounded transition-colors"
+                        title="Copy address"
+                      >
+                        {getCopyState('data-address') ? (
+                          <CheckIcon className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <CopyIcon className="h-3 w-3 text-muted-foreground" />
+                        )}
+                      </button>
+                      <a
+                        href={getExplorerUrl(formatValue(log.data, dataFormat))}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 hover:bg-muted rounded transition-colors"
+                        title="Open in explorer"
+                      >
+                        <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
+                      </a>
+                    </div>
                   ) : (
                     <code className="font-mono break-all block">
                       {formatValue(log.data, dataFormat)}
@@ -425,16 +514,42 @@ function EventCard({ log, logIndex }: { log: LogEntry; logIndex: number }) {
                 </div>
               ) : dataFormat === 'address' &&
                 isValidAddress(formatValue(log.data, dataFormat)) ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleAddressClick(formatValue(log.data, dataFormat))
-                  }
-                  className="text-xs font-mono break-all text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-none p-0 text-left w-full block"
-                  title={`View ${formatValue(log.data, dataFormat)} on explorer`}
-                >
-                  {formatValue(log.data, dataFormat)}
-                </button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={getExplorerUrl(formatValue(log.data, dataFormat))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-mono break-all text-blue-600 hover:text-blue-800 hover:underline transition-colors flex-1"
+                    title={`View ${formatValue(log.data, dataFormat)} on explorer`}
+                  >
+                    {formatValue(log.data, dataFormat)}
+                  </a>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(
+                        'data-address-simple',
+                        formatValue(log.data, dataFormat),
+                      )
+                    }
+                    className="p-1 hover:bg-muted rounded transition-colors"
+                    title="Copy address"
+                  >
+                    {getCopyState('data-address-simple') ? (
+                      <CheckIcon className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <CopyIcon className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </button>
+                  <a
+                    href={getExplorerUrl(formatValue(log.data, dataFormat))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1 hover:bg-muted rounded transition-colors"
+                    title="Open in explorer"
+                  >
+                    <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
+                  </a>
+                </div>
               ) : (
                 <code className="text-xs font-mono break-all block">
                   {formatValue(log.data, dataFormat)}

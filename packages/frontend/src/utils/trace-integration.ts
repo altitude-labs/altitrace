@@ -56,6 +56,32 @@ export interface EnhancedSimulationResult extends ExtendedSimulationResult {
 }
 
 /**
+ * Enhanced transaction trace result for direct transaction tracing
+ */
+export interface EnhancedTraceResult {
+  traceData: ExtendedTracerResponse
+  hasCallHierarchy: boolean
+  transactionHash: string
+  success: boolean
+  gasUsed: bigint
+  errors: string[]
+  status: 'success' | 'failed' | 'reverted'
+  type: 'trace'
+  isTraceResult: true
+  /** Optional receipt data with block gas info */
+  receipt?: {
+    blockNumber: bigint
+    blockHash: string
+    transactionIndex: number
+    effectiveGasPrice: bigint
+    contractAddress?: string
+    blockGasUsed?: bigint
+    blockGasLimit?: bigint
+    baseFeePerGas?: bigint
+  }
+}
+
+/**
  * Execute simulation, trace, and access list APIs with gas comparison analysis
  */
 export async function executeEnhancedSimulation(
@@ -63,26 +89,6 @@ export async function executeEnhancedSimulation(
   request: SimulationRequest,
 ): Promise<EnhancedSimulationResult> {
   try {
-    console.log(
-      '\n🔬 [Enhanced Simulation] Starting enhanced simulation execution...',
-    )
-    console.log('📋 Request details:')
-    console.log(
-      '   Block:',
-      request.params.blockNumber || request.params.blockTag || 'latest',
-    )
-    console.log(
-      '   State overrides count:',
-      request.options?.stateOverrides?.length || 0,
-    )
-    if (request.options?.stateOverrides?.length) {
-      console.log(
-        '   State override addresses:',
-        request.options.stateOverrides.map((o) => o.address),
-      )
-      console.log('   State overrides details:', request.options.stateOverrides)
-    }
-
     // Extract the first call for tracing and access list (assumes single transaction simulation)
     const primaryCall = request.params.calls[0]
 
@@ -90,71 +96,71 @@ export async function executeEnhancedSimulation(
       throw new Error('No calls found in simulation request')
     }
 
-    console.log('🎯 Primary call details:')
-    console.log('   To:', primaryCall.to)
-    console.log(
-      '   Data:',
-      primaryCall.data?.substring(0, 50) +
-        (primaryCall.data && primaryCall.data.length > 50 ? '...' : ''),
-    )
-    console.log('   Value:', primaryCall.value || '0x0')
-
-    // Execute simulation, trace, and access list comparison in parallel
-    console.log(
-      '⚡ [API Calls] Executing parallel API calls (simulation, trace, access list)...',
-    )
-
     const [simulationResult, traceResult, accessListComparison] =
       await Promise.all([
         // Original simulation API
         (async () => {
-          console.log(
-            '📡 [Simulation API] Calling simulation endpoint with state overrides...',
-          )
           const simResult = await client.executeSimulation(request)
-          console.log('✅ [Simulation API] Response received:')
-          console.log('   Success:', simResult.isSuccess())
-          console.log('   Status:', simResult.status)
-          console.log('   Gas used:', simResult.gasUsed)
-          console.log('   Total gas used:', simResult.getTotalGasUsed())
-          if (simResult.calls && simResult.calls.length > 0) {
-            console.log(
-              '   First call return data:',
-              simResult.calls[0].returnData,
-            )
-          }
-          if (!simResult.isSuccess()) {
-            console.log('   Errors:', simResult.getErrors())
-          }
+
           return simResult
         })(),
 
         // Trace API for call hierarchy (fallback silently if not available)
-        client
-          .trace()
-          .call(primaryCall)
-          .atBlock(
-            request.params.blockNumber || request.params.blockTag || 'latest',
-          )
-          .withCallTracer({ onlyTopCall: false, withLogs: true })
-          .with4ByteTracer()
-          .execute()
-          .catch(() => null), // Silently fail if trace API not available
+        (async () => {
+          
+          let traceBuilder = client
+            .trace()
+            .call(primaryCall)
+          
+          // Add state overrides if available (must be called before other builder methods)
+          if (request.options?.stateOverrides?.length) {
+            
+            // Convert array format to Record format expected by SDK
+            const stateOverridesRecord: Record<string, typeof request.options.stateOverrides[0]> = {}
+            request.options.stateOverrides.forEach(override => {
+              if (override.address) {
+                stateOverridesRecord[override.address] = override
+              }
+            })
+            
+            traceBuilder = traceBuilder.withStateOverrides(stateOverridesRecord)
+          }
+          
+          // Add tracing configuration after state overrides
+          traceBuilder = traceBuilder
+            .atBlock(
+              request.params.blockNumber || request.params.blockTag || 'latest',
+            )
+            .withCallTracer({ onlyTopCall: false, withLogs: true })
+            .with4ByteTracer()
+          
+          const result = await traceBuilder.execute()
+          return result
+        })().catch((error) => {
+          return null
+        }), // Silently fail if trace API not available
 
         // Access list comparison for gas optimization analysis
-        client
-          .compareAccessList()
-          .call(primaryCall)
-          .atBlock(
-            request.params.blockNumber || request.params.blockTag || 'latest',
-          )
-          .withAssetChanges(request.params.traceAssetChanges ?? false)
-          .withTransfers(request.params.traceTransfers ?? false)
-          .withValidation(request.params.validation ?? true)
-          .execute()
-          .catch((_error) => {
+        (async () => {
+          // Skip access list when state overrides are present (not supported by backend yet)
+          if (request.options?.stateOverrides?.length) {
             return null
-          }), // Log error but continue with simulation
+          }
+          
+          const accessListBuilder = client
+            .compareAccessList()
+            .call(primaryCall)
+            .atBlock(
+              request.params.blockNumber || request.params.blockTag || 'latest',
+            )
+            .withAssetChanges(request.params.traceAssetChanges ?? false)
+            .withTransfers(request.params.traceTransfers ?? false)
+            .withValidation(request.params.validation ?? true)
+          
+          return accessListBuilder.execute()
+        })().catch((_error) => {
+          return null
+        }), // Log error but continue with simulation
       ])
 
     // Create legacy gas comparison from the new comparison result
@@ -175,40 +181,10 @@ export async function executeEnhancedSimulation(
       hasGasComparison: !!accessListComparison?.success.baseline,
     }
 
-    console.log('\n🏁 [Enhanced Simulation Complete] Summary:')
-    console.log('   Simulation success:', enhancedResult.isSuccess())
-    console.log('   Simulation status:', enhancedResult.status)
-    console.log('   Has call hierarchy:', enhancedResult.hasCallHierarchy)
-    console.log('   Has access list:', enhancedResult.hasAccessList)
-    console.log('   Has gas comparison:', enhancedResult.hasGasComparison)
-    if (request.options?.stateOverrides?.length) {
-      console.log(
-        '   🎯 State overrides applied:',
-        request.options.stateOverrides.length,
-      )
-      console.log(
-        '   📍 Overridden addresses:',
-        request.options.stateOverrides.map((o) => o.address),
-      )
-      console.log('   ✅ Bytecode successfully overridden during simulation!')
-    }
-
     return enhancedResult
   } catch (_error) {
-    console.log(
-      '⚠️ [Enhanced Simulation] Error occurred, falling back to basic simulation...',
-    )
     const simulationResult = await client.executeSimulation(request)
 
-    console.log('🔄 [Fallback Simulation] Basic simulation result:')
-    console.log('   Success:', simulationResult.isSuccess())
-    console.log('   Status:', simulationResult.status)
-    if (request.options?.stateOverrides?.length) {
-      console.log(
-        '   🎯 State overrides still applied in fallback:',
-        request.options.stateOverrides.length,
-      )
-    }
 
     return {
       ...simulationResult,
@@ -344,7 +320,59 @@ function _createFailedGasComparison(
 }
 
 /**
- * Load transaction data from hash using trace API
+ * Execute transaction trace for an existing transaction hash
+ * This traces the original transaction without simulation
+ */
+export async function executeTransactionTrace(
+  client: AltitraceClient,
+  txHash: string,
+): Promise<EnhancedTraceResult> {
+  try {
+    const traceResult = await client
+      .trace()
+      .transaction(txHash)
+      .withCallTracer({ onlyTopCall: false, withLogs: true })
+      .with4ByteTracer()
+      .withReceipt()
+      .execute()
+    
+    // Extract basic information from trace
+    const rootCall = traceResult.callTracer?.rootCall
+    const success = rootCall ? !rootCall.reverted : true
+    const gasUsed = rootCall ? BigInt(rootCall.gasUsed) : 0n
+    const errors = traceResult.getErrors()
+    
+    const enhancedResult: EnhancedTraceResult = {
+      traceData: traceResult,
+      hasCallHierarchy: !!rootCall,
+      transactionHash: txHash,
+      success,
+      gasUsed,
+      errors,
+      status: errors.length > 0 ? 'failed' : success ? 'success' : 'reverted',
+      type: 'trace',
+      isTraceResult: true,
+      receipt: traceResult.receipt ? {
+        blockNumber: BigInt((traceResult.receipt as any).blockNumber || 0),
+        blockHash: (traceResult.receipt as any).blockHash || '',
+        transactionIndex: (traceResult.receipt as any).transactionIndex || 0,
+        effectiveGasPrice: BigInt((traceResult.receipt as any).effectiveGasPrice || 0),
+        contractAddress: (traceResult.receipt as any).contractAddress || undefined,
+        blockGasUsed: (traceResult.receipt as any).blockGasUsed ? BigInt((traceResult.receipt as any).blockGasUsed) : undefined,
+        blockGasLimit: (traceResult.receipt as any).blockGasLimit ? BigInt((traceResult.receipt as any).blockGasLimit) : undefined,
+        baseFeePerGas: (traceResult.receipt as any).baseFeePerGas ? BigInt((traceResult.receipt as any).baseFeePerGas) : undefined,
+      } : undefined,
+    }
+    
+    return enhancedResult
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Load transaction data from hash using viem to get original transaction parameters
+ * This is different from trace data - it gets the actual transaction parameters
  */
 export async function loadTransactionFromHash(
   client: AltitraceClient,
@@ -354,23 +382,62 @@ export async function loadTransactionFromHash(
   from: string
   data: string
   value: string
-  gasUsed: string
+  gas: string
+  gasPrice?: string
+  maxFeePerGas?: string
+  maxPriorityFeePerGas?: string
+  nonce: number
   success: boolean
+  gasUsed: string
+  transactionType?: string
 }> {
-  const trace = await client.traceTransaction(txHash)
-
-  if (!trace.callTracer?.rootCall) {
-    throw new Error('No call data found in transaction trace')
+  // Get the viem client from the Altitrace client
+  const viemClient = (client as any).viemClient
+  if (!viemClient) {
+    throw new Error('Viem client is required to load transaction data. Falling back to trace data.')
   }
 
-  const rootCall = trace.callTracer.rootCall
+  try {
+    // Fetch both transaction and receipt data
+    const [transaction, receipt] = await Promise.all([
+      viemClient.getTransaction({ hash: txHash as `0x${string}` }),
+      viemClient.getTransactionReceipt({ hash: txHash as `0x${string}` }).catch(() => null)
+    ])
 
-  return {
-    to: rootCall.to || '',
-    from: rootCall.from,
-    data: rootCall.input, // This IS the calldata!
-    value: rootCall.value,
-    gasUsed: rootCall.gasUsed,
-    success: !rootCall.reverted,
+    return {
+      to: transaction.to || '',
+      from: transaction.from,
+      data: transaction.input || '0x',
+      value: `0x${transaction.value.toString(16)}`,
+      gas: `0x${transaction.gas.toString(16)}`,
+      gasPrice: transaction.gasPrice ? `0x${transaction.gasPrice.toString(16)}` : undefined,
+      maxFeePerGas: transaction.maxFeePerGas ? `0x${transaction.maxFeePerGas.toString(16)}` : undefined,
+      maxPriorityFeePerGas: transaction.maxPriorityFeePerGas ? `0x${transaction.maxPriorityFeePerGas.toString(16)}` : undefined,
+      nonce: Number(transaction.nonce),
+      success: receipt?.status === 'success',
+      gasUsed: receipt ? `0x${receipt.gasUsed.toString(16)}` : '0x0',
+      transactionType: transaction.type || 'legacy',
+    }
+  } catch (_error) {
+    // Fallback to trace data if viem fails
+    
+    const trace = await client.traceTransaction(txHash)
+
+    if (!trace.callTracer?.rootCall) {
+      throw new Error('No call data found in transaction trace')
+    }
+
+    const rootCall = trace.callTracer.rootCall
+
+    return {
+      to: rootCall.to || '',
+      from: rootCall.from,
+      data: rootCall.input, // This IS the calldata!
+      value: rootCall.value,
+      gas: rootCall.gasUsed, // Note: this is gasUsed, not gasLimit from original tx
+      gasUsed: rootCall.gasUsed,
+      nonce: 0, // Not available in trace
+      success: !rootCall.reverted,
+    }
   }
 }

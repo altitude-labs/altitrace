@@ -44,7 +44,7 @@ export function generateSimulationMetadata(
       description,
       images: [
         {
-          url: '/banner.png',
+          url: `${baseUrl}/altitrace-embedded.png`,
           width: 1200,
           height: 630,
           alt: title,
@@ -54,11 +54,11 @@ export function generateSimulationMetadata(
     },
     twitter: {
       card: 'summary_large_image',
-      site: '@altitrace',
-      creator: '@altitrace',
+      site: '@valtitudexyz',
+      creator: '@quertyeth',
       title,
       description,
-      images: ['/banner.png'],
+      images: [`${baseUrl}/altitrace-embedded.png`],
     },
     alternates: {
       canonical: url,
@@ -70,7 +70,7 @@ export function generateHomeMetadata(
   baseUrl = 'https://altitrace.reachaltitude.xyz',
 ): Metadata {
   return {
-    title: 'Altitrace - HyperEVM Transaction Simulator',
+    title: 'Altitrace - HyperEVM Transaction Simulator by Altitude Labs',
     description:
       'Simulate, debug, and analyze EVM transactions within the HyperEVM network with precision and control. Professional tooling for developers.',
     keywords: [
@@ -79,6 +79,8 @@ export function generateHomeMetadata(
       'EVM',
       'Transaction Simulator',
       'Blockchain',
+      'HyperEVM',
+      'Altitude Labs',
       'Smart Contracts',
       'Gas Analysis',
       'Debugging',
@@ -89,12 +91,12 @@ export function generateHomeMetadata(
       locale: 'en_US',
       url: baseUrl,
       siteName: 'Altitrace',
-      title: 'Altitrace - HyperEVM Transaction Simulator',
+      title: 'Altitrace - HyperEVM Transaction Simulator by Altitude Labs',
       description:
         'Simulate, debug, and analyze EVM transactions within the HyperEVM network with precision and control.',
       images: [
         {
-          url: '/banner.png',
+          url: `${baseUrl}/altitrace-embedded.png`,
           width: 1200,
           height: 630,
           alt: 'Altitrace - Simulateur de Transactions HyperEVM',
@@ -104,12 +106,12 @@ export function generateHomeMetadata(
     },
     twitter: {
       card: 'summary_large_image',
-      site: '@altitrace',
-      creator: '@altitrace',
-      title: 'Altitrace - HyperEVM Transaction Simulator',
+      site: '@valtitudexyz',
+      creator: '@quertyeth',
+      title: 'Altitrace - HyperEVM Transaction Simulator by Altitude Labs',
       description:
         'Simulate, debug, and analyze EVM transactions within the HyperEVM network with precision and control.',
-      images: ['/banner.png'],
+      images: [`${baseUrl}/altitrace-embedded.png`],
     },
     alternates: {
       canonical: baseUrl,

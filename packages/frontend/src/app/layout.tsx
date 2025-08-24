@@ -35,7 +35,7 @@ export const metadata: Metadata = {
       'Simulate, debug, and analyze EVM transactions within the HyperEVM network with precision and control. Professional tooling for developers.',
     images: [
       {
-        url: '/banner.png',
+        url: 'https://altitrace.reachaltitude.xyz/altitrace-embedded.png',
         width: 1200,
         height: 630,
         alt: 'Altitrace - HyperEVM Transaction Simulator',
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     title: 'Altitrace - HyperEVM Transaction Simulator',
     description:
       'Simulate, debug, and analyze EVM transactions within the HyperEVM network with precision and control.',
-    images: ['/banner.png'],
+    images: ['https://altitrace.reachaltitude.xyz/altitrace-embedded.png'],
   },
 
   icons: {
