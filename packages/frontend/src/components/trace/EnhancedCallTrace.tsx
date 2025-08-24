@@ -19,15 +19,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui'
-import { parseBlockchainError } from '@/utils/error-parser'
 import { useMultipleCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { parseBlockchainError } from '@/utils/error-parser'
 
 interface EnhancedCallTraceProps {
   traceData: ExtendedTracerResponse
   className?: string
 }
-
-type TraceMode = 'gas' | 'full'
 
 /**
  * Enhanced call trace component inspired by Tenderly's interface
@@ -85,6 +83,21 @@ export function EnhancedCallTrace({
       
       <CardContent className="p-0">
         <div className="border-t font-mono text-sm">
+          {/* Header row for column alignment */}
+          <div 
+            className={`
+              grid items-center py-2 px-3 border-b bg-muted/20 text-xs font-medium text-muted-foreground
+              ${showGas ? 'grid-cols-[96px_80px_16px_1fr_80px]' : 'grid-cols-[96px_16px_1fr_80px]'}
+            `}
+            style={{ paddingLeft: '12px' }}
+          >
+            <div className="text-left">Type</div>
+            {showGas && <div className="text-right">Gas</div>}
+            <div />
+            <div className="text-left">Call Details</div>
+            <div className="text-right">Actions</div>
+          </div>
+          
           <TenderlyCallNode
             frame={rootCall}
             depth={0}
@@ -116,15 +129,12 @@ function TenderlyCallNode({
   showGas,
   showFullTrace,
 }: TenderlyCallNodeProps) {
-  const { getCopyState, copyToClipboard } = useMultipleCopyToClipboard()
+  const { copyToClipboard } = useMultipleCopyToClipboard()
   const [isExpanded, setIsExpanded] = useState(depth < 3) // Auto-expand first 3 levels
   
   const hasSubcalls = frame.calls && frame.calls.length > 0
   const gasUsed = Number.parseInt(frame.gasUsed, 16)
   const isSuccess = !frame.reverted
-  
-  // Calculate indentation
-  const indentLevel = depth * 16 // 16px per level
   
   // Format addresses - short format for display
   const formatAddress = (address: string) => {
@@ -157,38 +167,43 @@ function TenderlyCallNode({
     return colors[callType as keyof typeof colors] || 'bg-gray-500/10 text-gray-700 dark:text-gray-400'
   }
   
+  // Calculate indentation for subcalls
+  const indentLevel = depth * 16 // 16px per level
 
   return (
     <div>
-      {/* Main call row */}
+            {/* Main call row using CSS Grid for perfect alignment */}
       <div 
         className={`
-          group flex items-center py-1.5 px-3 hover:bg-muted/30 transition-colors
+          group grid items-center py-1.5 hover:bg-muted/30 transition-colors
           ${!isSuccess ? 'bg-red-50/50 dark:bg-red-950/10' : ''}
+          ${showGas ? 'grid-cols-[12px_96px_80px_16px_1fr_80px_12px]' : 'grid-cols-[12px_96px_16px_1fr_80px_12px]'}
         `}
-        style={{ paddingLeft: `${12 + indentLevel}px` }}
       >
-        {/* Fixed-width call type column (like Tenderly) */}
-        <div className="w-24 flex-shrink-0">
+        {/* Left padding that grows with indentation */}
+        <div style={{ width: `${indentLevel}px` }} />
+        
+        {/* Call type column - always aligned */}
+        <div className="flex justify-center px-1">
           <Badge 
-            className={`text-xs font-mono px-1 py-0.5 w-full justify-center ${getCallTypeColor(frame.callType, isSuccess)}`}
+            className={`text-xs font-mono px-2 py-0.5 w-full max-w-[88px] justify-center ${getCallTypeColor(frame.callType, isSuccess)}`}
             variant="outline"
           >
             {frame.callType}
           </Badge>
         </div>
         
-        {/* Fixed-width gas cost column (if enabled) */}
+        {/* Gas column (if enabled) - always aligned */}
         {showGas && (
-          <div className="w-20 flex-shrink-0 text-right pr-2">
+          <div className="text-right px-1">
             <span className="text-muted-foreground text-xs font-mono">
               {gasUsed.toLocaleString()}
             </span>
           </div>
         )}
         
-        {/* Expand/collapse button (positioned after gas) */}
-        <div className="w-4 flex justify-center mr-2 flex-shrink-0">
+        {/* Expand/collapse button - always aligned */}
+        <div className="flex justify-center">
           {hasSubcalls ? (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
@@ -205,8 +220,8 @@ function TenderlyCallNode({
           )}
         </div>
         
-        {/* Call information */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Call information - this part gets indented */}
+        <div className="flex items-center gap-2 min-w-0 px-3">
           {/* From address */}
           <span className="text-muted-foreground text-sm">
             {formatAddress(frame.from)}
@@ -241,14 +256,14 @@ function TenderlyCallNode({
             <span className="text-xs text-muted-foreground ml-1">
               ({(() => {
                 const inputData = frame.input.slice(10)
-                return inputData.length > 20 ? `${inputData.slice(0, 20)}...` : inputData
+                return inputData
               })()})
             </span>
           )}
         </div>
         
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100">
+        {/* Action buttons - always aligned */}
+        <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 px-1">
           {/* Copy from address */}
           <button
             onClick={() => copyToClipboard(`from-${depth}-${index}`, frame.from)}
@@ -280,6 +295,9 @@ function TenderlyCallNode({
             <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
           </a>
         </div>
+        
+        {/* Right padding */}
+        <div />
       </div>
       
       {/* Full trace mode additional details */}
@@ -287,7 +305,7 @@ function TenderlyCallNode({
         <div 
           className="bg-muted/10 border-l-2 border-muted/50 text-xs"
           style={{ 
-            paddingLeft: `${12 + indentLevel + 96 + (showGas ? 80 : 0) + 16 + 8}px` // Align with call details (w-24=96px, w-20=80px)
+            marginLeft: `${12 + indentLevel + 96 + (showGas ? 80 : 0) + 16}px`
           }}
         >
           <div className="py-1 px-3 space-y-1">
