@@ -105,7 +105,8 @@ export default function SimulatorDashboard() {
       const transactionCount = request.bundleRequest.transactions.length
       return {
         label: `Bundle (${transactionCount})`,
-        color: 'bg-orange-100 text-orange-800',
+        color:
+          'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300',
       }
     }
 
@@ -117,10 +118,22 @@ export default function SimulatorDashboard() {
       )
 
       if (callsCount > 1)
-        return { label: 'Batch', color: 'bg-purple-100 text-purple-800' }
+        return {
+          label: 'Batch',
+          color:
+            'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+        }
       if (hasValue)
-        return { label: 'Transfer', color: 'bg-blue-100 text-blue-800' }
-      return { label: 'Call', color: 'bg-green-100 text-green-800' }
+        return {
+          label: 'Transfer',
+          color:
+            'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+        }
+      return {
+        label: 'Call',
+        color:
+          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+      }
     }
 
     // Handle legacy format (backward compatibility)
@@ -132,13 +145,28 @@ export default function SimulatorDashboard() {
       )
 
       if (callsCount > 1)
-        return { label: 'Batch', color: 'bg-purple-100 text-purple-800' }
+        return {
+          label: 'Batch',
+          color:
+            'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+        }
       if (hasValue)
-        return { label: 'Transfer', color: 'bg-blue-100 text-blue-800' }
-      return { label: 'Call', color: 'bg-green-100 text-green-800' }
+        return {
+          label: 'Transfer',
+          color:
+            'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+        }
+      return {
+        label: 'Call',
+        color:
+          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+      }
     }
 
-    return { label: 'Unknown', color: 'bg-gray-100 text-gray-800' }
+    return {
+      label: 'Unknown',
+      color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300',
+    }
   }
 
   const getStatusIcon = (result?: StoredSimulation['result']) => {
