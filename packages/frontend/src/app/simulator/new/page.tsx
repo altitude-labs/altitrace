@@ -77,10 +77,6 @@ function NewSimulationPageContent() {
     if (rerunId && !isPreFilled) {
       const storedRequest = getRequest(rerunId)
       if (storedRequest) {
-        // Pre-fill form with stored request data
-        console.log('Pre-filling form with:', storedRequest)
-
-        // Extract data from stored request
         const call = storedRequest.params.calls[0]
         if (call) {
           // Set basic transaction data - convert hex values to decimal for display
@@ -125,42 +121,13 @@ function NewSimulationPageContent() {
   }, [searchParams, isPreFilled])
 
   const handleAbiImport = (parsedAbi: ParsedAbi, rawAbiJson: string) => {
-    console.log('📝 [ABI Import] New ABI imported:', {
-      functionsCount: parsedAbi.functions?.length || 0,
-      eventsCount: parsedAbi.events?.length || 0,
-      firstFunctionName: parsedAbi.functions?.[0]?.name || 'none',
-      rawAbiSize: rawAbiJson.length,
-    })
     setAbi(parsedAbi)
     setFunctionData(null) // Clear previous function data
-    console.log('🔄 [ABI State Updated] New ABI set in simulator state')
-    console.log('🔄 [Function Data] Cleared due to ABI change')
-
-    // Log current vs new ABI differences for debugging
-    console.log(
-      '📋 [ABI Functions List]:',
-      parsedAbi.functions?.map(
-        (f) => `${f.name}(${f.inputs?.map((i) => i.type).join(',')})`,
-      ) || [],
-    )
   }
 
   const handleContractSelect = (contract: any) => {
-    console.log('📋 [Contract Selection] Contract selected:', {
-      id: contract.id,
-      name: contract.metadata?.title || contract.contractData?.name,
-      address: contract.contractData?.address,
-      hasBytecode: !!contract.contractData?.bytecode,
-      status: contract.status,
-      compilationStatus: contract.metadata?.compilationStatus,
-      sourceCodeVerified: contract.metadata?.sourceCodeVerified,
-    })
     setSelectedContractId(contract.id)
     setSelectedContract(contract)
-    console.log(
-      '✅ [Contract Selection] State updated - selectedContractId:',
-      contract.id,
-    )
 
     // Also update the "to" address if the contract has an address
     if (contract.contractData?.address) {
@@ -168,10 +135,6 @@ function NewSimulationPageContent() {
         ...prev,
         to: contract.contractData.address,
       }))
-      console.log(
-        '📍 [Address Update] Transaction "to" address set to:',
-        contract.contractData.address,
-      )
     }
   }
 
@@ -203,6 +166,35 @@ function NewSimulationPageContent() {
     setFunctionData(null)
   }
 
+  const handleTraceTransaction = async (txHash: string) => {
+    // Generate a unique ID for the trace result
+    const traceId = generateSimulationId()
+    
+    // Store trace parameters for execution on results page
+    store(
+      traceId,
+      { 
+        params: { 
+          calls: [{
+            to: '0x0000000000000000000000000000000000000000',
+            data: '0x',
+            value: '0x0'
+          }],
+          blockTag: 'latest'
+        }
+      },
+      {
+        title: `Transaction Trace: ${txHash.slice(0, 10)}...`,
+        tags: ['trace', 'recent'],
+        description: `Trace for transaction: ${txHash}`,
+        traceHash: txHash,
+      },
+    )
+    
+    // Navigate to results page - trace execution happens there
+    router.push(`/simulator/${traceId}`)
+  }
+
   const handleSimulation = async (request: {
     params: SdkSimulationRequest['params']
     options?: SdkSimulationRequest['options']
@@ -211,21 +203,8 @@ function NewSimulationPageContent() {
     setError(null)
 
     try {
-      console.log('\n🚀 [Simulation Setup] Preparing simulation request...')
-      console.log(
-        '📦 Selected Contract:',
-        selectedContract?.metadata?.title ||
-          selectedContract?.contractData?.name ||
-          'None',
-      )
-
       const finalOptions = { ...request.options }
-
       if (selectedContract) {
-        console.log(
-          '🔍 [Smart State Override Detection] Checking if contract needs bytecode override...',
-        )
-
         try {
           const stateOverride = await createContractStateOverrideForSimulation(
             selectedContract,
@@ -233,9 +212,6 @@ function NewSimulationPageContent() {
           )
 
           if (stateOverride.requiresOverride && stateOverride.stateOverride) {
-            console.log(
-              '⚡ [SDK Call Preparation] Converting state override for API...',
-            )
 
             // Convert to array format expected by API
             const stateOverrideArray = Object.entries(
@@ -245,8 +221,6 @@ function NewSimulationPageContent() {
               ...overrides,
             }))
 
-            console.log('📋 [State Override Array]:', stateOverrideArray)
-
             // Merge with existing state overrides if any
             const existingOverrides = finalOptions.stateOverrides || []
             finalOptions.stateOverrides = [
@@ -254,42 +228,20 @@ function NewSimulationPageContent() {
               ...stateOverrideArray,
             ]
 
-            console.log(
-              '✅ [Final Options] State overrides applied to simulation:',
-            )
-            console.log(
-              '   Total overrides:',
-              finalOptions.stateOverrides.length,
-            )
-            console.log(
-              '   Overriding addresses:',
-              finalOptions.stateOverrides.map((o) => o.address),
-            )
-            console.log('   Full final options:', finalOptions)
-
             // Show comparison results to user
             if (stateOverride.bytecodeComparison) {
               const { isIdentical, localSize, deployedSize } =
                 stateOverride.bytecodeComparison
-              console.log(
-                `   🔍 Bytecode Analysis: ${isIdentical ? 'IDENTICAL' : 'DIFFERENT'} (Local: ${localSize}b, Deployed: ${deployedSize}b)`,
-              )
             }
           } else {
             const reason = stateOverride.bytecodeComparison?.isIdentical
               ? 'bytecode is identical to deployed version'
               : 'contract does not require override'
-            console.log(
-              `ℹ️ [State Override] No bytecode override needed: ${reason}`,
-            )
 
             // Show helpful info about the comparison
             if (stateOverride.bytecodeComparison) {
               const { localSize, deployedSize } =
                 stateOverride.bytecodeComparison
-              console.log(
-                `   📊 Comparison: Local ${localSize} bytes, Deployed ${deployedSize} bytes`,
-              )
             }
           }
         } catch (_error) {
@@ -308,22 +260,9 @@ function NewSimulationPageContent() {
               ...existingOverrides,
               ...stateOverrideArray,
             ]
-            console.log(
-              '✅ [Fallback] Applied state override using simple logic',
-            )
           }
         }
       } else {
-        console.log(
-          '❌ [State Override] selectedContract is null/undefined - no state overrides will be applied',
-        )
-        console.log('🔍 [Debug] Possible reasons:')
-        console.log('   1. No contract was selected in the ContractManager')
-        console.log('   2. Contract was not properly loaded/stored')
-        console.log(
-          '   3. selectedContractId does not match any stored contract',
-        )
-        console.log('   4. Contract selection state was reset')
       }
 
       // Store simulation parameters for execution on results page
@@ -331,17 +270,15 @@ function NewSimulationPageContent() {
 
       store(
         simulationId,
-        { params: request.params, options: finalOptions },
+        { 
+          params: request.params, 
+          options: finalOptions 
+        },
         {
           title: `${functionData?.functionName || 'Transaction'} Simulation`,
-          tags: ['recent'],
+          tags: ['simulation', 'recent'],
         },
       )
-
-      console.log(
-        `📋 [Storage] Saved simulation parameters with ID: ${simulationId}`,
-      )
-      console.log('🚀 [Navigation] Navigating to results page for execution...')
 
       // Navigate immediately to results page - execution happens there
       router.push(`/simulator/${simulationId}`)
@@ -502,6 +439,7 @@ function NewSimulationPageContent() {
           {/* Transaction Form */}
           <TransactionForm
             onSubmit={handleSimulation}
+            onTraceTransaction={handleTraceTransaction}
             loading={loading}
             abi={abi}
             functionData={functionData}

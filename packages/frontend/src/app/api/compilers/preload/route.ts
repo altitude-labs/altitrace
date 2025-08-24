@@ -3,7 +3,7 @@ import { getPreloadStatus, preloadCompilers } from '@/lib/compiler-preload'
 
 export async function POST(_request: NextRequest) {
   try {
-    console.log('🚀 Manual preload trigger received')
+
     await preloadCompilers()
 
     const status = getPreloadStatus()

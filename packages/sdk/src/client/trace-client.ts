@@ -18,6 +18,7 @@ import type {
   TraceRequestBuilder,
   TracerManyResponse,
   TraceTransactionBuilder,
+  TransactionReceiptData,
 } from '@sdk/types/trace'
 import { ValidationUtils } from '@sdk/utils/validation'
 
@@ -51,7 +52,17 @@ const DEFAULT_TRACERS: TraceConfig = {
  * Trace client for interacting with the trace API endpoints.
  */
 export class TraceClient {
-  constructor(private httpClient: HttpClient) {}
+  constructor(
+    private httpClient: HttpClient,
+    private viemClient?: any,
+  ) {}
+
+  /**
+   * Get the viem client if available
+   */
+  getViemClient() {
+    return this.viemClient
+  }
 
   /**
    * Create a trace request builder for fluent API usage.
@@ -413,6 +424,7 @@ class TraceRequestBuilderImpl implements TraceRequestBuilder {
 class TraceTransactionBuilderImpl implements TraceTransactionBuilder {
   private config: TraceConfig = { ...DEFAULT_TRACERS }
   private options?: TraceExecutionOptions
+  private includeReceipt = false
 
   constructor(
     private client: TraceClient,
@@ -454,12 +466,66 @@ class TraceTransactionBuilderImpl implements TraceTransactionBuilder {
     return this
   }
 
+  withReceipt(): TraceTransactionBuilder {
+    this.includeReceipt = true
+    return this
+  }
+
   async execute(): Promise<ExtendedTracerResponse> {
-    return this.client.traceTransaction(
+    const traceResult = await this.client.traceTransaction(
       this.transactionHash,
       this.config,
       this.options,
     )
+
+    // If receipt is requested and viem client is available, fetch it
+    if (this.includeReceipt && this.client.getViemClient()) {
+      try {
+        const receipt = await this.fetchTransactionReceipt()
+        // Add receipt data to the extended response
+        ;(traceResult as any).receipt = receipt
+      } catch (_error) {}
+    }
+
+    return traceResult
+  }
+
+  private async fetchTransactionReceipt(): Promise<TransactionReceiptData> {
+    const viemClient = this.client.getViemClient()
+    if (!viemClient) {
+      throw new Error('Viem client is required to fetch transaction receipt')
+    }
+
+    // Fetch transaction receipt first
+    const receipt = await viemClient.getTransactionReceipt({
+      hash: this.transactionHash as `0x${string}`,
+    })
+
+    // Then fetch the block data using the block number from receipt
+    let block = null
+    try {
+      block = await viemClient.getBlock({
+        blockNumber: receipt.blockNumber,
+      })
+    } catch (_error) {}
+
+    // Convert viem receipt and block data to our format
+    const receiptData: TransactionReceiptData = {
+      transactionHash: receipt.transactionHash,
+      blockNumber: receipt.blockNumber,
+      blockHash: receipt.blockHash,
+      transactionIndex: receipt.transactionIndex,
+      gasUsed: receipt.gasUsed,
+      effectiveGasPrice: receipt.effectiveGasPrice,
+      status: receipt.status === 'success' ? 'success' : 'reverted',
+      contractAddress: receipt.contractAddress || undefined,
+      // Use block gasUsed for actual block gas consumption
+      blockGasUsed: block?.gasUsed,
+      blockGasLimit: block?.gasLimit,
+      baseFeePerGas: block?.baseFeePerGas,
+    }
+
+    return receiptData
   }
 }
 
