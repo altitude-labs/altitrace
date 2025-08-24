@@ -46,6 +46,7 @@ export default function Home() {
             </Link>
             <Link
               href="https://docs.altitrace.reachaltitude.xyz"
+              target="_blank"
               className="w-full sm:w-auto"
             >
               <Button

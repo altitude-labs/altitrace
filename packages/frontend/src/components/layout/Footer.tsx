@@ -59,6 +59,7 @@ export function Footer() {
               <li>
                 <Link
                   href="https://docs.altitrace.reachaltitude.xyz"
+                  target="_blank"
                   className="hover:text-primary transition-colors"
                 >
                   Documentation
@@ -67,6 +68,7 @@ export function Footer() {
               <li>
                 <Link
                   href="https://docs.altitrace.reachaltitude.xyz/api"
+                  target="_blank"
                   className="hover:text-primary transition-colors"
                 >
                   API Reference
@@ -75,6 +77,7 @@ export function Footer() {
               <li>
                 <Link
                   href="https://docs.altitrace.reachaltitude.xyz/sdk"
+                  target="_blank"
                   className="hover:text-primary transition-colors"
                 >
                   SDK Guide
