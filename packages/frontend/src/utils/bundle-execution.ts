@@ -260,7 +260,18 @@ export async function executeBundleSimulation(
       },
       callTracer: true,
       fourByteTracer: true,
-      prestateTracer: true,
+      prestateTracer: {
+        diffMode: true,
+        disableCode: false,
+        disableStorage: false,
+      },
+      structLogger: {
+        cleanStructLogs: false,
+        disableMemory: true,
+        disableStack: false,  
+        disableStorage: false,
+        disableReturnData: false
+      },
       // Add state overrides if provided
       ...(request.stateOverrides &&
         request.stateOverrides.length > 0 && {

@@ -990,6 +990,13 @@ export async function executeEnhancedSimulation(
               disableCode: false,
               disableStorage: false,
             })
+            .withStructLogger({
+              cleanStructLogs: false,    // Enable detailed opcodes for storage operations
+              disableMemory: true,       // Disable memory for performance
+              disableStack: false,       // Enable stack for storage slot extraction
+              disableStorage: false,     // Enable storage operations tracking
+              disableReturnData: false   // Keep return data enabled
+            })
             .with4ByteTracer()
 
           const result = await traceBuilder.execute()
@@ -1331,6 +1338,13 @@ export async function executeTransactionTrace(
         diffMode: true,
         disableCode: false,
         disableStorage: false,
+      })
+      .withStructLogger({
+        cleanStructLogs: false,    // Enable detailed opcodes for storage operations
+        disableMemory: true,       // Disable memory for performance
+        disableStack: false,       // Enable stack for storage slot extraction
+        disableStorage: false,     // Enable storage operations tracking
+        disableReturnData: false   // Keep return data enabled
       })
       .with4ByteTracer()
       .execute()
