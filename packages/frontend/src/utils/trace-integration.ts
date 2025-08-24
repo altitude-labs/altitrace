@@ -33,6 +33,8 @@ export interface EnhancedTraceResult {
   type: 'trace'
   /** Whether this result has call hierarchy data */
   hasCallHierarchy: boolean
+  /** Whether this result has state changes data */
+  hasStateChanges: boolean
   /** Flag to identify trace results */
   isTraceResult: true
   /** Transaction receipt if available */
@@ -100,32 +102,8 @@ export interface EnhancedSimulationResult extends ExtendedSimulationResult {
   hasCallHierarchy: boolean
   hasAccessList: boolean
   hasGasComparison: boolean
-}
-
-/**
- * Enhanced transaction trace result for direct transaction tracing
- */
-export interface EnhancedTraceResult {
-  traceData: ExtendedTracerResponse
-  hasCallHierarchy: boolean
-  transactionHash: string
-  success: boolean
-  gasUsed: bigint
-  errors: string[]
-  status: 'success' | 'failed' | 'reverted'
-  type: 'trace'
-  isTraceResult: true
-  /** Optional receipt data with block gas info */
-  receipt?: {
-    blockNumber: bigint
-    blockHash: string
-    transactionIndex: number
-    effectiveGasPrice: bigint
-    contractAddress?: string
-    blockGasUsed?: bigint
-    blockGasLimit?: bigint
-    baseFeePerGas?: bigint
-  }
+  hasStateChanges: boolean
+  getStateChangesCount?(): number
 }
 
 /* DISABLED - VIEM ASSET TRACKING (keep for debugging)
@@ -1013,6 +991,11 @@ export async function executeEnhancedSimulation(
               request.params.blockNumber || request.params.blockTag || 'latest',
             )
             .withCallTracer({ onlyTopCall: false, withLogs: true })
+            .withPrestateTracer({
+              diffMode: true,
+              disableCode: false,
+              disableStorage: false,
+            })
             .with4ByteTracer()
 
           const result = await traceBuilder.execute()
@@ -1088,6 +1071,11 @@ export async function executeEnhancedSimulation(
       hasCallHierarchy: !!traceResult?.callTracer?.rootCall,
       hasAccessList: !!accessListComparison?.success.accessList,
       hasGasComparison: !!accessListComparison?.success.baseline,
+      hasStateChanges:
+        !!traceResult?.prestateTracer &&
+        hasPrestateChanges(traceResult.prestateTracer),
+      getStateChangesCount: () =>
+        getStateChangesCount(traceResult?.prestateTracer),
     }
 
     // Override getAssetChangesSummary to use our trace-based asset changes
@@ -1119,6 +1107,7 @@ export async function executeEnhancedSimulation(
       hasCallHierarchy: false,
       hasAccessList: false,
       hasGasComparison: false,
+      hasStateChanges: false,
     }
   }
 }
@@ -1343,6 +1332,11 @@ export async function executeTransactionTrace(
       .trace()
       .transaction(txHash)
       .withCallTracer({ onlyTopCall: false, withLogs: true })
+      .withPrestateTracer({
+        diffMode: true,
+        disableCode: false,
+        disableStorage: false,
+      })
       .with4ByteTracer()
       .execute()
 
@@ -1386,6 +1380,9 @@ export async function executeTransactionTrace(
     const enhancedResult: EnhancedTraceResult = {
       traceData: traceResult,
       hasCallHierarchy: !!rootCall,
+      hasStateChanges:
+        !!traceResult.prestateTracer &&
+        hasPrestateChanges(traceResult.prestateTracer),
       transactionHash: txHash,
       success,
       gasUsed,
@@ -1612,4 +1609,139 @@ async function decodeEventsFromLogs(logs: any[], abi: Abi): Promise<any[]> {
   }
 
   return decodedEvents
+}
+
+/**
+ * Check if prestate data contains state changes (diff mode with actual changes)
+ */
+function hasPrestateChanges(prestateData: any): boolean {
+  if (!prestateData) return false
+
+  // Check if it's diff mode data
+  if ('pre' in prestateData && 'post' in prestateData) {
+    const preAccounts = prestateData.pre || {}
+    const postAccounts = prestateData.post || {}
+
+    // Find any account with actual changes
+    const allAddresses = new Set([
+      ...Object.keys(preAccounts),
+      ...Object.keys(postAccounts),
+    ])
+
+    for (const address of allAddresses) {
+      const preState = preAccounts[address] || {}
+      const rawPostState = postAccounts[address] || {}
+
+      // Merge post state with pre state for missing fields (API diff optimization)
+      const postState = {
+        balance:
+          rawPostState.balance !== undefined
+            ? rawPostState.balance
+            : preState.balance,
+        nonce:
+          rawPostState.nonce !== undefined
+            ? rawPostState.nonce
+            : preState.nonce,
+        code:
+          rawPostState.code !== undefined ? rawPostState.code : preState.code,
+        storage: { ...preState.storage, ...rawPostState.storage },
+      }
+
+      // Check for any state changes with proper null handling
+      const preBalance = preState.balance || null
+      const postBalance = postState.balance || null
+      const preNonce = preState.nonce ?? null
+      const postNonce = postState.nonce ?? null
+      const preCode = preState.code || null
+      const postCode = postState.code || null
+
+      if (
+        preBalance !== postBalance ||
+        preNonce !== postNonce ||
+        preCode !== postCode ||
+        hasStorageChanges(preState.storage || {}, postState.storage || {})
+      ) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Get the count of accounts with state changes
+ */
+function getStateChangesCount(prestateData: any): number {
+  if (!prestateData || !hasPrestateChanges(prestateData)) {
+    return 0
+  }
+
+  const preAccounts = prestateData.pre || {}
+  const postAccounts = prestateData.post || {}
+
+  const allAddresses = new Set([
+    ...Object.keys(preAccounts),
+    ...Object.keys(postAccounts),
+  ])
+
+  let changeCount = 0
+  for (const address of allAddresses) {
+    const preState = preAccounts[address] || {}
+    const rawPostState = postAccounts[address] || {}
+
+    // Merge post state with pre state for missing fields (API diff optimization)
+    const postState = {
+      balance:
+        rawPostState.balance !== undefined
+          ? rawPostState.balance
+          : preState.balance,
+      nonce:
+        rawPostState.nonce !== undefined ? rawPostState.nonce : preState.nonce,
+      code: rawPostState.code !== undefined ? rawPostState.code : preState.code,
+      storage: { ...preState.storage, ...rawPostState.storage },
+    }
+
+    // Check for changes with proper null handling
+    const preBalance = preState.balance || null
+    const postBalance = postState.balance || null
+    const preNonce = preState.nonce ?? null
+    const postNonce = postState.nonce ?? null
+    const preCode = preState.code || null
+    const postCode = postState.code || null
+
+    if (
+      preBalance !== postBalance ||
+      preNonce !== postNonce ||
+      preCode !== postCode ||
+      hasStorageChanges(preState.storage || {}, postState.storage || {})
+    ) {
+      changeCount++
+    }
+  }
+
+  return changeCount
+}
+
+/**
+ * Check if storage has changes between two storage objects
+ */
+function hasStorageChanges(
+  preStorage: Record<string, string>,
+  postStorage: Record<string, string>,
+): boolean {
+  const allSlots = new Set([
+    ...Object.keys(preStorage),
+    ...Object.keys(postStorage),
+  ])
+
+  for (const slot of allSlots) {
+    const preValue = preStorage[slot] || '0x0'
+    const postValue = postStorage[slot] || '0x0'
+    if (preValue !== postValue) {
+      return true
+    }
+  }
+
+  return false
 }
