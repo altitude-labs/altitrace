@@ -295,7 +295,19 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         {/* Enhanced Simulation Results */}
         <EnhancedSimulationResults 
           result={simulationResult} 
-          simulationRequest={simulation?.request}
+          simulationRequest={simulation?.request ? {
+            ...simulation.request,
+            params: {
+              ...simulation.request.params,
+              calls: simulation.request.params.calls?.map(call => ({
+                to: call.to || '',
+                from: call.from || undefined,
+                data: call.data || undefined,
+                value: call.value || undefined,
+                gas: call.gas || undefined
+              })).filter(call => call.to) || []
+            }
+          } : undefined}
         />
       </div>
     </div>
