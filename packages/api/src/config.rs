@@ -18,6 +18,7 @@ pub(crate) struct ServerConfig {
 #[derive(Clone, Debug, Deserialize)]
 pub(crate) struct ApiConfig {
     pub auth_token: Option<String>,
+    pub base_url: Option<String>,
     pub cors: CorsConfig,
 }
 
