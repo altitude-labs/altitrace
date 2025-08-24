@@ -6,7 +6,6 @@ export default defineConfig({
   logoUrl: '/logo.svg',
   iconUrl: '/logo.svg',
   ogImageUrl: '/altitrace-prod.png',
-  basePath: '/docs',
   sidebar,
   topNav: [
     { text: 'Simulator', link: 'https://altitrace.reachaltitude.xyz' },
