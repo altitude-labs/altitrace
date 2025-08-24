@@ -91,14 +91,14 @@ export function EnhancedCallTrace({
             `}
             style={{ paddingLeft: '12px' }}
           >
-            <div className="text-left">Type</div>
-            {showGas && <div className="text-right">Gas</div>}
+            <div className="text-left text-center">Type</div>
+            {showGas && <div className="text-right text-center">Gas</div>}
             <div />
             <div className="text-left">Call Details</div>
             <div className="text-right">Actions</div>
           </div>
           
-          <TenderlyCallNode
+          <CallNode
             frame={rootCall}
             depth={0}
             index={0}
@@ -112,7 +112,7 @@ export function EnhancedCallTrace({
   )
 }
 
-interface TenderlyCallNodeProps {
+interface CallNodeProps {
   frame: CallFrame
   depth: number
   index: number
@@ -121,14 +121,14 @@ interface TenderlyCallNodeProps {
   showFullTrace: boolean
 }
 
-function TenderlyCallNode({
+function CallNode({
   frame,
   depth,
   index,
   isRoot = false,
   showGas,
   showFullTrace,
-}: TenderlyCallNodeProps) {
+}: CallNodeProps) {
   const { copyToClipboard } = useMultipleCopyToClipboard()
   const [isExpanded, setIsExpanded] = useState(depth < 3) // Auto-expand first 3 levels
   
@@ -139,7 +139,7 @@ function TenderlyCallNode({
   // Format addresses - short format for display
   const formatAddress = (address: string) => {
     if (!address) return 'N/A'
-    return `${address.slice(0, 8)}...${address.slice(-6)}`
+    return `${address}`
   }
   
   // Get function selector and format it
@@ -152,7 +152,7 @@ function TenderlyCallNode({
   
   const functionSelector = getFunctionSelector()
   
-  // Get call type color similar to Tenderly
+  // Get call type color similar
   const getCallTypeColor = (callType: string, success: boolean) => {
     if (!success) return 'bg-red-500/10 text-red-700 dark:text-red-400'
     
@@ -202,12 +202,15 @@ function TenderlyCallNode({
           </div>
         )}
         
-        {/* Expand/collapse button - always aligned */}
-        <div className="flex justify-center">
+        {/* Expand/collapse button - indented based on depth */}
+        <div className="flex justify-start relative z-10" style={{ paddingLeft: `${indentLevel}px` }}>
           {hasSubcalls ? (
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-0.5 rounded hover:bg-muted transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+              className="p-0.5 rounded hover:bg-muted transition-colors relative z-10 cursor-pointer"
             >
               {isExpanded ? (
                 <ChevronDownIcon className="h-3 w-3" />
@@ -220,11 +223,11 @@ function TenderlyCallNode({
           )}
         </div>
         
-        {/* Call information - this part gets indented */}
-        <div className="flex items-center gap-2 min-w-0 px-3">
+        {/* Call information - indented based on depth */}
+        <div className="flex items-center gap-2 min-w-0 px-3" style={{ paddingLeft: `${indentLevel + 12}px` }}>
           {/* From address */}
           <span className="text-muted-foreground text-sm">
-            {formatAddress(frame.from)}
+            [CALLER] {formatAddress(frame.from)}
           </span>
           
           {/* Arrow */}
@@ -233,7 +236,7 @@ function TenderlyCallNode({
           {/* To address or CREATE */}
           {frame.to ? (
             <span className="text-muted-foreground text-sm">
-              {formatAddress(frame.to)}
+              [RECEIVER] {formatAddress(frame.to)}
             </span>
           ) : (
             <span className="text-orange-600 dark:text-orange-400 font-medium text-sm">
@@ -254,10 +257,7 @@ function TenderlyCallNode({
           {/* Data (if full trace mode and has input beyond selector) */}
           {showFullTrace && frame.input && frame.input.length > 10 && (
             <span className="text-xs text-muted-foreground ml-1">
-              ({(() => {
-                const inputData = frame.input.slice(10)
-                return inputData
-              })()})
+              ({frame.input})
             </span>
           )}
         </div>
@@ -305,7 +305,7 @@ function TenderlyCallNode({
         <div 
           className="bg-muted/10 border-l-2 border-muted/50 text-xs"
           style={{ 
-            marginLeft: `${12 + indentLevel + 96 + (showGas ? 80 : 0) + 16}px`
+            marginLeft: `${12 + 96 + (showGas ? 80 : 0) + 16 + indentLevel + 12}px`
           }}
         >
           <div className="py-1 px-3 space-y-1">
@@ -345,7 +345,7 @@ function TenderlyCallNode({
       {hasSubcalls && isExpanded && frame.calls && (
         <>
           {frame.calls.map((subcall, subIndex) => (
-            <TenderlyCallNode
+            <CallNode
               key={`${depth}-${subIndex}`}
               frame={subcall}
               depth={depth + 1}
