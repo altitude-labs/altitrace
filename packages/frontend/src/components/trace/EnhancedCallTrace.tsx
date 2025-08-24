@@ -360,10 +360,10 @@ function CallNode({
             marginLeft: `${12 + 96 + (showGas ? 80 : 0) + 16 + indentLevel + 12}px`
           }}
         >
-          <div className="py-1 px-3 space-y-1">
+          <div className="py-1 px-3 flex flex-wrap items-center gap-x-4 gap-y-1 overflow-x-auto whitespace-nowrap">
             {/* Value transfer */}
             {frame.value && frame.value !== '0x0' && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="text-amber-600 dark:text-amber-400 font-semibold text-xs">VALUE:</span>
                 <span className="text-amber-700 dark:text-amber-300 font-mono text-sm">{BigInt(frame.value).toLocaleString()} wei</span>
               </div>
@@ -371,9 +371,9 @@ function CallNode({
             
             {/* Error information with decoded output */}
             {!isSuccess && (frame.error || frame.output) && (
-              <div className="flex items-center gap-2 whitespace-nowrap">
-                <span className="text-red-600 dark:text-red-400 font-semibold text-xs flex-shrink-0">ERROR:</span>
-                <span className="text-red-700 dark:text-red-300 font-medium text-sm flex-shrink-0">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-red-600 dark:text-red-400 font-semibold text-xs">ERROR:</span>
+                <span className="text-red-700 dark:text-red-300 font-medium text-sm">
                   {(() => {
                     const parsedError = parseBlockchainErrorWithOutput(frame.error || '', frame.output || '')
                     return parsedError.details || parsedError.title || 'execution reverted'
@@ -384,10 +384,10 @@ function CallNode({
             
             {/* Output data (only show for successful calls or when no decoded error) */}
             {frame.output && frame.output !== '0x' && (isSuccess || !frame.error) && (
-              <div className="flex items-start gap-2">
-                <span className={`${!isSuccess ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} font-semibold text-xs flex-shrink-0`}>OUTPUT:</span>
-                <span className={`${!isSuccess ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'} font-mono text-xs break-all`}>
-                  {frame.output}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className={`${!isSuccess ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} font-semibold text-xs`}>OUTPUT:</span>
+                <span className={`${!isSuccess ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'} font-mono text-xs`}>
+                  {frame.output.length > 50 ? `${frame.output.slice(0, 50)}...` : frame.output}
                 </span>
               </div>
             )}
