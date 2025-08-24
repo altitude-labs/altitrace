@@ -254,12 +254,13 @@ export function ContractManager({
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BookOpenIcon className="h-5 w-5" />
-              Contract & ABI Management
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <BookOpenIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Contract & ABI Management</span>
+              <span className="sm:hidden">Contract Manager</span>
               {currentAbi && (
-                <span className="text-sm font-normal text-green-600">
-                  ({currentAbi.functions.length} functions loaded)
+                <span className="text-xs sm:text-sm font-normal text-green-600">
+                  ({currentAbi.functions.length} functions)
                 </span>
               )}
             </CardTitle>

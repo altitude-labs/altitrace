@@ -293,7 +293,10 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
         </div>
 
         {/* Enhanced Simulation Results */}
-        <EnhancedSimulationResults result={simulationResult} />
+        <EnhancedSimulationResults 
+          result={simulationResult} 
+          simulationRequest={simulation?.request}
+        />
       </div>
     </div>
   )
