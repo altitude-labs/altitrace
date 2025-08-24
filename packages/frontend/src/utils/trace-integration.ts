@@ -671,70 +671,6 @@ async function executeTraceBasedAssetTracking(
   }
 }
 
-/* DISABLED - VIEM HELPER FUNCTIONS (keep for debugging)
-/**
- * Extract and normalize asset changes from viem simulateCalls result
- */
-/*
-function extractAssetChangesFromViemResult(viemResult: any): any[] {
-  try {
-    console.log('🔍 [Viem Asset Tracking] Processing result structure:', {
-      isArray: Array.isArray(viemResult),
-      keys: viemResult ? Object.keys(viemResult) : [],
-      length: Array.isArray(viemResult) ? viemResult.length : 'N/A'
-    })
-
-    // simulateCalls returns an array of results, we want the first one
-    let resultToProcess = viemResult
-    if (Array.isArray(viemResult) && viemResult.length > 0) {
-      resultToProcess = viemResult[0]
-      console.log('🔍 [Viem Asset Tracking] Processing first result from array')
-    }
-
-    // According to viem source code, assetChanges is a direct top-level property
-    const assetChanges = resultToProcess?.assetChanges || []
-
-    console.log('🔍 [Viem Asset Tracking] Looking for assetChanges in result:', {
-      hasAssetChanges: !!resultToProcess?.assetChanges,
-      assetChangesLength: resultToProcess?.assetChanges?.length || 0,
-      resultKeys: Object.keys(resultToProcess || {}),
-    })
-
-    if (!assetChanges || assetChanges.length === 0) {
-      console.log('🔍 [Viem Asset Tracking] No asset changes found. Result structure:',
-        JSON.stringify(resultToProcess, createBigIntSafeLogger(), 2).slice(0, 500))
-      return []
-    }
-
-    console.log(`✅ [Viem Asset Tracking] Found ${assetChanges.length} asset changes:`,
-      JSON.stringify(assetChanges, createBigIntSafeLogger(), 2))
-
-    // Normalize viem's exact structure to our expected format
-    return assetChanges.map((change: any, index: number) => {
-      console.log(`🔧 [Viem Asset Tracking] Processing change ${index}:`,
-        JSON.stringify(change, createBigIntSafeLogger(), 2))
-
-      // Viem returns exact structure: { token: {...}, value: { pre, post, diff } }
-      return {
-        token: {
-          address: change.token?.address,
-          symbol: change.token?.symbol || null,
-          name: change.token?.name || null,
-          decimals: change.token?.decimals || 18,
-        },
-        value: {
-          pre: convertBigIntToString(change.value?.pre || '0'),
-          post: convertBigIntToString(change.value?.post || '0'),
-          diff: convertBigIntToString(change.value?.diff || '0'),
-        },
-      }
-    })
-  } catch (error) {
-    console.warn('⚠️ [Viem Asset Tracking] Error processing asset changes:', error)
-    return []
-  }
-}
-
 /**
  * Helper function for BigInt-safe JSON logging
  */
@@ -1321,8 +1257,8 @@ export async function loadTransactionFromHash(
 }
 
 /**
- * Execute transaction trace for an existing transaction hash with automatic ABI fetching
- * This traces the original transaction and attempts to decode events using fetched ABIs
+ * Execute transaction trace for an existing transaction hash without blocking on ABI fetching
+ * This traces the original transaction and returns results immediately
  */
 export async function executeTransactionTrace(
   client: AltitraceClient,
@@ -1355,36 +1291,7 @@ export async function executeTransactionTrace(
     const gasUsed = rootCall ? BigInt(rootCall.gasUsed) : 0n
     const errors = traceResult.getErrors()
 
-    // Extract contract addresses for ABI fetching
-    const contractAddresses = extractContractAddressesFromTrace(traceResult)
-
-    // Fetch contracts and ABIs (in parallel with rate limiting)
-    let fetchedContracts: ContractFetchResult[] = []
-    let combinedABI: Abi | null = null
-    let decodedEvents: any[] = []
-
-    if (contractAddresses.length > 0) {
-      try {
-        const contractResults =
-          await fetchContractsWithRateLimit(contractAddresses)
-        fetchedContracts = contractResults
-
-        if (fetchedContracts.length > 0) {
-          combinedABI = createCombinedABIFromContracts(fetchedContracts)
-
-          // Decode events if we have ABIs and logs
-          if (combinedABI && rootCall?.logs && rootCall.logs.length > 0) {
-            decodedEvents = await decodeEventsFromLogs(
-              rootCall.logs,
-              combinedABI,
-            )
-          }
-        }
-      } catch (abiError) {
-        console.warn(`⚠️ [Transaction Trace] ABI fetching failed:`, abiError)
-        // Continue without ABI decoding - not critical for trace functionality
-      }
-    }
+    // NOTE: Contract fetching moved to background - no longer blocking here
 
     // Execute asset change tracking for this trace
     let assetChanges: any[] | undefined
@@ -1447,10 +1354,10 @@ export async function executeTransactionTrace(
               : undefined,
           }
         : undefined,
-      fetchedContracts:
-        fetchedContracts.length > 0 ? fetchedContracts : undefined,
-      combinedABI: combinedABI || undefined,
-      decodedEvents: decodedEvents.length > 0 ? decodedEvents : undefined,
+      // Contract data will be populated via background fetching
+      fetchedContracts: undefined,
+      combinedABI: undefined,
+      decodedEvents: undefined,
     }
 
     return enhancedResult
@@ -1460,6 +1367,57 @@ export async function executeTransactionTrace(
       error,
     )
     throw error
+  }
+}
+
+/**
+ * Fetch contracts and ABIs for a trace result in the background
+ * This is separated from executeTransactionTrace to avoid blocking the UI
+ */
+export async function fetchContractsForTrace(
+  traceResult: EnhancedTraceResult,
+): Promise<{
+  fetchedContracts: ContractFetchResult[]
+  combinedABI: Abi | null
+  decodedEvents: any[]
+}> {
+  try {
+    // Extract contract addresses for ABI fetching
+    const contractAddresses = extractContractAddressesFromTrace(traceResult.traceData)
+
+    let fetchedContracts: ContractFetchResult[] = []
+    let combinedABI: Abi | null = null
+    let decodedEvents: any[] = []
+
+    if (contractAddresses.length > 0) {
+      
+      const contractResults = await fetchContractsWithRateLimit(contractAddresses)
+      fetchedContracts = contractResults
+
+      if (fetchedContracts.length > 0) {
+        
+        combinedABI = createCombinedABIFromContracts(fetchedContracts)
+
+        // Decode events if we have ABIs and logs
+        const rootCall = traceResult.traceData.callTracer?.rootCall
+        if (combinedABI && rootCall?.logs && rootCall.logs.length > 0) {
+          decodedEvents = await decodeEventsFromLogs(rootCall.logs, combinedABI)
+        }
+      }
+    }
+
+    return {
+      fetchedContracts,
+      combinedABI,
+      decodedEvents,
+    }
+  } catch (error) {
+    console.warn(`⚠️ [Background Contract Fetch] Failed to fetch contracts:`, error)
+    return {
+      fetchedContracts: [],
+      combinedABI: null,
+      decodedEvents: [],
+    }
   }
 }
 

@@ -1027,6 +1027,7 @@ function EventsBreakdown({ result }: { result: EnhancedSimulationResult }) {
   // Extract ABI information if available (for trace results with auto-fetched ABIs)
   const availableABI = (result as any).combinedABI || undefined
   const fetchedContracts = (result as any).fetchedContracts || undefined
+  const contractsLoading = (result as any).contractsLoading || false
 
   // Filter calls that have logs
   const callsWithLogs = result.calls.filter(
@@ -1049,6 +1050,16 @@ function EventsBreakdown({ result }: { result: EnhancedSimulationResult }) {
 
   return (
     <div className="space-y-4">
+      {/* Contract ABI Loading Indicator */}
+      {contractsLoading && (
+        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-dashed">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="text-sm text-muted-foreground">
+            Fetching contract ABIs for enhanced event decoding...
+          </div>
+        </div>
+      )}
+      
       {callsWithLogs.map((call, index: number) => (
         <EnhancedEventDisplay
           key={`event-${call.status}-${index}`}

@@ -12,8 +12,6 @@ export async function POST(request: NextRequest) {
     // Parse the JSON-RPC request from viem
     const body = await request.json()
 
-    console.log(`🔗 [RPC Proxy] Forwarding ${body.method} to ${RPC_URL}`)
-
     // Forward the request to the actual RPC endpoint
     const response = await fetch(RPC_URL, {
       method: 'POST',
@@ -28,9 +26,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (!response.ok) {
-      console.error(
-        `❌ [RPC Proxy] RPC request failed: ${response.status} ${response.statusText}`,
-      )
       return NextResponse.json(
         { error: `RPC request failed: ${response.statusText}` },
         { status: response.status },
@@ -39,12 +34,8 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json()
 
-    // Log successful requests (but not the full response data for brevity)
-    console.log(`✅ [RPC Proxy] ${body.method} successful`)
-
     return NextResponse.json(data)
   } catch (error) {
-    console.error('❌ [RPC Proxy] Proxy error:', error)
     return NextResponse.json(
       {
         error: 'RPC proxy error',
