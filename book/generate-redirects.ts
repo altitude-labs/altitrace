@@ -37,7 +37,6 @@ Object.entries(redirects).forEach(([from, to]) => {
       mkdirSync(dirname(indexPath), { recursive: true })
       writeFileSync(indexPath, generateRedirectHtml(to))
     } else {
-      // C'est un chemin de fichier
       mkdirSync(dirname(filePath), { recursive: true })
       writeFileSync(filePath, generateRedirectHtml(to))
     }
