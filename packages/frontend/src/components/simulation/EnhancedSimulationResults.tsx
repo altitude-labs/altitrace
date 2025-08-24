@@ -7,6 +7,7 @@ import {
   CheckIcon,
   CoinsIcon,
   CopyIcon,
+  DatabaseIcon,
   ExternalLinkIcon,
   FuelIcon,
   HashIcon,
@@ -42,6 +43,7 @@ import type { EnhancedSimulationResult } from '@/utils/trace-integration'
 import { AccessListView } from './AccessListView'
 import { EnhancedEventDisplay } from './EnhancedEventDisplay'
 import { EnhancedGasAnalysis } from './EnhancedGasAnalysis'
+import { StateChangesView } from './StateChangesView'
 
 interface EnhancedSimulationResultsProps {
   result: EnhancedSimulationResult
@@ -127,6 +129,15 @@ export function EnhancedSimulationResults({
       disabled: !result.hasAccessList && !result.hasGasComparison,
     },
     {
+      id: 'statechanges',
+      label: 'State Changes',
+      icon: DatabaseIcon,
+      count: result.hasStateChanges
+        ? result.getStateChangesCount?.() || 0
+        : null,
+      disabled: !result.hasStateChanges,
+    },
+    {
       id: 'events',
       label: 'Events',
       icon: ListIcon,
@@ -137,7 +148,7 @@ export function EnhancedSimulationResults({
       label: 'Asset Changes',
       icon: CoinsIcon,
       count: assetChanges.length,
-      disabled: isTraceOnly, // Disable for trace-only results since they don't have asset tracking
+      disabled: assetChanges.length === 0, // Disable only if there are no asset changes
     },
     {
       id: 'request',
@@ -208,17 +219,17 @@ export function EnhancedSimulationResults({
               </div>
             </div>
 
-            {/* Desktop: Horizontal tabs */}
-            <TabsList className="hidden sm:grid w-full grid-cols-6 gap-1">
+            {/* Desktop: Horizontal tabs - Allow wrapping for better tab visibility */}
+            <TabsList className="hidden sm:flex w-full flex-wrap gap-1 h-auto min-h-10 p-1">
               {tabConfig.map((tab) => (
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
                   disabled={tab.disabled}
-                  className="flex items-center gap-1 text-xs p-2"
+                  className="flex items-center gap-1 text-xs p-2 min-w-fit whitespace-nowrap"
                 >
                   <tab.icon className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{tab.label}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
                   {tab.count !== null && (
                     <Badge
                       variant="secondary"
@@ -256,6 +267,16 @@ export function EnhancedSimulationResults({
                   />
                 ) : (
                   <AccessListFallback />
+                )}
+              </TabsContent>
+
+              <TabsContent value="statechanges">
+                {result.hasStateChanges && result.traceData?.prestateTracer ? (
+                  <StateChangesView
+                    prestateData={result.traceData.prestateTracer}
+                  />
+                ) : (
+                  <StateChangesFallback />
                 )}
               </TabsContent>
 
@@ -653,7 +674,10 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
                       <TrendingDownIcon className="h-3 w-3" />
                     )}
                     <span className="font-mono text-sm">
-                      {change.netChange}
+                      {formatTokenAmount(
+                        change.netChange,
+                        change.decimals ?? undefined,
+                      )}
                     </span>
                   </div>
                 </div>
@@ -917,6 +941,31 @@ function AssetChangesBreakdown({
   )
 }
 
+// Helper function to format token amounts with proper decimals
+const formatTokenAmount = (amount: string, decimals?: number) => {
+  if (!amount || amount === '0') return '0'
+
+  try {
+    const value = BigInt(amount)
+    if (decimals && decimals > 0) {
+      const divisor = BigInt(10 ** decimals)
+      const wholePart = value / divisor
+      const fractionalPart = value % divisor
+
+      if (fractionalPart === 0n) {
+        return wholePart.toString()
+      } else {
+        const fractionalStr = fractionalPart.toString().padStart(decimals, '0')
+        const trimmed = fractionalStr.replace(/0+$/, '')
+        return `${wholePart}.${trimmed}`
+      }
+    }
+    return value.toString()
+  } catch (error) {
+    return amount
+  }
+}
+
 function AssetChangeCard({ change }: { change: any }) {
   const [copied, setCopied] = useState(false)
 
@@ -933,32 +982,6 @@ function AssetChangeCard({ change }: { change: any }) {
   const getExplorerUrl = (address: string) => {
     // Using HyperScan for HyperEVM
     return `https://hyperscan.com/address/${address}`
-  }
-
-  const formatTokenAmount = (amount: string, decimals?: number) => {
-    if (!amount || amount === '0') return '0'
-
-    try {
-      const value = BigInt(amount)
-      if (decimals && decimals > 0) {
-        const divisor = BigInt(10 ** decimals)
-        const wholePart = value / divisor
-        const fractionalPart = value % divisor
-
-        if (fractionalPart === 0n) {
-          return wholePart.toString()
-        } else {
-          const fractionalStr = fractionalPart
-            .toString()
-            .padStart(decimals, '0')
-          const trimmed = fractionalStr.replace(/0+$/, '')
-          return `${wholePart}.${trimmed}`
-        }
-      }
-      return value.toString()
-    } catch (error) {
-      return amount
-    }
   }
 
   const displaySymbol =
@@ -1082,6 +1105,36 @@ function AccessListFallback() {
           <li>• Get recommendations on whether to use access lists</li>
           <li>• See detailed gas savings analysis</li>
           <li>• Particularly effective for complex contract interactions</li>
+        </ul>
+      </div>
+    </div>
+  )
+}
+
+function StateChangesFallback() {
+  return (
+    <div className="text-center py-12 text-muted-foreground space-y-4">
+      <DatabaseIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium text-foreground">
+          State Changes Not Available
+        </h3>
+        <p className="text-sm max-w-md mx-auto">
+          State changes tracking failed or is not supported for this simulation.
+          This feature requires trace data with the prestate tracer enabled in
+          diff mode.
+        </p>
+      </div>
+      <div className="bg-muted/50 border rounded-lg max-w-lg mx-auto p-4 text-xs">
+        <p className="font-medium mb-2 text-foreground">
+          🔍 About State Changes Tracking
+        </p>
+        <ul className="text-left space-y-1 text-muted-foreground">
+          <li>• Track all account balance changes during execution</li>
+          <li>• Monitor nonce updates for transaction accounts</li>
+          <li>• View storage slot modifications with before/after values</li>
+          <li>• Identify contract code updates and deployments</li>
+          <li>• Essential for understanding transaction side effects</li>
         </ul>
       </div>
     </div>

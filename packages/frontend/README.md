@@ -68,3 +68,4 @@ The frontend integrates with:
 Environment:
 
 - `NEXT_PUBLIC_API_URL` to set the base API host (SDK uses `${NEXT_PUBLIC_API_URL}/v1`).
+- `NEXT_PUBLIC_ETHERSCAN_API_KEY` to enable contract fetching from Etherscan API

@@ -260,6 +260,11 @@ export async function executeBundleSimulation(
       },
       callTracer: true,
       fourByteTracer: true,
+      prestateTracer: {
+        diffMode: true,
+        disableCode: false,
+        disableStorage: false,
+      },
       // Add state overrides if provided
       ...(request.stateOverrides &&
         request.stateOverrides.length > 0 && {

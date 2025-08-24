@@ -30,6 +30,10 @@ import { EnhancedSimulationResults } from '@/components/simulation/EnhancedSimul
 import type { EnhancedBundleSimulationResult } from '@/utils/bundle-execution'
 import type { BundleTransactionResult } from '@/types/bundle'
 import type { EnhancedSimulationResult } from '@/utils/trace-integration'
+import {
+  hasPrestateChanges,
+  getStateChangesCount,
+} from '@/utils/trace-integration'
 import { formatWeiValue } from '@/utils/abi'
 
 interface BundleSimulationResultsProps {
@@ -107,6 +111,14 @@ function convertToSimulationResult(
     hasCallHierarchy: !!txResult.traceData,
     hasAccessList: false,
     hasGasComparison: false,
+    hasStateChanges: (() => {
+      const hasPrestate = !!txResult.traceData?.prestateTracer
+      if (!hasPrestate || !txResult.traceData) return false
+
+      return hasPrestateChanges(txResult.traceData.prestateTracer)
+    })(),
+    getStateChangesCount: () =>
+      getStateChangesCount(txResult.traceData?.prestateTracer),
   } as unknown as EnhancedSimulationResult
 }
 

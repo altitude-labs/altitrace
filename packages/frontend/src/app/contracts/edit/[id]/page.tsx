@@ -351,7 +351,6 @@ export default function ContractEditPage({
                   onChange={handleSourceCodeChange}
                   language="solidity"
                   height="600px"
-                  onCompile={() => {}}
                 />
               </CardContent>
             </Card>

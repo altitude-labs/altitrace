@@ -690,7 +690,7 @@ class TraceCallManyBuilderImpl implements TraceCallManyBuilder {
 
   withPrestateTracer(config?: PrestateTracerConfig): TraceCallManyBuilder {
     this.config.prestateTracer = config || {
-      diffMode: false,
+      diffMode: true,
       disableCode: false,
       disableStorage: false,
     }
