@@ -131,7 +131,8 @@ where
                                     .as_ref()
                                     .map(|auth| auth.is_enabled())
                                     .unwrap_or(false);
-                                let openapi_handler = OpenApiHandler::new(api_key_enabled);
+                                let openapi_handler =
+                                    OpenApiHandler::new(api_key_enabled).with_url(&api_config);
                                 cfg.app_data(openapi_handler.into_app_data())
                                     .configure(OpenApiHandler::configure);
                             }),
