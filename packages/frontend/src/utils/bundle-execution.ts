@@ -238,12 +238,6 @@ export async function executeBundleSimulation(
   client: InstanceType<typeof AltitraceClient>,
   request: BundleSimulationRequest,
 ): Promise<BundleSimulationResult> {
-  console.log('\n🔗 [Bundle Simulation] Starting bundle execution...')
-  console.log('📋 Bundle details:')
-  console.log('   Transactions:', request.transactions.length)
-  console.log('   Block:', request.blockNumber || request.blockTag || 'latest')
-  console.log('   Validation:', request.validation)
-
   const startTime = Date.now()
   const bundleId = crypto.randomUUID()
 
@@ -513,14 +507,6 @@ export async function executeBundleSimulation(
         }
       }
     }
-
-    console.log('📊 [Bundle Results]:')
-    console.log('   Bundle status:', bundleStatus)
-    console.log('   Success count:', successCount)
-    console.log('   Failure count:', failureCount)
-    console.log('   Total gas used:', totalGasUsed.toString())
-    console.log('   Bundle asset changes:', bundleAssetChanges.length)
-    console.log('   Execution time:', executionTimeMs, 'ms')
 
     const result: BundleSimulationResult = {
       bundleId,

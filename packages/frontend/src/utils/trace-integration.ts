@@ -362,18 +362,13 @@ export async function getTokenMetadata(
   // Check hardcoded data first
   const hardcoded = HARDCODED_TOKEN_DATA.get(normalizedAddress)
   if (hardcoded) {
-    console.log(
-      `✅ [Token Metadata] Using hardcoded data for ${tokenAddress}: ${hardcoded.symbol}`,
-    )
     return hardcoded
   }
 
   // Check cache
   if (tokenMetadataCache.has(normalizedAddress)) {
     const cached = tokenMetadataCache.get(normalizedAddress)!
-    console.log(
-      `📦 [Token Metadata] Using cached data for ${tokenAddress}: ${cached.symbol || 'unknown'}`,
-    )
+
     return cached
   }
 

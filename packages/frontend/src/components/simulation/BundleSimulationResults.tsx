@@ -244,23 +244,6 @@ export function BundleSimulationResults({
     })
   }
 
-  // Debug: Log bundle asset changes data
-  console.log('🖥️ [Bundle UI] Bundle asset changes:', {
-    hasBundleAssetChanges: !!(
-      result.bundleAssetChanges && result.bundleAssetChanges.length > 0
-    ),
-    bundleAssetChangesCount: result.bundleAssetChanges?.length || 0,
-    bundleAssetChanges: result.bundleAssetChanges,
-    transactionCount: result.transactionResults.length,
-    individualTxAssetChanges: result.transactionResults.map((tx, index) => ({
-      txIndex: index,
-      txId: tx.transactionId,
-      status: tx.status,
-      hasAssetChanges: !!(tx.assetChanges && tx.assetChanges.length > 0),
-      assetChangesCount: tx.assetChanges?.length || 0,
-    })),
-  })
-
   const getBundleStatusIcon = () => {
     if (result.isSuccess()) {
       return <CheckCircleIcon className="h-5 w-5 text-green-600" />

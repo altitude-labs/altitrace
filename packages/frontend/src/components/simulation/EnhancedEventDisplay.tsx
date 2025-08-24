@@ -102,17 +102,6 @@ export function EnhancedEventDisplay({
       enhancedTokenMap.set(address, tokenInfo)
     }
 
-    console.log('🎯 [Events] Enhanced token map with hardcoded data:', {
-      hardcodedCount: HARDCODED_TOKEN_DATA.size,
-      assetChangesCount: assetTokenMap.size,
-      totalCount: enhancedTokenMap.size,
-      tokens: Array.from(enhancedTokenMap.entries()).map(([addr, info]) => ({
-        address: addr,
-        symbol: info.symbol,
-        name: info.name,
-      })),
-    })
-
     return enhancedTokenMap
   }, [assetChanges])
 

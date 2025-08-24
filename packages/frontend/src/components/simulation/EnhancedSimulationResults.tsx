@@ -887,21 +887,6 @@ function AssetChangesBreakdown({
 }) {
   const assetChanges = result.getAssetChangesSummary()
 
-  // Debug: Log what asset changes data reaches the UI component
-  console.log('🖥️ [UI AssetChangesBreakdown] Received asset changes:', {
-    count: assetChanges.length,
-    data: assetChanges.map((change, index) => ({
-      index,
-      tokenAddress: change.tokenAddress,
-      symbol: change.symbol,
-      decimals: change.decimals,
-      netChange: change.netChange,
-      type: change.type,
-      hasTokenObject: !!(change as any).token,
-      hasValueObject: !!(change as any).value,
-    })),
-  })
-
   if (assetChanges.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground space-y-4">
