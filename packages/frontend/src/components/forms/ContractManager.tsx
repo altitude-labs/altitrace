@@ -87,29 +87,12 @@ export function ContractManager({
     }
 
     const rawAbiJson = JSON.stringify(fetchResult.abi, null, 2)
-    console.log(
-      'Setting rawAbi in handleContractFetched:',
-      rawAbiJson.length,
-      'characters',
-    )
     setCurrentRawAbi(rawAbiJson)
     onAbiImport?.(parsedAbi, rawAbiJson)
   }
 
   const handleContractImport = useCallback(
     (contract: StoredContract) => {
-      console.log(
-        '📦 [Contract Import] Importing contract to ContractManager:',
-        {
-          id: contract.id,
-          name: contract.metadata?.title || contract.contractData?.name,
-          address: contract.contractData?.address,
-          abiLength: contract.contractData?.abi?.length || 0,
-          hasBytecode: !!contract.contractData?.bytecode,
-          compilationStatus: contract.metadata?.compilationStatus,
-          lastCompiled: contract.metadata?.compiledAt,
-        },
-      )
 
       setSelectedContract(contract)
       setContractSource('saved')
@@ -135,19 +118,10 @@ export function ContractManager({
       }
 
       const rawAbiJson = JSON.stringify(contract.contractData.abi, null, 2)
-      console.log('📋 [ABI Import] Converting contract ABI for simulator:')
-      console.log(
-        '   Functions:',
-        parsedAbi.functions?.map((f) => f.name) || [],
-      )
-      console.log('   Events:', parsedAbi.events?.length || 0)
-      console.log('   Raw ABI size:', rawAbiJson.length, 'characters')
 
       setCurrentRawAbi(rawAbiJson)
       onAbiImport?.(parsedAbi, rawAbiJson)
-      console.log(
-        '✅ [ABI Import] ABI sent to simulator via onAbiImport callback',
-      )
+
       setShowImportDialog(false)
     },
     [onContractSelect, onAbiImport],
@@ -156,11 +130,6 @@ export function ContractManager({
   // Listen for contract updates and refresh ABI if needed
   useEffect(() => {
     const handleContractsUpdated = (event: any) => {
-      console.log(
-        '📢 [ContractManager] Received contractsUpdated event:',
-        event.detail,
-      )
-
       // Force a re-render to update counts
       setContractsCount(contracts.length)
 
@@ -169,16 +138,9 @@ export function ContractManager({
         event.detail?.contractId &&
         selectedContract?.id === event.detail.contractId
       ) {
-        console.log(
-          '🔄 [ABI Refresh] Currently selected contract was updated, refreshing ABI...',
-        )
-
         // Get the updated contract from storage
         const updatedContract = getContract(event.detail.contractId)
         if (updatedContract && event.detail.hasNewAbi) {
-          console.log(
-            '📋 [ABI Auto-Update] Re-importing updated ABI for selected contract',
-          )
           handleContractImport(updatedContract)
         }
       }
@@ -254,13 +216,12 @@ export function ContractManager({
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <BookOpenIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="hidden sm:inline">Contract & ABI Management</span>
-              <span className="sm:hidden">Contract Manager</span>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpenIcon className="h-5 w-5" />
+              Contract & ABI Management
               {currentAbi && (
-                <span className="text-xs sm:text-sm font-normal text-green-600">
-                  ({currentAbi.functions.length} functions)
+                <span className="text-sm font-normal text-green-600">
+                  ({currentAbi.functions.length} functions loaded)
                 </span>
               )}
             </CardTitle>
@@ -417,11 +378,6 @@ export function ContractManager({
                   abi={currentAbi}
                   rawAbi={currentRawAbi}
                   onFunctionDataGenerated={(data, functionName, parameters) => {
-                    console.log('onFunctionDataGenerated called:', {
-                      data,
-                      functionName,
-                      parameters,
-                    })
                     onFunctionSelect?.(
                       currentAbi.functions.find(
                         (f) => f.name === functionName,

@@ -38,12 +38,14 @@ export class AltitraceClient {
   private simulationClient: SimulationClient
   private traceClient: TraceClient
   private accessListClient: AccessListClient
+  private viemClient?: any // Optional viem client for blockchain data access
 
   constructor(config: AltitraceClientConfig = {}) {
     this.httpClient = new HttpClient(config)
     this.simulationClient = new SimulationClient(this.httpClient)
-    this.traceClient = new TraceClient(this.httpClient)
+    this.traceClient = new TraceClient(this.httpClient, config.viemClient)
     this.accessListClient = new AccessListClient(this.httpClient)
+    this.viemClient = config.viemClient
   }
 
   /**

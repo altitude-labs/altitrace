@@ -57,7 +57,7 @@ export default function SimulatorDashboard() {
     try {
       await navigator.clipboard.writeText(url)
       // TODO: Add toast notification
-      console.log('Copied to clipboard:', url)
+
     } catch (_e) {}
   }
 
@@ -342,36 +342,36 @@ export default function SimulatorDashboard() {
                           router.push(`/simulator/${simulation.id}`)
                         }
                         title="View results"
-                        className="h-9 w-9 p-0 hover:bg-primary/10"
+                        className="h-9 w-9 p-0 transition-all duration-200 ease-in-out hover:bg-primary/10 hover:scale-105 hover:shadow-md hover:text-primary group"
                       >
-                        <PlayIcon className="w-4 h-4" />
+                        <PlayIcon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditSimulation(simulation.id)}
                         title="Edit parameters"
-                        className="h-9 w-9 p-0 hover:bg-blue-500/10"
+                        className="h-9 w-9 p-0 transition-all duration-200 ease-in-out hover:bg-blue-500/10 hover:scale-105 hover:shadow-md hover:text-blue-600 group"
                       >
-                        <EditIcon className="w-4 h-4" />
+                        <EditIcon className="w-4 h-4 transition-transform duration-200 group-hover:rotate-12" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleShareSimulation(simulation.id)}
                         title="Share simulation"
-                        className="h-9 w-9 p-0 hover:bg-green-500/10"
+                        className="h-9 w-9 p-0 transition-all duration-200 ease-in-out hover:bg-green-500/10 hover:scale-105 hover:shadow-md hover:text-green-600 group"
                       >
-                        <ShareIcon className="w-4 h-4" />
+                        <ShareIcon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteSimulation(simulation.id)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
+                        className="h-9 w-9 p-0 transition-all duration-200 ease-in-out hover:bg-destructive/10 hover:scale-105 hover:shadow-md hover:text-destructive group"
                         title="Delete simulation"
                       >
-                        <TrashIcon className="w-4 h-4" />
+                        <TrashIcon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
                       </Button>
                     </div>
                   </div>
