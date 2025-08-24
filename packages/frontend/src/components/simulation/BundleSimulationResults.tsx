@@ -112,9 +112,9 @@ export function BundleSimulationResults({
   }
 
   const getBundleStatusColor = () => {
-    if (result.isSuccess()) return 'border-green-200 bg-green-50'
-    if (result.isPartialSuccess()) return 'border-yellow-200 bg-yellow-50'
-    return 'border-red-200 bg-red-50'
+    if (result.isSuccess()) return 'border-green-200 bg-green-100 dark:border-green-700 dark:bg-green-900/20'
+    if (result.isPartialSuccess()) return 'border-yellow-200 bg-yellow-100 dark:border-yellow-700 dark:bg-yellow-900/20'
+    return 'border-red-200 bg-red-100 dark:border-red-700 dark:bg-red-900/20'
   }
 
   return (
