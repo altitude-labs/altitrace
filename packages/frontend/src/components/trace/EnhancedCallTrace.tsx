@@ -463,14 +463,14 @@ function CallNode({
                 <div className="flex items-center gap-1">
                   <span className="text-muted-foreground">Slot:</span>
                   <code className="bg-muted/50 px-1 py-0.5 rounded text-xs">
-                    {op.slot.length > 12 ? `${op.slot.slice(0, 8)}...${op.slot.slice(-4)}` : op.slot}
+                    {op.slot}
                   </code>
                 </div>
                 {op.opcode === 'SSTORE' && op.value && (
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">→</span>
                     <code className="bg-green-500/10 text-green-700 dark:text-green-400 px-1 py-0.5 rounded text-xs">
-                      {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
+                      {op.value}
                     </code>
                   </div>
                 )}
@@ -478,7 +478,7 @@ function CallNode({
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Value:</span>
                     <code className="bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 px-1 py-0.5 rounded text-xs">
-                      {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
+                      {op.value}
                     </code>
                   </div>
                 )}
