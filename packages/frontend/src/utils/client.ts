@@ -12,5 +12,6 @@ export function createAltitraceClient(): InstanceType<typeof AltitraceClient> {
     baseUrl,
     debug: !isProduction,
     timeout: 30000,
+    viemClient, // Add viem client for asset tracking
   })
 }

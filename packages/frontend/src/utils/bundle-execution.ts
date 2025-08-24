@@ -28,6 +28,12 @@ import type {
   BundleTransactionResult,
 } from '@/types/bundle'
 import type { EnhancedSimulationResult } from './trace-integration'
+import {
+  parseNativeTransfers,
+  parseTokenTransfersFromLogs,
+  getTokenMetadata,
+  HARDCODED_TOKEN_DATA,
+} from './trace-integration'
 
 /**
  * Recursively extract logs from call trace hierarchy
@@ -48,6 +54,181 @@ function extractLogsFromCalls(calls: any[]): any[] {
   }
 
   return logs
+}
+
+/**
+ * Parse asset changes for a single transaction in a bundle
+ */
+async function parseTransactionAssetChanges(
+  traceData: any,
+  targetAccount: string,
+  txIndex: number,
+): Promise<Array<{ address: string; change: bigint }>> {
+  try {
+    console.log(
+      `🔍 [Bundle Asset Tracking] Processing transaction ${txIndex + 1} for account ${targetAccount}`,
+    )
+
+    const allChanges = new Map<string, bigint>()
+
+    // 1. Parse native HYPE transfers from trace data
+    if (traceData?.callTracer?.rootCall) {
+      console.log(
+        `📞 [Bundle Asset Tracking] Tx${txIndex + 1}: Parsing native transfers...`,
+      )
+      const nativeChanges = parseNativeTransfers(traceData, targetAccount)
+
+      for (const change of nativeChanges) {
+        const existing = allChanges.get(change.address) || BigInt(0)
+        allChanges.set(change.address, existing + change.change)
+      }
+    }
+
+    // 2. Parse ERC-20/ERC-721 Transfer events from logs
+    const logs = traceData?.getAllLogs
+      ? traceData.getAllLogs()
+      : traceData?.callTracer?.rootCall
+        ? extractLogsFromCalls([traceData.callTracer.rootCall])
+        : []
+
+    if (logs.length > 0) {
+      console.log(
+        `📝 [Bundle Asset Tracking] Tx${txIndex + 1}: Parsing ${logs.length} logs for token transfers...`,
+      )
+      const tokenChanges = parseTokenTransfersFromLogs(logs, targetAccount)
+
+      for (const change of tokenChanges) {
+        const existing = allChanges.get(change.address) || BigInt(0)
+        allChanges.set(change.address, existing + change.change)
+      }
+    }
+
+    // Convert to array format
+    const result = Array.from(allChanges.entries()).map(
+      ([address, change]) => ({ address, change }),
+    )
+    console.log(
+      `✅ [Bundle Asset Tracking] Tx${txIndex + 1}: Found ${result.length} asset changes`,
+    )
+
+    return result
+  } catch (error) {
+    console.warn(
+      `⚠️ [Bundle Asset Tracking] Failed to parse asset changes for transaction ${txIndex + 1}:`,
+      error,
+    )
+    return []
+  }
+}
+
+/**
+ * Aggregate asset changes across all transactions in a bundle
+ */
+async function aggregateBundleAssetChanges(
+  transactionResults: BundleTransactionResult[],
+  targetAccount: string,
+): Promise<any[]> {
+  try {
+    console.log(
+      `🔍 [Bundle Asset Tracking] Aggregating asset changes across ${transactionResults.length} transactions`,
+    )
+
+    const bundleChanges = new Map<string, { address: string; change: bigint }>()
+
+    // Process each successful transaction
+    for (let i = 0; i < transactionResults.length; i++) {
+      const txResult = transactionResults[i]
+
+      if (txResult.status !== 'success' || !txResult.traceData) {
+        console.log(
+          `ℹ️ [Bundle Asset Tracking] Skipping transaction ${i + 1} (status: ${txResult.status})`,
+        )
+        continue
+      }
+
+      const txChanges = await parseTransactionAssetChanges(
+        txResult.traceData,
+        targetAccount,
+        i,
+      )
+
+      // Aggregate changes across all transactions
+      for (const change of txChanges) {
+        const existing = bundleChanges.get(change.address) || {
+          address: change.address,
+          change: BigInt(0),
+        }
+        existing.change += change.change
+        bundleChanges.set(change.address, existing)
+      }
+    }
+
+    // Convert to final format with metadata
+    const assetChanges: any[] = []
+
+    for (const [address, changeData] of bundleChanges.entries()) {
+      if (changeData.change === BigInt(0)) {
+        continue // Skip zero changes
+      }
+
+      console.log(
+        `🔧 [Bundle Asset Tracking] Processing bundle asset change for ${address}: ${changeData.change > 0n ? '+' : ''}${changeData.change.toString()}`,
+      )
+
+      // Fetch token metadata
+      const metadata = await getTokenMetadata(address)
+
+      // Determine change type
+      const changeType = changeData.change > 0n ? 'gain' : 'loss'
+      const absChange =
+        changeData.change < 0n ? -changeData.change : changeData.change
+
+      assetChanges.push({
+        // Flat format for UI compatibility
+        tokenAddress: address,
+        symbol: metadata.symbol,
+        decimals: metadata.decimals || 18,
+        netChange: absChange.toString(),
+        type: changeType,
+
+        // Legacy nested format for compatibility
+        token: {
+          address: address,
+          symbol: metadata.symbol,
+          name: metadata.name,
+          decimals: metadata.decimals || 18,
+        },
+        value: {
+          pre: '0',
+          post: changeData.change.toString(),
+          diff: changeData.change.toString(),
+        },
+      })
+    }
+
+    if (assetChanges.length > 0) {
+      console.log(
+        `✅ [Bundle Asset Tracking] Found ${assetChanges.length} total bundle asset changes:`,
+      )
+      assetChanges.forEach((change) => {
+        console.log(
+          `  • ${change.symbol || change.tokenAddress}: ${change.type === 'gain' ? '+' : '-'}${change.netChange}`,
+        )
+      })
+    } else {
+      console.log(
+        'ℹ️ [Bundle Asset Tracking] No net asset changes detected across bundle',
+      )
+    }
+
+    return assetChanges
+  } catch (error) {
+    console.warn(
+      '⚠️ [Bundle Asset Tracking] Failed to aggregate bundle asset changes:',
+      error,
+    )
+    return []
+  }
 }
 
 /**
@@ -201,7 +382,7 @@ export async function executeBundleSimulation(
         returnData: traceResponse.callTracer?.rootCall?.output,
         error,
         logs,
-        // Asset changes would be populated here if available from trace response
+        // Asset changes for this specific transaction (will be populated later)
         assetChanges: [],
         // Store full trace data for individual transaction analysis
         traceData: traceResponse,
@@ -258,11 +439,87 @@ export async function executeBundleSimulation(
 
     const executionTimeMs = Date.now() - startTime
 
+    // Calculate bundle-level asset changes if an account is specified
+    let bundleAssetChanges: any[] = []
+    if (request.account && request.traceAssetChanges) {
+      console.log(
+        '🔍 [Bundle Simulation] Calculating bundle-level asset changes...',
+      )
+      try {
+        bundleAssetChanges = await aggregateBundleAssetChanges(
+          transactionResults,
+          request.account,
+        )
+      } catch (error) {
+        console.warn(
+          '⚠️ [Bundle Simulation] Failed to calculate bundle asset changes:',
+          error,
+        )
+      }
+    }
+
+    // Calculate per-transaction asset changes if account is specified
+    if (request.account && request.traceAssetChanges) {
+      console.log(
+        '🔍 [Bundle Simulation] Calculating per-transaction asset changes...',
+      )
+      for (let i = 0; i < transactionResults.length; i++) {
+        const txResult = transactionResults[i]
+        if (txResult.status === 'success' && txResult.traceData) {
+          try {
+            const txChanges = await parseTransactionAssetChanges(
+              txResult.traceData,
+              request.account,
+              i,
+            )
+
+            // Convert to UI format
+            const formattedChanges: any[] = []
+            for (const change of txChanges) {
+              if (change.change === BigInt(0)) continue
+
+              const metadata = await getTokenMetadata(change.address)
+              const changeType = change.change > 0n ? 'gain' : 'loss'
+              const absChange =
+                change.change < 0n ? -change.change : change.change
+
+              formattedChanges.push({
+                tokenAddress: change.address,
+                symbol: metadata.symbol,
+                decimals: metadata.decimals || 18,
+                netChange: absChange.toString(),
+                type: changeType,
+                token: {
+                  address: change.address,
+                  symbol: metadata.symbol,
+                  name: metadata.name,
+                  decimals: metadata.decimals || 18,
+                },
+                value: {
+                  pre: '0',
+                  post: change.change.toString(),
+                  diff: change.change.toString(),
+                },
+              })
+            }
+
+            txResult.assetChanges = formattedChanges
+          } catch (error) {
+            console.warn(
+              `⚠️ [Bundle Simulation] Failed to calculate asset changes for transaction ${i + 1}:`,
+              error,
+            )
+          }
+        }
+      }
+    }
+
     console.log('📊 [Bundle Results]:')
     console.log('   Bundle status:', bundleStatus)
     console.log('   Success count:', successCount)
     console.log('   Failure count:', failureCount)
     console.log('   Total gas used:', totalGasUsed.toString())
+    console.log('   Bundle asset changes:', bundleAssetChanges.length)
     console.log('   Execution time:', executionTimeMs, 'ms')
 
     const result: BundleSimulationResult = {
@@ -272,7 +529,7 @@ export async function executeBundleSimulation(
       totalGasUsed: '0x' + totalGasUsed.toString(16),
       transactionResults,
       executionTimeMs,
-      bundleAssetChanges: [], // Would be populated from trace analysis
+      bundleAssetChanges,
       bundleErrors:
         failureCount > 0
           ? [`${failureCount} transaction(s) failed`]

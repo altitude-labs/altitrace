@@ -5,6 +5,7 @@ import type {
   ExtendedSimulationResult,
   ExtendedTracerResponse,
   SimulationRequest,
+  StateOverride,
 } from '@altitrace/sdk/types'
 import {
   ContractFetcher,
@@ -127,6 +128,942 @@ export interface EnhancedTraceResult {
   }
 }
 
+/* DISABLED - VIEM ASSET TRACKING (keep for debugging)
+/**
+ * Execute viem asset tracking for getting token balance changes
+ * This uses viem's simulateCall with traceAssetChanges to get asset data that our API doesn't provide yet
+ */
+/*
+async function executeViemAssetTracking(
+  client: AltitraceClient,
+  request: SimulationRequest,
+): Promise<any[] | undefined> {
+  try {
+    const viemClient = (client as any).viemClient
+    if (!viemClient) {
+      console.warn('⚠️ [Viem Asset Tracking] No viem client available')
+      return undefined
+    }
+
+    console.log('🔍 [Viem Asset Tracking] Viem client available:', {
+      hasSimulateCalls: typeof viemClient.simulateCalls === 'function',
+      hasCall: typeof viemClient.call === 'function',
+      availableMethods: Object.getOwnPropertyNames(viemClient).filter(name => typeof viemClient[name] === 'function'),
+      transport: viemClient.transport?.url || 'unknown',
+      chain: viemClient.chain?.name || 'unknown'
+    })
+
+    const primaryCall = request.params.calls[0]
+    if (!primaryCall) {
+      return undefined
+    }
+
+    // Prepare viem simulation parameters
+    const viemCallParams: any = {
+      to: primaryCall.to as `0x${string}`,
+      data: primaryCall.data as `0x${string}`,
+      value: primaryCall.value ? BigInt(primaryCall.value) : undefined,
+      from: primaryCall.from as `0x${string}` | undefined,
+      gas: primaryCall.gas ? BigInt(primaryCall.gas) : undefined,
+    }
+
+    // Add state overrides if present (convert from array to viem format)
+    const stateOverride: Record<string, any> = {}
+    if (request.options?.stateOverrides?.length) {
+      for (const override of request.options.stateOverrides) {
+        if (override.address) {
+          const viemOverride: any = {}
+          if (override.balance) viemOverride.balance = BigInt(override.balance)
+          if (override.nonce !== undefined) viemOverride.nonce = override.nonce
+          if (override.code) viemOverride.code = override.code
+          if (override.storage) viemOverride.storage = override.storage
+          stateOverride[override.address] = viemOverride
+        }
+      }
+    }
+
+    // Determine block parameter
+    const blockTag = request.params.blockNumber || request.params.blockTag || 'latest'
+
+    // Prepare simulation options with block parameter
+    const viemSimulateOptions: any = {
+      account: request.params.account || primaryCall.from,
+      blockTag: blockTag === 'latest' ? 'latest' : blockTag,
+    }
+
+    // Add state override if any
+    if (Object.keys(stateOverride).length > 0) {
+      viemSimulateOptions.stateOverride = stateOverride
+    }
+
+    console.log('🔍 [Viem Asset Tracking] Calling viem call with:', {
+      call: viemCallParams,
+      options: viemSimulateOptions,
+      block: blockTag,
+    })
+
+    // Skip basic connectivity test since transaction might be expired/invalid
+    // We'll test connectivity directly with simulateCalls which handles block context better
+    console.log('🔍 [Viem Asset Tracking] Proceeding directly to simulateCalls with proper block context')
+
+    // Check if simulateCalls method exists
+    if (typeof viemClient.simulateCalls !== 'function') {
+      console.warn('⚠️ [Viem Asset Tracking] simulateCalls method not available on viem client')
+      console.log('   Available methods:', Object.getOwnPropertyNames(viemClient).filter(name => typeof viemClient[name] === 'function'))
+      return undefined
+    }
+
+    // Use viem's simulateCalls method with traceAssetChanges
+    try {
+      console.log('🔍 [Viem Asset Tracking] Calling simulateCalls with traceAssetChanges...')
+
+      const callsToSimulate = [viemCallParams]
+
+      // Prepare simulateCalls options - account is REQUIRED for traceAssetChanges
+      const accountAddress = request.params.account || primaryCall.from
+
+      if (!accountAddress) {
+        console.warn('⚠️ [Viem Asset Tracking] No account address available for traceAssetChanges')
+        return undefined
+      }
+
+      const simulateOptions: any = {
+        traceAssetChanges: true,
+        account: accountAddress,
+      }
+
+      console.log('🔍 [Viem Asset Tracking] Using account for asset tracking:', accountAddress)
+
+      // Handle block parameter correctly for simulateCalls
+      // CRITICAL: Must use the same historical block as the original simulation
+      if (blockTag === 'latest') {
+        simulateOptions.blockTag = 'latest'
+      } else if (typeof blockTag === 'string' && blockTag.startsWith('0x')) {
+        // Convert hex block number to bigint for simulateCalls
+        const blockNumber = BigInt(blockTag)
+        simulateOptions.blockNumber = blockNumber
+        console.log(`🔍 [Viem Asset Tracking] Using historical block: ${blockNumber} (${blockTag})`)
+      } else if (typeof blockTag === 'string' && !isNaN(Number(blockTag))) {
+        // Handle numeric string
+        const blockNumber = BigInt(blockTag)
+        simulateOptions.blockNumber = blockNumber
+        console.log(`🔍 [Viem Asset Tracking] Using historical block: ${blockNumber}`)
+      } else {
+        // For expired transactions, we should NOT default to latest
+        console.warn('⚠️ [Viem Asset Tracking] Unknown block format, this may cause EXPIRED errors:', blockTag)
+        simulateOptions.blockTag = 'latest'
+      }
+
+      // Add state overrides if present
+      if (Object.keys(stateOverride).length > 0) {
+        simulateOptions.stateOverride = stateOverride
+      }
+
+      console.log('📡 [Viem Asset Tracking] simulateCalls parameters:', {
+        calls: callsToSimulate,
+        options: simulateOptions,
+        originalBlockTag: blockTag
+      })
+
+      const viemResult = await viemClient.simulateCalls({
+        calls: callsToSimulate,
+        ...simulateOptions,
+      })
+
+      console.log('✅ [Viem Asset Tracking] simulateCalls result:', JSON.stringify(viemResult, createBigIntSafeLogger(), 2))
+
+      // Debug the structure to understand why assetChanges might be empty
+      console.log('🔍 [Viem Asset Tracking] Result structure analysis:', {
+        hasAssetChanges: !!viemResult?.assetChanges,
+        assetChangesLength: viemResult?.assetChanges?.length || 0,
+        assetChangesContent: viemResult?.assetChanges,
+        hasResults: !!viemResult?.results,
+        resultsLength: viemResult?.results?.length || 0,
+        hasBlock: !!viemResult?.block,
+        hasLogs: viemResult?.results?.[0]?.logs?.length || 0,
+        logSample: viemResult?.results?.[0]?.logs?.slice(0, 2)
+      })
+
+      // Extract asset changes from viem result
+      const assetChanges = extractAssetChangesFromViemResult(viemResult)
+
+      if (assetChanges && assetChanges.length > 0) {
+        console.log(`🎯 [Viem Asset Tracking] Found ${assetChanges.length} asset changes`)
+        return assetChanges
+      } else {
+        console.log('ℹ️ [Viem Asset Tracking] No asset changes found in simulateCalls result')
+
+        // Fallback: Extract from Transfer events if simulation has logs
+        const logs = viemResult?.results?.[0]?.logs
+        if (logs && logs.length > 0) {
+          console.log('🔄 [Viem Asset Tracking] Attempting to extract asset changes from Transfer events as fallback...')
+          const transferBasedAssetChanges = extractAssetChangesFromTransferEvents(logs, accountAddress)
+
+          if (transferBasedAssetChanges && transferBasedAssetChanges.length > 0) {
+            console.log(`✅ [Viem Asset Tracking] Fallback found ${transferBasedAssetChanges.length} asset changes from Transfer events`)
+            return transferBasedAssetChanges
+          }
+        }
+
+        return undefined
+      }
+
+    } catch (error) {
+      console.warn('⚠️ [Viem Asset Tracking] simulateCalls failed:', error)
+      console.log('   Error details:', {
+        name: (error as any)?.name,
+        message: (error as any)?.message,
+        code: (error as any)?.code,
+        stack: (error as any)?.stack?.split('\n').slice(0, 3)
+      })
+
+      return undefined
+    }
+  } catch (error) {
+    console.warn('⚠️ [Viem Asset Tracking] Failed to get asset changes:', error)
+    // Don't throw - this is supplementary data
+    return undefined
+  }
+}
+*/
+// END DISABLED VIEM ASSET TRACKING
+
+// Hardcoded token metadata for HyperEVM network
+export const HARDCODED_TOKEN_DATA = new Map<
+  string,
+  { symbol: string; decimals: number; name: string }
+>([
+  // Native currency (ETH equivalent on HyperEVM)
+  [
+    '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+    { symbol: 'HYPE', decimals: 18, name: 'HyperEVM Native Token' },
+  ],
+  // WHYPE (Wrapped HYPE)
+  [
+    '0x5555555555555555555555555555555555555555',
+    { symbol: 'WHYPE', decimals: 18, name: 'Wrapped HYPE' },
+  ],
+])
+
+// Cache for fetched token metadata
+const tokenMetadataCache = new Map<
+  string,
+  { symbol?: string; decimals?: number; name?: string }
+>()
+
+/**
+ * Get token metadata (symbol, decimals, name) with caching and hardcoded overrides
+ */
+export async function getTokenMetadata(
+  tokenAddress: string,
+): Promise<{ symbol?: string; decimals?: number; name?: string }> {
+  const normalizedAddress = tokenAddress.toLowerCase()
+
+  // Check hardcoded data first
+  const hardcoded = HARDCODED_TOKEN_DATA.get(normalizedAddress)
+  if (hardcoded) {
+    console.log(
+      `✅ [Token Metadata] Using hardcoded data for ${tokenAddress}: ${hardcoded.symbol}`,
+    )
+    return hardcoded
+  }
+
+  // Check cache
+  if (tokenMetadataCache.has(normalizedAddress)) {
+    const cached = tokenMetadataCache.get(normalizedAddress)!
+    console.log(
+      `📦 [Token Metadata] Using cached data for ${tokenAddress}: ${cached.symbol || 'unknown'}`,
+    )
+    return cached
+  }
+
+  // Fetch from blockchain (using viem client from config)
+  try {
+    console.log(`🔍 [Token Metadata] Fetching metadata for ${tokenAddress}...`)
+
+    // Import viem client here to avoid circular dependencies
+    const { viemClient } = await import('@/config/chains')
+
+    // Run all calls in parallel
+    const [symbol, decimals, name] = await Promise.allSettled([
+      viemClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: [
+          {
+            name: 'symbol',
+            type: 'function',
+            stateMutability: 'view',
+            inputs: [],
+            outputs: [{ type: 'string' }],
+          },
+        ],
+        functionName: 'symbol',
+      }),
+      viemClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: [
+          {
+            name: 'decimals',
+            type: 'function',
+            stateMutability: 'view',
+            inputs: [],
+            outputs: [{ type: 'uint8' }],
+          },
+        ],
+        functionName: 'decimals',
+      }),
+      viemClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: [
+          {
+            name: 'name',
+            type: 'function',
+            stateMutability: 'view',
+            inputs: [],
+            outputs: [{ type: 'string' }],
+          },
+        ],
+        functionName: 'name',
+      }),
+    ])
+
+    const metadata = {
+      symbol:
+        symbol.status === 'fulfilled' ? (symbol.value as string) : undefined,
+      decimals: decimals.status === 'fulfilled' ? Number(decimals.value) : 18, // Default to 18
+      name: name.status === 'fulfilled' ? (name.value as string) : undefined,
+    }
+
+    // Cache the result
+    tokenMetadataCache.set(normalizedAddress, metadata)
+
+    console.log(
+      `✅ [Token Metadata] Fetched metadata for ${tokenAddress}:`,
+      metadata,
+    )
+    return metadata
+  } catch (error) {
+    console.warn(
+      `⚠️ [Token Metadata] Failed to fetch metadata for ${tokenAddress}:`,
+      error,
+    )
+
+    // Cache empty result to avoid repeated failed calls
+    const emptyMetadata = { symbol: undefined, decimals: 18, name: undefined }
+    tokenMetadataCache.set(normalizedAddress, emptyMetadata)
+    return emptyMetadata
+  }
+}
+
+/**
+ * Parse native HYPE transfers from call trace value changes
+ */
+export function parseNativeTransfers(
+  traceData: any,
+  targetAccount: string,
+): Array<{ address: string; change: bigint }> {
+  const changes: Array<{ address: string; change: bigint }> = []
+
+  if (!traceData.callTracer?.rootCall) {
+    return changes
+  }
+
+  console.log(
+    '🔍 [Native Transfers] Analyzing call trace for native value transfers...',
+  )
+
+  // Recursive function to analyze all calls in the trace
+  function analyzeCall(call: any, depth = 0) {
+    if (!call) return
+
+    const indent = '  '.repeat(depth)
+    console.log(
+      `${indent}📞 [Call] ${call.from || 'unknown'} → ${call.to || 'unknown'}, value: ${call.value || '0x0'}`,
+    )
+
+    // Check if this call transfers native currency to/from our target account
+    const value = call.value ? BigInt(call.value) : BigInt(0)
+    const from = (call.from || '').toLowerCase()
+    const to = (call.to || '').toLowerCase()
+    const target = targetAccount.toLowerCase()
+
+    if (value > 0n) {
+      if (from === target) {
+        // Outgoing native transfer
+        console.log(`${indent}💸 [Native] Outgoing: -${value.toString()} HYPE`)
+        changes.push({
+          address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          change: -value,
+        })
+      }
+      if (to === target) {
+        // Incoming native transfer
+        console.log(`${indent}💰 [Native] Incoming: +${value.toString()} HYPE`)
+        changes.push({
+          address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          change: value,
+        })
+      }
+    }
+
+    // Analyze subcalls recursively
+    if (call.calls && Array.isArray(call.calls)) {
+      for (const subCall of call.calls) {
+        analyzeCall(subCall, depth + 1)
+      }
+    }
+  }
+
+  analyzeCall(traceData.callTracer.rootCall)
+
+  console.log(
+    `✅ [Native Transfers] Found ${changes.length} native transfer changes`,
+  )
+  return changes
+}
+
+/**
+ * Parse ERC-20/ERC-721 Transfer events from logs
+ */
+export function parseTokenTransfersFromLogs(
+  logs: any[],
+  targetAccount: string,
+): Array<{ address: string; change: bigint }> {
+  const changes = new Map<string, bigint>()
+
+  if (!logs || logs.length === 0) {
+    return []
+  }
+
+  console.log(
+    `🔍 [Token Transfers] Analyzing ${logs.length} logs for ERC-20/ERC-721 transfers...`,
+  )
+
+  // ERC-20/ERC-721 Transfer event signature: Transfer(address,address,uint256)
+  const TRANSFER_SIGNATURE =
+    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+  const target = targetAccount.toLowerCase()
+
+  for (let i = 0; i < logs.length; i++) {
+    const log = logs[i]
+
+    // Skip if not a Transfer event
+    if (
+      !log.topics ||
+      log.topics[0] !== TRANSFER_SIGNATURE ||
+      log.topics.length < 3
+    ) {
+      continue
+    }
+
+    const tokenAddress = log.address.toLowerCase()
+    const fromAddress = '0x' + log.topics[1].slice(26).toLowerCase() // Remove padding
+    const toAddress = '0x' + log.topics[2].slice(26).toLowerCase() // Remove padding
+
+    // Parse transfer amount from data field
+    let amount: bigint
+    try {
+      amount = BigInt(log.data || '0x0')
+    } catch (error) {
+      console.warn(
+        `Failed to parse transfer amount for ${tokenAddress}:`,
+        log.data,
+      )
+      continue
+    }
+
+    console.log(
+      `📝 [Transfer] ${tokenAddress}: ${fromAddress} → ${toAddress}, amount: ${amount.toString()}`,
+    )
+
+    // Check if this transfer affects our target account
+    let netChange = BigInt(0)
+    if (fromAddress === target) {
+      netChange -= amount // Outgoing transfer (negative)
+      console.log(`💸 [Transfer] Outgoing: -${amount.toString()}`)
+    }
+    if (toAddress === target) {
+      netChange += amount // Incoming transfer (positive)
+      console.log(`💰 [Transfer] Incoming: +${amount.toString()}`)
+    }
+
+    if (netChange !== BigInt(0)) {
+      // Update running total for this token
+      const currentChange = changes.get(tokenAddress) || BigInt(0)
+      changes.set(tokenAddress, currentChange + netChange)
+    }
+  }
+
+  // Convert to array format
+  const result = Array.from(changes.entries()).map(([address, change]) => ({
+    address,
+    change,
+  }))
+  console.log(
+    `✅ [Token Transfers] Found ${result.length} token transfer changes`,
+  )
+  return result
+}
+
+/**
+ * NEW: Execute trace-based asset tracking by parsing simulation results
+ * This extracts asset changes from existing trace data without additional API calls
+ */
+async function executeTraceBasedAssetTracking(
+  request: SimulationRequest,
+  primaryCall: any,
+  simulationResult: any,
+  traceResult: any,
+): Promise<any[] | undefined> {
+  try {
+    console.log('🔍 [Trace Asset Tracking] Starting trace-based asset tracking')
+
+    // Get the target account from the request or primary call
+    const targetAccount = request.params.account || primaryCall.from
+    if (!targetAccount) {
+      console.warn(
+        '⚠️ [Trace Asset Tracking] No target account specified for asset tracking',
+      )
+      return undefined
+    }
+
+    console.log(`🎯 [Trace Asset Tracking] Target account: ${targetAccount}`)
+
+    const allChanges = new Map<string, { address: string; change: bigint }>()
+
+    // 1. Parse native HYPE transfers from trace data
+    if (traceResult?.callTracer?.rootCall) {
+      console.log(
+        '🔍 [Trace Asset Tracking] Parsing native transfers from trace data...',
+      )
+      const nativeChanges = parseNativeTransfers(traceResult, targetAccount)
+
+      for (const change of nativeChanges) {
+        const existing = allChanges.get(change.address) || {
+          address: change.address,
+          change: BigInt(0),
+        }
+        existing.change += change.change
+        allChanges.set(change.address, existing)
+      }
+    } else {
+      console.log(
+        'ℹ️ [Trace Asset Tracking] No trace data available for native transfer analysis',
+      )
+    }
+
+    // 2. Parse ERC-20/ERC-721 Transfer events from logs
+    let logs: any[] = []
+
+    // Try to get logs from trace data first (preferred)
+    if (traceResult?.getAllLogs) {
+      logs = traceResult.getAllLogs()
+      console.log(
+        `🔍 [Trace Asset Tracking] Using ${logs.length} logs from trace data`,
+      )
+    }
+    // Fallback to simulation result logs
+    else if (simulationResult?.getAllLogs) {
+      logs = simulationResult.getAllLogs()
+      console.log(
+        `🔍 [Trace Asset Tracking] Using ${logs.length} logs from simulation result`,
+      )
+    }
+    // Fallback to direct logs property
+    else if (simulationResult?.logs?.length) {
+      logs = simulationResult.logs
+      console.log(
+        `🔍 [Trace Asset Tracking] Using ${logs.length} logs from simulation logs property`,
+      )
+    }
+
+    if (logs.length > 0) {
+      console.log(
+        '🔍 [Trace Asset Tracking] Parsing token transfers from logs...',
+      )
+      const tokenChanges = parseTokenTransfersFromLogs(logs, targetAccount)
+
+      for (const change of tokenChanges) {
+        const existing = allChanges.get(change.address) || {
+          address: change.address,
+          change: BigInt(0),
+        }
+        existing.change += change.change
+        allChanges.set(change.address, existing)
+      }
+    } else {
+      console.log(
+        'ℹ️ [Trace Asset Tracking] No logs available for token transfer analysis',
+      )
+    }
+
+    // 3. Convert to asset changes format with metadata fetching
+    const assetChanges: any[] = []
+
+    for (const [address, changeData] of allChanges.entries()) {
+      if (changeData.change === BigInt(0)) {
+        continue // Skip zero changes
+      }
+
+      console.log(
+        `🔧 [Trace Asset Tracking] Processing asset change for ${address}: ${changeData.change > 0n ? '+' : ''}${changeData.change.toString()}`,
+      )
+
+      // Fetch token metadata
+      const metadata = await getTokenMetadata(address)
+
+      // Determine change type
+      const changeType = changeData.change > 0n ? 'gain' : 'loss'
+      const absChange =
+        changeData.change < 0n ? -changeData.change : changeData.change
+
+      assetChanges.push({
+        // Flat format for EnhancedSimulationResults UI compatibility
+        tokenAddress: address,
+        symbol: metadata.symbol,
+        decimals: metadata.decimals || 18,
+        netChange: absChange.toString(),
+        type: changeType,
+
+        // Legacy nested format for other components (if needed)
+        token: {
+          address: address,
+          symbol: metadata.symbol,
+          name: metadata.name,
+          decimals: metadata.decimals || 18,
+        },
+        value: {
+          pre: '0', // We don't track exact before/after, just the change
+          post: changeData.change.toString(),
+          diff: changeData.change.toString(),
+        },
+      })
+    }
+
+    if (assetChanges.length > 0) {
+      console.log(
+        `✅ [Trace Asset Tracking] Found ${assetChanges.length} asset changes:`,
+      )
+      assetChanges.forEach((change, index) => {
+        console.log(
+          `  • ${change.symbol || change.tokenAddress}: ${change.type === 'gain' ? '+' : '-'}${change.netChange}`,
+        )
+        console.log(`    [${index}] Full change object:`, {
+          tokenAddress: change.tokenAddress,
+          symbol: change.symbol,
+          decimals: change.decimals,
+          netChange: change.netChange,
+          type: change.type,
+        })
+      })
+
+      // Debug: Log the final asset changes array being returned
+      console.log(
+        `🚀 [Trace Asset Tracking] Returning asset changes array:`,
+        assetChanges,
+      )
+      return assetChanges
+    } else {
+      console.log('ℹ️ [Trace Asset Tracking] No asset changes detected')
+      return []
+    }
+  } catch (error) {
+    console.warn(
+      '⚠️ [Trace Asset Tracking] Failed to get asset changes from trace:',
+      error,
+    )
+    return undefined
+  }
+}
+
+/* DISABLED - VIEM HELPER FUNCTIONS (keep for debugging)
+/**
+ * Extract and normalize asset changes from viem simulateCalls result
+ */
+/*
+function extractAssetChangesFromViemResult(viemResult: any): any[] {
+  try {
+    console.log('🔍 [Viem Asset Tracking] Processing result structure:', {
+      isArray: Array.isArray(viemResult),
+      keys: viemResult ? Object.keys(viemResult) : [],
+      length: Array.isArray(viemResult) ? viemResult.length : 'N/A'
+    })
+
+    // simulateCalls returns an array of results, we want the first one
+    let resultToProcess = viemResult
+    if (Array.isArray(viemResult) && viemResult.length > 0) {
+      resultToProcess = viemResult[0]
+      console.log('🔍 [Viem Asset Tracking] Processing first result from array')
+    }
+
+    // According to viem source code, assetChanges is a direct top-level property
+    const assetChanges = resultToProcess?.assetChanges || []
+
+    console.log('🔍 [Viem Asset Tracking] Looking for assetChanges in result:', {
+      hasAssetChanges: !!resultToProcess?.assetChanges,
+      assetChangesLength: resultToProcess?.assetChanges?.length || 0,
+      resultKeys: Object.keys(resultToProcess || {}),
+    })
+
+    if (!assetChanges || assetChanges.length === 0) {
+      console.log('🔍 [Viem Asset Tracking] No asset changes found. Result structure:',
+        JSON.stringify(resultToProcess, createBigIntSafeLogger(), 2).slice(0, 500))
+      return []
+    }
+
+    console.log(`✅ [Viem Asset Tracking] Found ${assetChanges.length} asset changes:`,
+      JSON.stringify(assetChanges, createBigIntSafeLogger(), 2))
+
+    // Normalize viem's exact structure to our expected format
+    return assetChanges.map((change: any, index: number) => {
+      console.log(`🔧 [Viem Asset Tracking] Processing change ${index}:`,
+        JSON.stringify(change, createBigIntSafeLogger(), 2))
+
+      // Viem returns exact structure: { token: {...}, value: { pre, post, diff } }
+      return {
+        token: {
+          address: change.token?.address,
+          symbol: change.token?.symbol || null,
+          name: change.token?.name || null,
+          decimals: change.token?.decimals || 18,
+        },
+        value: {
+          pre: convertBigIntToString(change.value?.pre || '0'),
+          post: convertBigIntToString(change.value?.post || '0'),
+          diff: convertBigIntToString(change.value?.diff || '0'),
+        },
+      }
+    })
+  } catch (error) {
+    console.warn('⚠️ [Viem Asset Tracking] Error processing asset changes:', error)
+    return []
+  }
+}
+
+/**
+ * Helper function for BigInt-safe JSON logging
+ */
+function createBigIntSafeLogger() {
+  return (key: string, value: any) =>
+    typeof value === 'bigint' ? `BigInt(${value})` : value
+}
+
+/**
+ * Helper function to safely convert BigInt or string values to string
+ */
+function convertBigIntToString(value: any): string {
+  if (typeof value === 'bigint') {
+    return value.toString()
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  if (typeof value === 'number') {
+    return value.toString()
+  }
+  return '0'
+}
+
+/**
+ * Helper function to calculate difference between two balance values
+ */
+function calculateDiff(pre: any, post: any): string {
+  try {
+    const preString = convertBigIntToString(pre)
+    const postString = convertBigIntToString(post)
+    const preBN = BigInt(preString)
+    const postBN = BigInt(postString)
+    return (postBN - preBN).toString()
+  } catch (error) {
+    console.warn('Failed to calculate diff:', error)
+    return '0'
+  }
+}
+
+/**
+ * Fallback: Extract asset changes from Transfer events when viem's native tracking fails
+ * This parses ERC-20/ERC-721 Transfer events from simulation logs
+ */
+function extractAssetChangesFromTransferEvents(
+  logs: any[],
+  accountAddress: string,
+): any[] {
+  if (!logs || logs.length === 0 || !accountAddress) {
+    return []
+  }
+
+  console.log(
+    `🔍 [Transfer Events] Parsing ${logs.length} logs for account ${accountAddress}`,
+  )
+
+  // ERC-20/ERC-721 Transfer event signature: Transfer(address,address,uint256)
+  const TRANSFER_SIGNATURE =
+    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+
+  // Track balance changes per token
+  const tokenChanges = new Map<
+    string,
+    {
+      token: { address: string; symbol?: string; decimals?: number }
+      totalChange: bigint
+    }
+  >()
+
+  const targetAccount = accountAddress.toLowerCase()
+
+  for (const log of logs) {
+    // Skip if not a Transfer event
+    if (
+      !log.topics ||
+      log.topics[0] !== TRANSFER_SIGNATURE ||
+      log.topics.length < 3
+    ) {
+      continue
+    }
+
+    const tokenAddress = log.address.toLowerCase()
+    const fromAddress = '0x' + log.topics[1].slice(26) // Remove padding
+    const toAddress = '0x' + log.topics[2].slice(26) // Remove padding
+
+    // Parse transfer amount from data field
+    let amount: bigint
+    try {
+      amount = BigInt(log.data || '0x0')
+    } catch (error) {
+      console.warn(
+        `Failed to parse transfer amount for ${tokenAddress}:`,
+        log.data,
+      )
+      continue
+    }
+
+    console.log(
+      `📝 [Transfer Events] ${tokenAddress}: ${fromAddress} → ${toAddress}, amount: ${amount.toString()}`,
+    )
+
+    // Check if this transfer affects our target account
+    let accountChange = 0n
+    if (fromAddress.toLowerCase() === targetAccount) {
+      accountChange -= amount // Outgoing transfer (negative)
+    }
+    if (toAddress.toLowerCase() === targetAccount) {
+      accountChange += amount // Incoming transfer (positive)
+    }
+
+    if (accountChange !== 0n) {
+      console.log(
+        `💰 [Transfer Events] Account affected: ${accountChange > 0n ? '+' : ''}${accountChange.toString()}`,
+      )
+
+      // Update or create token change tracking
+      if (tokenChanges.has(tokenAddress)) {
+        const existing = tokenChanges.get(tokenAddress)!
+        existing.totalChange += accountChange
+      } else {
+        tokenChanges.set(tokenAddress, {
+          token: {
+            address: tokenAddress,
+            // We don't have symbol/decimals from logs, they'll be undefined
+            symbol: undefined,
+            decimals: undefined,
+          },
+          totalChange: accountChange,
+        })
+      }
+    }
+  }
+
+  // Convert to asset changes format
+  const assetChanges = Array.from(tokenChanges.entries()).map(
+    ([address, change]) => {
+      console.log(
+        `🎯 [Transfer Events] Final change for ${address}: ${change.totalChange.toString()}`,
+      )
+
+      return {
+        token: {
+          address: change.token.address,
+          symbol: change.token.symbol,
+          name: undefined, // Not available from Transfer events
+          decimals: change.token.decimals || 18, // Default to 18 for ERC-20
+        },
+        value: {
+          pre: '0', // We don't know the exact before/after from events
+          post: change.totalChange.toString(), // Net change
+          diff: change.totalChange.toString(),
+        },
+      }
+    },
+  )
+
+  console.log(
+    `✅ [Transfer Events] Extracted ${assetChanges.length} asset changes from Transfer events`,
+  )
+  return assetChanges
+}
+// END DISABLED VIEM HELPER FUNCTIONS
+
+/**
+ * Merge asset changes from API and trace sources, preferring trace data when available
+ */
+function mergeAssetChanges(
+  apiAssetChanges: any[] | undefined | null,
+  traceAssetChanges: any[] | undefined | null,
+): any[] {
+  // If no data from either source, return empty array
+  if (
+    (!apiAssetChanges || apiAssetChanges.length === 0) &&
+    (!traceAssetChanges || traceAssetChanges.length === 0)
+  ) {
+    return []
+  }
+
+  // If only trace data available, use it
+  if (!apiAssetChanges || apiAssetChanges.length === 0) {
+    console.log(
+      '✅ [Asset Merge] Using trace asset changes only:',
+      traceAssetChanges?.length || 0,
+    )
+    return traceAssetChanges || []
+  }
+
+  // If only API data available, use it
+  if (!traceAssetChanges || traceAssetChanges.length === 0) {
+    console.log(
+      '✅ [Asset Merge] Using API asset changes only:',
+      apiAssetChanges.length,
+    )
+    return apiAssetChanges
+  }
+
+  // If both available, merge them (prefer trace data for duplicates)
+  console.log(
+    `🔄 [Asset Merge] Merging API (${apiAssetChanges.length}) and trace (${traceAssetChanges.length}) asset changes`,
+  )
+
+  const mergedMap = new Map<string, any>()
+
+  // Add API data first
+  for (const change of apiAssetChanges) {
+    const key = change.token?.address || change.address
+    if (key) {
+      mergedMap.set(key.toLowerCase(), change)
+    }
+  }
+
+  // Add trace data second (overwrites API data for same token)
+  for (const change of traceAssetChanges) {
+    const key = change.token?.address || change.address
+    if (key) {
+      mergedMap.set(key.toLowerCase(), change) // trace data takes priority
+    }
+  }
+
+  const merged = Array.from(mergedMap.values())
+  console.log(`✅ [Asset Merge] Final merged asset changes: ${merged.length}`)
+  return merged
+}
+
 /**
  * Execute simulation, trace, and access list APIs with gas comparison analysis
  */
@@ -142,12 +1079,12 @@ export async function executeEnhancedSimulation(
       throw new Error('No calls found in simulation request')
     }
 
+    // Execute simulation and trace in parallel first
     const [simulationResult, traceResult, accessListComparison] =
       await Promise.all([
         // Original simulation API
         (async () => {
           const simResult = await client.executeSimulation(request)
-
           return simResult
         })(),
 
@@ -182,6 +1119,10 @@ export async function executeEnhancedSimulation(
           const result = await traceBuilder.execute()
           return result
         })().catch((error) => {
+          console.warn(
+            '⚠️ [Trace API] Trace API failed, continuing without trace data:',
+            error,
+          )
           return null
         }), // Silently fail if trace API not available
 
@@ -208,15 +1149,71 @@ export async function executeEnhancedSimulation(
         }), // Log error but continue with simulation
       ])
 
+    // Now execute trace-based asset tracking with the available data
+    let traceAssetChanges: any[] | undefined
+    try {
+      traceAssetChanges = await executeTraceBasedAssetTracking(
+        request,
+        primaryCall,
+        simulationResult,
+        traceResult,
+      )
+    } catch (error) {
+      console.warn(
+        '⚠️ [Trace Asset Tracking] Failed to get asset changes from trace:',
+        error,
+      )
+      traceAssetChanges = undefined
+    }
+
     // Create legacy gas comparison from the new comparison result
     let gasComparison: GasComparisonAnalysis | undefined
     if (accessListComparison?.success.baseline) {
       gasComparison = createGasComparisonFromComparison(accessListComparison)
     }
 
+    // Merge asset changes from trace parsing with API results (if any)
+    console.log('🔄 [Asset Integration] Merging asset changes:', {
+      apiAssetChanges: simulationResult.assetChanges?.length || 0,
+      traceAssetChanges: traceAssetChanges?.length || 0,
+    })
+
+    const mergedAssetChanges = mergeAssetChanges(
+      simulationResult.assetChanges,
+      traceAssetChanges,
+    )
+
+    console.log('🎯 [Asset Integration] Final merged asset changes:', {
+      count: mergedAssetChanges.length,
+      changes: mergedAssetChanges.map((change) => ({
+        tokenAddress: change.tokenAddress,
+        symbol: change.symbol,
+        type: change.type,
+        netChange: change.netChange,
+      })),
+    })
+
+    // Debug: Log the final data being added to the enhanced result
+    console.log(
+      '🔧 [Asset Integration] Adding asset changes to enhanced result:',
+      {
+        mergedAssetChanges: mergedAssetChanges,
+        sampleChange: mergedAssetChanges[0]
+          ? {
+              hasToken: !!mergedAssetChanges[0].token,
+              hasValue: !!mergedAssetChanges[0].value,
+              tokenAddress: mergedAssetChanges[0].token?.address,
+              symbol: mergedAssetChanges[0].token?.symbol,
+              valueDiff: mergedAssetChanges[0].value?.diff,
+            }
+          : 'No changes',
+      },
+    )
+
     // Combine results
     const enhancedResult: EnhancedSimulationResult = {
       ...simulationResult,
+      assetChanges: mergedAssetChanges,
       traceData: traceResult || undefined,
       accessListData: accessListComparison?.accessListData || undefined,
       gasComparison,
@@ -224,6 +1221,55 @@ export async function executeEnhancedSimulation(
       hasCallHierarchy: !!traceResult?.callTracer?.rootCall,
       hasAccessList: !!accessListComparison?.success.accessList,
       hasGasComparison: !!accessListComparison?.success.baseline,
+    }
+
+    // Override getAssetChangesSummary to use our trace-based asset changes
+    enhancedResult.getAssetChangesSummary = () => {
+      console.log(
+        '🔍 [Custom getAssetChangesSummary] Called with merged asset changes:',
+        {
+          count: mergedAssetChanges.length,
+          hasChanges: mergedAssetChanges.length > 0,
+          sampleChange: mergedAssetChanges[0] || null,
+        },
+      )
+
+      if (!mergedAssetChanges || mergedAssetChanges.length === 0) {
+        console.log(
+          '🔍 [Custom getAssetChangesSummary] No asset changes, returning empty array',
+        )
+        return []
+      }
+
+      // Convert our format to AssetChangeSummary format
+      const summary = mergedAssetChanges.map((change, index) => {
+        console.log(
+          `🔧 [Custom getAssetChangesSummary] Processing change ${index}:`,
+          {
+            tokenAddress: change.tokenAddress,
+            symbol: change.symbol,
+            decimals: change.decimals,
+            netChange: change.netChange,
+            type: change.type,
+            hasNestedToken: !!change.token,
+            hasNestedValue: !!change.value,
+          },
+        )
+
+        return {
+          tokenAddress: change.tokenAddress,
+          symbol: change.symbol,
+          decimals: change.decimals,
+          netChange: change.netChange,
+          type: change.type as 'gain' | 'loss',
+        }
+      })
+
+      console.log(
+        '✅ [Custom getAssetChangesSummary] Returning summary:',
+        summary,
+      )
+      return summary
     }
 
     return enhancedResult

@@ -4,8 +4,10 @@ import type { CallResult, StateOverride } from '@altitrace/sdk/types'
 import {
   AlertTriangleIcon,
   CheckCircleIcon,
+  CheckIcon,
   CoinsIcon,
   CopyIcon,
+  ExternalLinkIcon,
   FuelIcon,
   HashIcon,
   KeyIcon,
@@ -871,6 +873,7 @@ function EventsBreakdown({ result }: { result: EnhancedSimulationResult }) {
           callIndex={index}
           availableABI={availableABI}
           fetchedContracts={fetchedContracts}
+          assetChanges={result.assetChanges || undefined}
         />
       ))}
     </div>
@@ -884,46 +887,33 @@ function AssetChangesBreakdown({
 }) {
   const assetChanges = result.getAssetChangesSummary()
 
+  // Debug: Log what asset changes data reaches the UI component
+  console.log('🖥️ [UI AssetChangesBreakdown] Received asset changes:', {
+    count: assetChanges.length,
+    data: assetChanges.map((change, index) => ({
+      index,
+      tokenAddress: change.tokenAddress,
+      symbol: change.symbol,
+      decimals: change.decimals,
+      netChange: change.netChange,
+      type: change.type,
+      hasTokenObject: !!(change as any).token,
+      hasValueObject: !!(change as any).value,
+    })),
+  })
+
   if (assetChanges.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground space-y-4">
         <CoinsIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
         <div className="space-y-2">
           <h3 className="text-lg font-medium text-foreground">
-            Asset Tracking Configuration
+            No Asset Changes Detected
           </h3>
           <p className="text-sm max-w-md mx-auto">
-            Asset tracking parameters are being sent with the simulation
-            request. The backend may still be implementing full asset change
-            detection.
-          </p>
-        </div>
-        <div className="bg-muted/50 p-4 rounded-lg max-w-lg mx-auto text-xs">
-          <p className="font-medium mb-2">📋 Current Status:</p>
-          <ul className="text-left space-y-1">
-            <li>
-              •{' '}
-              <code className="bg-background px-1 rounded">
-                traceAssetChanges: true
-              </code>
-            </li>
-            <li>
-              •{' '}
-              <code className="bg-background px-1 rounded">
-                traceTransfers: true
-              </code>
-            </li>
-            <li>• Account tracking: Auto-detected from transaction</li>
-            <li>
-              • Backend response:{' '}
-              <code className="bg-background px-1 rounded">
-                assetChanges: undefined
-              </code>
-            </li>
-          </ul>
-          <p className="mt-3 text-muted-foreground">
-            💡 Check the Events tab for token transfer events which may contain
-            balance change information.
+            This simulation didn't result in any ERC-20 or ERC-721 token balance
+            changes. This could mean the transaction doesn't interact with
+            tokens, or only performs read operations.
           </p>
         </div>
       </div>
@@ -933,47 +923,144 @@ function AssetChangesBreakdown({
   return (
     <div className="space-y-4">
       {assetChanges.map((change, index: number) => (
-        <Card key={`${change.tokenAddress}-${change.type}-${index}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`p-2 rounded-full ${
-                    change.type === 'gain'
-                      ? 'bg-green-100 dark:bg-green-900'
-                      : 'bg-red-100 dark:bg-red-900'
-                  }`}
-                >
-                  {change.type === 'gain' ? (
-                    <TrendingUpIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  ) : (
-                    <TrendingDownIcon className="h-4 w-4 text-red-600 dark:text-red-400" />
-                  )}
-                </div>
-                <div>
-                  <div className="font-medium">{change.symbol}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {change.tokenAddress}
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div
-                  className={`text-lg font-semibold ${
-                    change.type === 'gain' ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {change.netChange}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {change.decimals} decimals
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AssetChangeCard
+          key={`${change.tokenAddress}-${change.type}-${index}`}
+          change={change}
+        />
       ))}
     </div>
+  )
+}
+
+function AssetChangeCard({ change }: { change: any }) {
+  const [copied, setCopied] = useState(false)
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.warn('Failed to copy to clipboard:', error)
+    }
+  }
+
+  const getExplorerUrl = (address: string) => {
+    // Using HyperScan for HyperEVM
+    return `https://hyperscan.com/address/${address}`
+  }
+
+  const formatTokenAmount = (amount: string, decimals?: number) => {
+    if (!amount || amount === '0') return '0'
+
+    try {
+      const value = BigInt(amount)
+      if (decimals && decimals > 0) {
+        const divisor = BigInt(10 ** decimals)
+        const wholePart = value / divisor
+        const fractionalPart = value % divisor
+
+        if (fractionalPart === 0n) {
+          return wholePart.toString()
+        } else {
+          const fractionalStr = fractionalPart
+            .toString()
+            .padStart(decimals, '0')
+          const trimmed = fractionalStr.replace(/0+$/, '')
+          return `${wholePart}.${trimmed}`
+        }
+      }
+      return value.toString()
+    } catch (error) {
+      return amount
+    }
+  }
+
+  const displaySymbol =
+    change.symbol && change.symbol !== 'null'
+      ? change.symbol
+      : change.tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+        ? 'HYPE'
+        : `Token (${change.tokenAddress.slice(0, 6)}...)`
+
+  const isHYPE =
+    change.tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-full ${
+                change.type === 'gain'
+                  ? 'bg-green-100 dark:bg-green-900'
+                  : 'bg-red-100 dark:bg-red-900'
+              }`}
+            >
+              {change.type === 'gain' ? (
+                <TrendingUpIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+              ) : (
+                <TrendingDownIcon className="h-4 w-4 text-red-600 dark:text-red-400" />
+              )}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <div className="font-medium">{displaySymbol}</div>
+                {change.symbol && change.symbol !== 'null' && (
+                  <Badge variant="outline" className="text-xs">
+                    {isHYPE ? 'Native' : 'ERC-20'}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-mono">
+                  {isHYPE ? 'Native Token' : change.tokenAddress}
+                </span>
+                {!isHYPE && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(change.tokenAddress)}
+                      className="h-4 w-4 p-0 hover:bg-transparent"
+                      title="Copy token address"
+                    >
+                      {copied ? (
+                        <CheckIcon className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <CopyIcon className="h-3 w-3" />
+                      )}
+                    </Button>
+                    <a
+                      href={getExplorerUrl(change.tokenAddress)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-4 w-4 p-0 hover:bg-muted rounded transition-colors flex items-center justify-center"
+                      title="View on explorer"
+                    >
+                      <ExternalLinkIcon className="h-3 w-3" />
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div
+              className={`text-lg font-semibold ${
+                change.type === 'gain' ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {formatTokenAmount(change.netChange, change.decimals)}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {change.decimals || 18} decimals
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
