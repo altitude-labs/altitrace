@@ -35,8 +35,12 @@ export interface EnhancedTraceResult {
   hasCallHierarchy: boolean
   /** Whether this result has state changes data */
   hasStateChanges: boolean
+  /** Whether this result has asset changes data */
+  hasAssetChanges: boolean
   /** Flag to identify trace results */
   isTraceResult: true
+  /** Asset changes extracted from trace data */
+  assetChanges?: any[]
   /** Transaction receipt if available */
   receipt?: {
     blockNumber: bigint
@@ -80,10 +84,10 @@ export interface GasComparisonAnalysis {
     isBeneficial?: boolean
     /** Human-readable recommendation */
     recommendation:
-      | 'use-access-list'
-      | 'skip-access-list'
-      | 'neutral'
-      | 'unknown'
+    | 'use-access-list'
+    | 'skip-access-list'
+    | 'neutral'
+    | 'unknown'
     /** Status of the comparison */
     status: 'success' | 'partial' | 'failed'
     /** Error message if comparison failed */
@@ -103,6 +107,7 @@ export interface EnhancedSimulationResult extends ExtendedSimulationResult {
   hasAccessList: boolean
   hasGasComparison: boolean
   hasStateChanges: boolean
+  hasAssetChanges?: boolean
   getStateChangesCount?(): number
 }
 
@@ -841,10 +846,6 @@ function extractAssetChangesFromTransferEvents(
     }
 
     if (accountChange !== 0n) {
-      console.log(
-        `💰 [Transfer Events] Account affected: ${accountChange > 0n ? '+' : ''}${accountChange.toString()}`,
-      )
-
       // Update or create token change tracking
       if (tokenChanges.has(tokenAddress)) {
         const existing = tokenChanges.get(tokenAddress)!
@@ -866,10 +867,6 @@ function extractAssetChangesFromTransferEvents(
   // Convert to asset changes format
   const assetChanges = Array.from(tokenChanges.entries()).map(
     ([address, change]) => {
-      console.log(
-        `🎯 [Transfer Events] Final change for ${address}: ${change.totalChange.toString()}`,
-      )
-
       return {
         token: {
           address: change.token.address,
@@ -886,9 +883,6 @@ function extractAssetChangesFromTransferEvents(
     },
   )
 
-  console.log(
-    `✅ [Transfer Events] Extracted ${assetChanges.length} asset changes from Transfer events`,
-  )
   return assetChanges
 }
 // END DISABLED VIEM HELPER FUNCTIONS
@@ -1074,6 +1068,7 @@ export async function executeEnhancedSimulation(
       hasStateChanges:
         !!traceResult?.prestateTracer &&
         hasPrestateChanges(traceResult.prestateTracer),
+      hasAssetChanges: !!(mergedAssetChanges && mergedAssetChanges.length > 0),
       getStateChangesCount: () =>
         getStateChangesCount(traceResult?.prestateTracer),
     }
@@ -1377,12 +1372,37 @@ export async function executeTransactionTrace(
       }
     }
 
+    // Execute asset change tracking for this trace
+    let assetChanges: any[] | undefined
+    if (rootCall) {
+      try {
+        // Create a minimal request object for asset tracking
+        const mockRequest = {
+          params: {
+            account: rootCall.from, // Use the transaction sender as account
+          }
+        } as SimulationRequest
+
+        // Use the trace-based asset tracking function
+        assetChanges = await executeTraceBasedAssetTracking(
+          mockRequest,
+          rootCall,
+          { assetChanges: [] }, // Empty simulation result
+          traceResult,
+        )
+      } catch (error) {
+        console.warn('⚠️ [Transaction Trace] Asset tracking failed:', error)
+        assetChanges = undefined
+      }
+    }
+
     const enhancedResult: EnhancedTraceResult = {
       traceData: traceResult,
       hasCallHierarchy: !!rootCall,
       hasStateChanges:
         !!traceResult.prestateTracer &&
         hasPrestateChanges(traceResult.prestateTracer),
+      hasAssetChanges: !!(assetChanges && assetChanges.length > 0),
       transactionHash: txHash,
       success,
       gasUsed,
@@ -1390,27 +1410,28 @@ export async function executeTransactionTrace(
       status: errors.length > 0 ? 'failed' : success ? 'success' : 'reverted',
       type: 'trace',
       isTraceResult: true,
+      assetChanges: assetChanges || [],
       receipt: traceResult.receipt
         ? {
-            blockNumber: BigInt((traceResult.receipt as any).blockNumber || 0),
-            blockHash: (traceResult.receipt as any).blockHash || '',
-            transactionIndex:
-              (traceResult.receipt as any).transactionIndex || 0,
-            effectiveGasPrice: BigInt(
-              (traceResult.receipt as any).effectiveGasPrice || 0,
-            ),
-            contractAddress:
-              (traceResult.receipt as any).contractAddress || undefined,
-            blockGasUsed: (traceResult.receipt as any).blockGasUsed
-              ? BigInt((traceResult.receipt as any).blockGasUsed)
-              : undefined,
-            blockGasLimit: (traceResult.receipt as any).blockGasLimit
-              ? BigInt((traceResult.receipt as any).blockGasLimit)
-              : undefined,
-            baseFeePerGas: (traceResult.receipt as any).baseFeePerGas
-              ? BigInt((traceResult.receipt as any).baseFeePerGas)
-              : undefined,
-          }
+          blockNumber: BigInt((traceResult.receipt as any).blockNumber || 0),
+          blockHash: (traceResult.receipt as any).blockHash || '',
+          transactionIndex:
+            (traceResult.receipt as any).transactionIndex || 0,
+          effectiveGasPrice: BigInt(
+            (traceResult.receipt as any).effectiveGasPrice || 0,
+          ),
+          contractAddress:
+            (traceResult.receipt as any).contractAddress || undefined,
+          blockGasUsed: (traceResult.receipt as any).blockGasUsed
+            ? BigInt((traceResult.receipt as any).blockGasUsed)
+            : undefined,
+          blockGasLimit: (traceResult.receipt as any).blockGasLimit
+            ? BigInt((traceResult.receipt as any).blockGasLimit)
+            : undefined,
+          baseFeePerGas: (traceResult.receipt as any).baseFeePerGas
+            ? BigInt((traceResult.receipt as any).baseFeePerGas)
+            : undefined,
+        }
         : undefined,
       fetchedContracts:
         fetchedContracts.length > 0 ? fetchedContracts : undefined,
@@ -1614,7 +1635,7 @@ async function decodeEventsFromLogs(logs: any[], abi: Abi): Promise<any[]> {
 /**
  * Check if prestate data contains state changes (diff mode with actual changes)
  */
-function hasPrestateChanges(prestateData: any): boolean {
+export function hasPrestateChanges(prestateData: any): boolean {
   if (!prestateData) return false
 
   // Check if it's diff mode data
@@ -1672,7 +1693,7 @@ function hasPrestateChanges(prestateData: any): boolean {
 /**
  * Get the count of accounts with state changes
  */
-function getStateChangesCount(prestateData: any): number {
+export function getStateChangesCount(prestateData: any): number {
   if (!prestateData || !hasPrestateChanges(prestateData)) {
     return 0
   }

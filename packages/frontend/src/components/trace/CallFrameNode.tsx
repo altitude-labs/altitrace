@@ -114,7 +114,7 @@ export function CallFrameNode({
               className="flex-shrink-0 w-64"
             >
               <Card
-                className={`border-l-4 ${callBorderColor} ${!callIsSuccess ? 'bg-red-50 border-red-200' : ''} h-full`}
+                className={`border-l-4 ${callBorderColor} ${!callIsSuccess ? 'bg-red-100 border-red-300' : ''} h-full`}
               >
                 <CardContent className="p-3 flex flex-col justify-center">
                   <div className="space-y-2">
@@ -284,7 +284,7 @@ export function CallFrameNode({
   return (
     <div className={`${depth > 0 ? 'ml-4' : ''}`}>
       <Card
-        className={`mb-1 border-l-4 ${borderColor} ${!isSuccess ? 'bg-red-50 border-red-200' : ''}`}
+        className={`mb-1 border-l-4 ${borderColor} ${!isSuccess ? 'bg-red-100 border-red-300' : ''}`}
       >
         <CardContent className="p-3">
           {/* Main call header */}

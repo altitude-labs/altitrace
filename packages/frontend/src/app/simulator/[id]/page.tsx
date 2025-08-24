@@ -21,6 +21,7 @@ import {
   type EnhancedTraceResult,
   executeEnhancedSimulation,
   executeTransactionTrace,
+  getStateChangesCount,
 } from '@/utils/trace-integration'
 import {
   executeBundleSimulation,
@@ -484,6 +485,11 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 hasCallHierarchy: traceResult.hasCallHierarchy,
                 hasAccessList: false,
                 hasGasComparison: false,
+                hasStateChanges: traceResult.hasStateChanges,
+                hasAssetChanges: !!(traceResult.assetChanges && traceResult.assetChanges.length > 0),
+                getStateChangesCount: () =>
+                  getStateChangesCount(traceResult.traceData?.prestateTracer),
+
                 isSuccess: () => traceResult.success,
                 isFailed: () => !traceResult.success,
                 getTotalGasUsed: () => traceResult.gasUsed,
@@ -494,7 +500,20 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                   ) || (() => []),
                 getLogCount: () =>
                   traceResult.traceData.getAllLogs?.()?.length || 0,
-                getAssetChangesSummary: () => [],
+                getAssetChangesSummary: () => {
+                  if (!traceResult.assetChanges || traceResult.assetChanges.length === 0) {
+                    return []
+                  }
+                  
+                  // Convert trace asset changes to AssetChangeSummary format
+                  return traceResult.assetChanges.map((change: any) => ({
+                    tokenAddress: change.tokenAddress,
+                    symbol: change.symbol,
+                    decimals: change.decimals,
+                    netChange: change.netChange,
+                    type: change.type as 'gain' | 'loss',
+                  }))
+                },
                 // Include receipt data from trace result
                 receipt: traceResult.receipt,
                 blockNumber: traceResult.receipt?.blockNumber

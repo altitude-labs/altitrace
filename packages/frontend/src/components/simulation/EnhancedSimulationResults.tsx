@@ -148,7 +148,7 @@ export function EnhancedSimulationResults({
       label: 'Asset Changes',
       icon: CoinsIcon,
       count: assetChanges.length,
-      disabled: isTraceOnly, // Disable for trace-only results since they don't have asset tracking
+      disabled: assetChanges.length === 0, // Disable only if there are no asset changes
     },
     {
       id: 'request',
@@ -674,7 +674,7 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
                       <TrendingDownIcon className="h-3 w-3" />
                     )}
                     <span className="font-mono text-sm">
-                      {change.netChange}
+                      {formatTokenAmount(change.netChange, change.decimals)}
                     </span>
                   </div>
                 </div>
@@ -938,6 +938,33 @@ function AssetChangesBreakdown({
   )
 }
 
+// Helper function to format token amounts with proper decimals
+const formatTokenAmount = (amount: string, decimals?: number) => {
+  if (!amount || amount === '0') return '0'
+
+  try {
+    const value = BigInt(amount)
+    if (decimals && decimals > 0) {
+      const divisor = BigInt(10 ** decimals)
+      const wholePart = value / divisor
+      const fractionalPart = value % divisor
+
+      if (fractionalPart === 0n) {
+        return wholePart.toString()
+      } else {
+        const fractionalStr = fractionalPart
+          .toString()
+          .padStart(decimals, '0')
+        const trimmed = fractionalStr.replace(/0+$/, '')
+        return `${wholePart}.${trimmed}`
+      }
+    }
+    return value.toString()
+  } catch (error) {
+    return amount
+  }
+}
+
 function AssetChangeCard({ change }: { change: any }) {
   const [copied, setCopied] = useState(false)
 
@@ -954,32 +981,6 @@ function AssetChangeCard({ change }: { change: any }) {
   const getExplorerUrl = (address: string) => {
     // Using HyperScan for HyperEVM
     return `https://hyperscan.com/address/${address}`
-  }
-
-  const formatTokenAmount = (amount: string, decimals?: number) => {
-    if (!amount || amount === '0') return '0'
-
-    try {
-      const value = BigInt(amount)
-      if (decimals && decimals > 0) {
-        const divisor = BigInt(10 ** decimals)
-        const wholePart = value / divisor
-        const fractionalPart = value % divisor
-
-        if (fractionalPart === 0n) {
-          return wholePart.toString()
-        } else {
-          const fractionalStr = fractionalPart
-            .toString()
-            .padStart(decimals, '0')
-          const trimmed = fractionalStr.replace(/0+$/, '')
-          return `${wholePart}.${trimmed}`
-        }
-      }
-      return value.toString()
-    } catch (error) {
-      return amount
-    }
   }
 
   const displaySymbol =
