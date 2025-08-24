@@ -4,8 +4,6 @@ import type { CallFrame, ExtendedTracerResponse } from '@altitrace/sdk/types'
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  CopyIcon,
-  ExternalLinkIcon,
   EyeIcon,
   FuelIcon,
   SettingsIcon,
@@ -19,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui'
-import { useMultipleCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { parseBlockchainError } from '@/utils/error-parser'
 
 interface EnhancedCallTraceProps {
@@ -55,7 +52,7 @@ export function EnhancedCallTrace({
         .call-trace-container {
           /* Custom scrollbar styles for the global container */
           scrollbar-width: thin;
-          scrollbar-color: #3b82f6 transparent;
+          scrollbar-color: #74A8FB transparent;
         }
         
         .call-trace-container::-webkit-scrollbar {
@@ -92,7 +89,7 @@ export function EnhancedCallTrace({
         /* Firefox custom scrollbar */
         @supports (scrollbar-color: auto) {
           .call-trace-container {
-            scrollbar-color: #3b82f6 hsl(var(--muted) / 0.1);
+            scrollbar-color: #74A8FB hsl(var(--muted) / 0.1);
             scrollbar-width: thin;
           }
         }
@@ -157,7 +154,7 @@ export function EnhancedCallTrace({
             <div 
               className={`
                 grid items-center py-2 px-3 border-b bg-muted/20 text-xs font-medium text-muted-foreground call-node-content
-                ${showGas ? 'grid-cols-[96px_80px_16px_1fr_80px]' : 'grid-cols-[96px_16px_1fr_80px]'}
+                ${showGas ? 'grid-cols-[96px_80px_16px_1fr]' : 'grid-cols-[96px_16px_1fr]'}
               `}
               style={{ paddingLeft: '12px' }}
             >
@@ -199,7 +196,6 @@ function CallNode({
   showGas,
   showFullTrace,
 }: CallNodeProps) {
-  const { copyToClipboard } = useMultipleCopyToClipboard()
   const [isExpanded, setIsExpanded] = useState(depth < 3) // Auto-expand first 3 levels
   
   const hasSubcalls = frame.calls && frame.calls.length > 0
@@ -247,7 +243,7 @@ function CallNode({
         className={`
           group grid items-center py-1.5 hover:bg-muted/30 transition-colors
           ${!isSuccess ? 'bg-red-50/50 dark:bg-red-950/10' : ''}
-          ${showGas ? 'grid-cols-[12px_96px_80px_16px_1fr_80px_12px]' : 'grid-cols-[12px_96px_16px_1fr_80px_12px]'}
+          ${showGas ? 'grid-cols-[12px_96px_80px_16px_1fr]' : 'grid-cols-[12px_96px_16px_1fr]'}
         `}
       >
         {/* Left padding that grows with indentation */}
@@ -304,9 +300,14 @@ function CallNode({
           <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
             CALLER
           </span>
-          <span className="text-cyan-800 dark:text-cyan-600 text-sm font-mono flex-shrink-0">
+          <a
+            href={`https://hyperevmscan.io/address/${frame.from}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-800 dark:text-cyan-600 hover:text-cyan-600 dark:hover:text-cyan-500 text-sm font-mono flex-shrink-0 underline decoration-dotted underline-offset-2 transition-colors"
+          >
             {formatAddress(frame.from)}
-          </span>
+          </a>
           
           {/* Arrow */}
           <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">→</span>
@@ -317,9 +318,14 @@ function CallNode({
               <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
                 RECEIVER
               </span>
-              <span className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
+              <a
+                href={`https://hyperevmscan.io/address/${frame.to}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 text-sm font-mono flex-shrink-0 underline decoration-dotted underline-offset-2 transition-colors"
+              >
                 {formatAddress(frame.to)}
-              </span>
+              </a>
             </>
           ) : (
             <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm flex-shrink-0">
@@ -344,43 +350,6 @@ function CallNode({
             </span>
           )}
         </div>
-        
-        {/* Action buttons - always aligned */}
-        <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 px-1">
-          {/* Copy from address */}
-          <button
-            onClick={() => copyToClipboard(`from-${depth}-${index}`, frame.from)}
-            className="p-1 hover:bg-muted rounded transition-colors"
-            title="Copy from address"
-          >
-            <CopyIcon className="h-3 w-3 text-muted-foreground" />
-          </button>
-          
-          {/* Copy to address */}
-          {frame.to && (
-            <button
-              onClick={() => copyToClipboard(`to-${depth}-${index}`, frame.to!)}
-              className="p-1 hover:bg-muted rounded transition-colors"
-              title="Copy to address"
-            >
-              <CopyIcon className="h-3 w-3 text-muted-foreground" />
-            </button>
-          )}
-          
-          {/* External link */}
-          <a
-            href={`https://hyperevmscan.io/address/${frame.to || frame.from}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-muted rounded transition-colors"
-            title="Open in explorer"
-          >
-            <ExternalLinkIcon className="h-3 w-3 text-muted-foreground" />
-          </a>
-        </div>
-        
-        {/* Right padding */}
-        <div />
       </div>
       
       {/* Full trace mode additional details */}
