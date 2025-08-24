@@ -79,11 +79,10 @@ Altitrace consists of three main parts:
 - State changes and storage access patterns
 - Decoded event logs and function calls
 
-## Community & Support
+## Support
 
 - 📖 [Documentation](https://docs.altitrace.reachaltitude.xyz) - Complete guides and API reference
 - 🐛 [GitHub Issues](https://github.com/altitude-labs/altitrace/issues) - Bug reports and feature requests
-- 🔗 [Examples](https://github.com/altitude-dev/altitrace-examples) - Real-world usage patterns
 
 ## License
 
