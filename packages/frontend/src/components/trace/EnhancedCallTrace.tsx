@@ -538,9 +538,7 @@ function CallNode({
                 SLOT
               </span>
               <code className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
-                {op.slot.length > 12
-                  ? `${op.slot.slice(0, 8)}...${op.slot.slice(-4)}`
-                  : op.slot}
+                {op.slot}
               </code>
 
               {/* Operation-specific value display */}
@@ -553,9 +551,7 @@ function CallNode({
                     VALUE
                   </span>
                   <code className="text-green-600 dark:text-green-400 text-sm font-mono flex-shrink-0">
-                    {op.value.length > 12
-                      ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}`
-                      : op.value}
+                    {op.value}
                   </code>
                 </>
               )}
@@ -569,9 +565,7 @@ function CallNode({
                     READ
                   </span>
                   <code className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
-                    {op.value.length > 12
-                      ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}`
-                      : op.value}
+                    {op.value}
                   </code>
                 </>
               )}

@@ -43,7 +43,7 @@ export function CallFrameNode({
   isHorizontal = false,
 }: CallFrameNodeProps) {
   const { getCopyState, copyToClipboard } = useMultipleCopyToClipboard()
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
 
   const hasSubcalls = frame.calls && frame.calls.length > 0
