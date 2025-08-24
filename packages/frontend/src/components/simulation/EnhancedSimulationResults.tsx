@@ -39,8 +39,8 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui'
-import type { EnhancedSimulationResult } from '@/utils/trace-integration'
 import { getErrorSummary, parseBlockchainError } from '@/utils/error-parser'
+import type { EnhancedSimulationResult } from '@/utils/trace-integration'
 import { AccessListView } from './AccessListView'
 import { EnhancedEventDisplay } from './EnhancedEventDisplay'
 import { EnhancedGasAnalysis } from './EnhancedGasAnalysis'
@@ -398,8 +398,11 @@ function SimulationQuickStats({
                     const errors = result.getErrors()
                     // Find the most specific error (contract error data)
                     const specificError = errors.find(error => {
-                      const errorMessage = typeof error === 'string' ? error : (error.reason || error.message || '')
-                      const parsed = parseBlockchainError(error)
+                      const normalizedError = typeof error === 'string' ? error : {
+                        reason: error.reason,
+                        message: error.message || undefined
+                      }
+                      const parsed = parseBlockchainError(normalizedError)
                       return parsed.type === 'revert' && parsed.details && 
                         parsed.details !== 'execution reverted' &&
                         parsed.details !== 'The transaction was reverted by the contract'
@@ -410,7 +413,11 @@ function SimulationQuickStats({
                       return `Transaction reverted: ${errorMessage}`
                     }
                     
-                    return getErrorSummary(errors[0])
+                    const normalizedFirstError = typeof errors[0] === 'string' ? errors[0] : {
+                      reason: errors[0].reason,
+                      message: errors[0].message || undefined
+                    }
+                    return getErrorSummary(normalizedFirstError)
                   })()}
                 </p>
               )}
@@ -555,10 +562,16 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
     if (errors.length <= 1) return errors
     
     // Parse all errors
-    const parsedErrors = errors.map(error => ({
-      original: error,
-      parsed: parseBlockchainError(error)
-    }))
+    const parsedErrors = errors.map(error => {
+      const normalizedError = typeof error === 'string' ? error : {
+        reason: error.reason,
+        message: error.message || undefined
+      }
+      return {
+        original: error,
+        parsed: parseBlockchainError(normalizedError)
+      }
+    })
     
     // Look for pairs of generic revert + specific error data
     const genericReverts = parsedErrors.filter(e => 
@@ -691,7 +704,11 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
           <CardContent>
             <div className="space-y-3">
               {processedErrors.map((error, index: number) => {
-                const parsedError = parseBlockchainError(error)
+                const normalizedError = typeof error === 'string' ? error : {
+                  reason: error.reason,
+                  message: error.message || undefined
+                }
+                const parsedError = parseBlockchainError(normalizedError)
                 // For short error codes or specific contract errors, show them prominently
                 const isContractError = parsedError.type === 'revert' && parsedError.details && 
                   parsedError.details !== 'The transaction was reverted by the contract'
@@ -1035,14 +1052,13 @@ const formatTokenAmount = (amount: string, decimals?: number) => {
 
       if (fractionalPart === 0n) {
         return wholePart.toString()
-      } else {
-        const fractionalStr = fractionalPart.toString().padStart(decimals, '0')
-        const trimmed = fractionalStr.replace(/0+$/, '')
-        return `${wholePart}.${trimmed}`
       }
+      const fractionalStr = fractionalPart.toString().padStart(decimals, '0')
+      const trimmed = fractionalStr.replace(/0+$/, '')
+      return `${wholePart}.${trimmed}`
     }
     return value.toString()
-  } catch (error) {
+  } catch {
     return amount
   }
 }
@@ -1055,8 +1071,8 @@ function AssetChangeCard({ change }: { change: any }) {
       await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (error) {
-      console.warn('Failed to copy to clipboard:', error)
+    } catch {
+      // Failed to copy to clipboard
     }
   }
 
@@ -1283,9 +1299,9 @@ function RequestParametersView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {options?.bundleId && (
                   <div>
-                    <label className="font-medium text-muted-foreground">
+                    <div className="font-medium text-muted-foreground">
                       Bundle ID
-                    </label>
+                    </div>
                     <p className="font-mono text-xs break-all mt-1">
                       {options.bundleId}
                     </p>
@@ -1293,26 +1309,26 @@ function RequestParametersView({
                 )}
                 {options?.bundleIndex !== undefined && (
                   <div>
-                    <label className="font-medium text-muted-foreground">
+                    <div className="font-medium text-muted-foreground">
                       Transaction Position
-                    </label>
+                    </div>
                     <p className="mt-1">
                       Transaction #{options.bundleIndex + 1} in bundle
                     </p>
                   </div>
                 )}
                 <div>
-                  <label className="font-medium text-muted-foreground">
+                  <div className="font-medium text-muted-foreground">
                     Execution Context
-                  </label>
+                  </div>
                   <p className="mt-1">
                     Part of sequential bundle execution with state dependency
                   </p>
                 </div>
                 <div>
-                  <label className="font-medium text-muted-foreground">
+                  <div className="font-medium text-muted-foreground">
                     Block Context
-                  </label>
+                  </div>
                   <p className="font-mono text-sm mt-1">
                     {params.blockNumber || params.blockTag || 'latest'}
                   </p>

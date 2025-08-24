@@ -266,11 +266,11 @@ export async function executeBundleSimulation(
         disableStorage: false,
       },
       structLogger: {
-        cleanStructLogs: false,    // Enable detailed opcodes for storage operations
-        disableMemory: true,       // Disable memory for performance
-        disableStack: false,       // Enable stack for storage slot extraction
-        disableStorage: false,     // Enable storage operations tracking
-        disableReturnData: false   // Keep return data enabled
+        cleanStructLogs: false,
+        disableMemory: true,
+        disableStack: false,  
+        disableStorage: false,
+        disableReturnData: false
       },
       // Add state overrides if provided
       ...(request.stateOverrides &&
