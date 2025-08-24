@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Footer } from './Footer'
 import { Sidebar } from './Sidebar'
 
@@ -9,19 +10,20 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)
-      if (mobile) {
-        setSidebarCollapsed(true)
-      }
+      setSidebarCollapsed(true)
+      setSidebarOpen(false)
     }
 
+    setIsHydrated(true)
     checkScreenSize()
     window.addEventListener('resize', checkScreenSize)
     return () => window.removeEventListener('resize', checkScreenSize)
@@ -41,6 +43,12 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
   }
 
+  const handleNavigate = () => {
+    if (isMobile && sidebarOpen) {
+      setSidebarOpen(false)
+    }
+  }
+
   return (
     <div className="flex h-screen bg-background">
       {/* Mobile Overlay */}
@@ -52,26 +60,29 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Sidebar */}
-      <div
-        className={`${
-          isMobile
-            ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ${
-                sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-              }`
-            : 'relative'
-        }`}
-      >
-        <Sidebar
-          isCollapsed={sidebarCollapsed}
-          onToggle={handleSidebarToggle}
-          isMobile={isMobile}
-        />
-      </div>
+      {isHydrated && (
+        <div
+          className={`${
+            isMobile
+              ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ${
+                  sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                }`
+              : 'relative'
+          }`}
+        >
+          <Sidebar
+            isCollapsed={sidebarCollapsed}
+            onToggle={handleSidebarToggle}
+            isMobile={isMobile}
+            onNavigate={handleNavigate}
+          />
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto flex flex-col">
         {/* Mobile Header */}
-        {isMobile && (
+        {isMobile && isHydrated && (
           <div className="bg-card border-b p-4 h-[72px] flex items-center md:hidden">
             <div className="flex items-center gap-3">
               <button
@@ -92,7 +103,13 @@ export function AppLayout({ children }: AppLayoutProps) {
                   />
                 </svg>
               </button>
-              <h1 className="font-semibold text-lg">Altitrace</h1>
+              <Image
+                src="/altitrace.svg"
+                alt="Altitrace"
+                width={120}
+                height={24}
+                className="h-6 w-auto"
+              />
             </div>
           </div>
         )}
