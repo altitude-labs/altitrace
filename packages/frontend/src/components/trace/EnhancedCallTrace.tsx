@@ -224,22 +224,30 @@ function CallNode({
         </div>
         
         {/* Call information - indented based on depth */}
-        <div className="flex items-center gap-2 min-w-0 px-3" style={{ paddingLeft: `${indentLevel + 12}px` }}>
+        <div className="flex items-center gap-1 min-w-0 px-3 whitespace-nowrap overflow-hidden" style={{ paddingLeft: `${indentLevel + 12}px` }}>
           {/* From address */}
-          <span className="text-muted-foreground text-sm">
-            [CALLER] {formatAddress(frame.from)}
+          <span className="text-muted-foreground text-sm flex-shrink-0">
+            [CALLER]
+          </span>
+          <span className="text-muted-foreground text-sm truncate">
+            {formatAddress(frame.from)}
           </span>
           
           {/* Arrow */}
-          <span className="text-muted-foreground">→</span>
+          <span className="text-muted-foreground flex-shrink-0">→</span>
           
           {/* To address or CREATE */}
           {frame.to ? (
-            <span className="text-muted-foreground text-sm">
-              [RECEIVER] {formatAddress(frame.to)}
-            </span>
+            <>
+              <span className="text-muted-foreground text-sm flex-shrink-0">
+                [RECEIVER]
+              </span>
+              <span className="text-muted-foreground text-sm truncate">
+                {formatAddress(frame.to)}
+              </span>
+            </>
           ) : (
-            <span className="text-orange-600 dark:text-orange-400 font-medium text-sm">
+            <span className="text-orange-600 dark:text-orange-400 font-medium text-sm flex-shrink-0">
               CREATE
             </span>
           )}
@@ -247,8 +255,8 @@ function CallNode({
           {/* Function selector */}
           {frame.to && functionSelector && (
             <>
-              <span className="text-muted-foreground">.</span>
-              <span className="text-blue-600 dark:text-blue-400 font-medium text-sm">
+              <span className="text-muted-foreground flex-shrink-0">.</span>
+              <span className="text-blue-600 dark:text-blue-400 font-medium text-sm flex-shrink-0">
                 {functionSelector}
               </span>
             </>
@@ -256,8 +264,8 @@ function CallNode({
           
           {/* Data (if full trace mode and has input beyond selector) */}
           {showFullTrace && frame.input && frame.input.length > 10 && (
-            <span className="text-xs text-muted-foreground ml-1">
-              ({frame.input})
+            <span className="text-xs text-muted-foreground ml-1 truncate">
+              ({frame.input.length > 50 ? `${frame.input.slice(0, 50)}...` : frame.input})
             </span>
           )}
         </div>
