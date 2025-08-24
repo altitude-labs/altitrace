@@ -117,12 +117,12 @@ export function EnhancedCallTrace({
             Call Trace
           </CardTitle>
           
-          <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
+          <div className="flex gap-1 sm:gap-2 flex-wrap justify-center sm:justify-end">
             <Button
               variant={showGas ? 'primary' : 'ghost'}
               size="sm"
               onClick={() => setShowGas(!showGas)}
-              className="h-8 flex-1 sm:flex-none min-w-0"
+              className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3"
             >
               <FuelIcon className="h-4 w-4 mr-1" />
               Gas
@@ -131,19 +131,21 @@ export function EnhancedCallTrace({
               variant={showFullTrace ? 'primary' : 'ghost'}
               size="sm"
               onClick={() => setShowFullTrace(!showFullTrace)}
-              className="h-8 flex-1 sm:flex-none min-w-0"
+              className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
             >
-              <EyeIcon className="h-4 w-4 mr-1" />
-              Full Trace
+              <EyeIcon className="h-4 w-4 mr-0.5 sm:mr-1" />
+              <span className="sm:hidden">Detail</span>
+              <span className="hidden sm:inline">Full Trace</span>
             </Button>
             <Button
               variant={showStorage ? 'primary' : 'ghost'}
               size="sm"
               onClick={() => setShowStorage(!showStorage)}
-              className="h-8 flex-1 sm:flex-none min-w-0"
+              className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3"
             >
-              <DatabaseIcon className="h-4 w-4 mr-1" />
-              Storage
+              <DatabaseIcon className="h-4 w-4 mr-0.5 sm:mr-1" />
+              <span className="sm:hidden">Store</span>
+              <span className="hidden sm:inline">Storage</span>
             </Button>
           </div>
         </div>
