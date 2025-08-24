@@ -1,6 +1,6 @@
 'use client'
 
-import type { CallResult } from '@altitrace/sdk/types'
+import type { CallResult, StateOverride } from '@altitrace/sdk/types'
 import {
   AlertTriangleIcon,
   CheckCircleIcon,
@@ -9,9 +9,12 @@ import {
   HashIcon,
   KeyIcon,
   ListIcon,
+  SettingsIcon,
   TreePineIcon,
   TrendingDownIcon,
   TrendingUpIcon,
+  UserIcon,
+  WalletIcon,
   XCircleIcon,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -39,10 +42,25 @@ import { EnhancedGasAnalysis } from './EnhancedGasAnalysis'
 
 interface EnhancedSimulationResultsProps {
   result: EnhancedSimulationResult
+  simulationRequest?: {
+    params: {
+      calls: Array<{
+        to: string
+        from?: string
+        data?: string
+        value?: string
+        gas?: string
+      }>
+      stateOverrides?: StateOverride[]
+      [key: string]: any
+    }
+    options?: any
+  }
 }
 
 export function EnhancedSimulationResults({
   result,
+  simulationRequest,
 }: EnhancedSimulationResultsProps) {
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -65,6 +83,10 @@ export function EnhancedSimulationResults({
   const isSuccess = result.isSuccess()
   const logCount = result.getLogCount()
   const assetChanges = result.getAssetChangesSummary()
+
+  const stateOverrides = simulationRequest?.options?.stateOverrides || simulationRequest?.params?.stateOverrides || []
+  const hasStateOverrides = stateOverrides.length > 0
+  const hasTransactionValue = simulationRequest?.params?.calls?.some((call) => call.value && call.value !== '0x0')
 
   const tabConfig = [
     {
@@ -110,12 +132,19 @@ export function EnhancedSimulationResults({
       count: assetChanges.length,
       disabled: false, // Always enabled since asset tracking is auto-enabled
     },
+    {
+      id: 'request',
+      label: 'Request',
+      icon: SettingsIcon,
+      count: hasStateOverrides ? stateOverrides.length : null,
+      disabled: false,
+    },
   ]
 
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
-      <SimulationQuickStats result={result} />
+      <SimulationQuickStats result={result} simulationRequest={simulationRequest} />
 
       {/* Main Content Tabs */}
       <Card>
@@ -227,6 +256,10 @@ export function EnhancedSimulationResults({
               <TabsContent value="assets">
                 <AssetChangesBreakdown result={result} />
               </TabsContent>
+
+              <TabsContent value="request">
+                <RequestParametersView simulationRequest={simulationRequest} />
+              </TabsContent>
             </div>
           </Tabs>
         </CardContent>
@@ -237,8 +270,10 @@ export function EnhancedSimulationResults({
 
 function SimulationQuickStats({
   result,
+  simulationRequest,
 }: {
   result: EnhancedSimulationResult
+  simulationRequest?: EnhancedSimulationResultsProps['simulationRequest']
 }) {
   const blockNumberDecimal = Number.parseInt(result.blockNumber, 16)
   const gasUsedDecimal = Number(result.getTotalGasUsed())
@@ -255,14 +290,32 @@ function SimulationQuickStats({
       0,
     ) || 0
 
+  // Transaction value from the first call
+  const transactionValue = simulationRequest?.params?.calls?.[0]?.value
+  const hasTransactionValue = transactionValue && transactionValue !== '0x0'
+  
+  // Calculate transaction value in ETH for display
+  const transactionValueEth = hasTransactionValue 
+    ? (BigInt(transactionValue) / BigInt(10**18)).toString() + '.' + 
+      (BigInt(transactionValue) % BigInt(10**18)).toString().padStart(18, '0').slice(0, 4)
+    : null
+
+  // State overrides count
+  const allStateOverrides = simulationRequest?.options?.stateOverrides || simulationRequest?.params?.stateOverrides || []
+  const stateOverridesCount = allStateOverrides.length
+
+  // Grid columns: show 5 columns if we have transaction value or state overrides, otherwise 4
+  const shouldShow5Columns = hasTransactionValue || stateOverridesCount > 0
+  const gridCols = shouldShow5Columns ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-4'
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div className={`grid ${gridCols} gap-3 sm:gap-4`}>
       <Card
         className={`${result.isSuccess() ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}
       >
-        <CardContent className="p-3 sm:p-4 h-full">
-          <div className="flex items-center justify-between h-full">
-            <div className="min-w-0 flex flex-col justify-center">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
               <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                 Status
               </p>
@@ -282,58 +335,100 @@ function SimulationQuickStats({
       </Card>
 
       <Card>
-        <CardContent className="p-3 sm:p-4 h-full">
-          <div className="flex items-center justify-between h-full">
-            <div className="min-w-0 flex flex-col justify-center">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
               <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                 Gas Used
               </p>
-              <p className="text-sm sm:text-xl font-bold truncate">
+              <p className="text-sm sm:text-lg font-bold truncate">
                 {gasUsedDecimal.toLocaleString()}
               </p>
             </div>
-            <FuelIcon className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0" />
+            <FuelIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0 mt-1" />
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-3 sm:p-4 h-full">
-          <div className="flex items-center justify-between h-full">
-            <div className="min-w-0 flex flex-col justify-center">
-              <p className="text-xs sm:text-sm text-muted-foreground mb-1 truncate">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                 {result.hasCallHierarchy
                   ? 'Total Calls (Trace)'
                   : 'Transaction Calls'}
               </p>
-              <p className="text-sm sm:text-xl font-bold">{callCount}</p>
+              <p className="text-sm sm:text-lg font-bold">{callCount}</p>
               {result.hasCallHierarchy && (
                 <Badge variant="secondary" className="text-xs mt-1">
                   Enhanced
                 </Badge>
               )}
             </div>
-            <TreePineIcon className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0" />
+            <TreePineIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0 mt-1" />
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-3 sm:p-4 h-full">
-          <div className="flex items-center justify-between h-full">
-            <div className="min-w-0 flex flex-col justify-center">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
               <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                 Events
               </p>
-              <p className="text-sm sm:text-xl font-bold">{eventCount}</p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-sm sm:text-lg font-bold">{eventCount}</p>
+              <p className="text-xs text-muted-foreground">
                 Block #{blockNumberDecimal.toLocaleString()}
               </p>
             </div>
-            <ListIcon className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0" />
+            <ListIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0 mt-1" />
           </div>
         </CardContent>
       </Card>
+
+      {/* Transaction Value Card */}
+      {hasTransactionValue && (
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-start justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">
+                  Transaction Value
+                </p>
+                <p className="text-sm sm:text-lg font-bold">
+                  {transactionValueEth} ETH
+                </p>
+                <p className="text-xs text-muted-foreground font-mono break-all">
+                  {transactionValue}
+                </p>
+              </div>
+              <WalletIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0 mt-1" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* State Overrides Card */}
+      {stateOverridesCount > 0 && (
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-start justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">
+                  State Overrides
+                </p>
+                <p className="text-sm sm:text-lg font-bold">{stateOverridesCount}</p>
+                <p className="text-xs text-muted-foreground">
+                  {stateOverridesCount === 1 ? 'account' : 'accounts'}
+                </p>
+              </div>
+              <UserIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0 mt-1" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
@@ -803,6 +898,270 @@ function AccessListFallback() {
           <li>• See detailed gas savings analysis</li>
           <li>• Particularly effective for complex contract interactions</li>
         </ul>
+      </div>
+    </div>
+  )
+}
+
+function RequestParametersView({ 
+  simulationRequest 
+}: { 
+  simulationRequest?: EnhancedSimulationResultsProps['simulationRequest'] 
+}) {
+  if (!simulationRequest) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>No request parameters available</p>
+      </div>
+    )
+  }
+
+  const { params, options } = simulationRequest
+  const stateOverrides = options?.stateOverrides || params.stateOverrides || []
+  const hasStateOverrides = stateOverrides.length > 0
+  const transactionCalls = params.calls || []
+
+  // Format transaction value for display
+  const formatTransactionValue = (value?: string) => {
+    if (!value || value === '0x0') return null
+    try {
+      const valueInWei = BigInt(value)
+      const valueInEth = Number(valueInWei) / 1e18
+      return {
+        wei: value,
+        eth: valueInEth.toFixed(6),
+        formatted: valueInEth > 0.001 ? `${valueInEth.toFixed(4)} ETH` : `${Number(valueInWei)} wei`
+      }
+    } catch {
+      return { wei: value, eth: 'Invalid', formatted: value }
+    }
+  }
+
+  // Get state override summary
+  const getStateOverrideSummary = (override: StateOverride) => {
+    const parts = []
+    if (override.balance) parts.push('Balance')
+    if (override.nonce !== null && override.nonce !== undefined) parts.push('Nonce')
+    if (override.code) parts.push('Code')
+    if (override.state && override.state.length > 0) parts.push(`Storage (${override.state.length})`)
+    return parts.join(', ') || 'Empty override'
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Transaction Calls */}
+      <div>
+        <h3 className="font-semibold text-lg mb-4">Transaction Calls ({transactionCalls.length})</h3>
+        <div className="space-y-4">
+          {transactionCalls.map((call, index) => {
+            const value = formatTransactionValue(call.value)
+            return (
+              <Card key={index} className="border-l-4 border-l-blue-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Call #{index + 1}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">To Address</label>
+                      <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
+                        <span className="sm:hidden">{`${call.to.slice(0, 10)}...${call.to.slice(-8)}`}</span>
+                        <span className="hidden sm:inline">{call.to}</span>
+                      </p>
+                    </div>
+                    
+                    {call.from && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">From Address</label>
+                        <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
+                          <span className="sm:hidden">{`${call.from.slice(0, 10)}...${call.from.slice(-8)}`}</span>
+                          <span className="hidden sm:inline">{call.from}</span>
+                        </p>
+                      </div>
+                    )}
+                    
+                    {call.data && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Call Data</label>
+                        <p className="font-mono text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
+                          <span className="sm:hidden">
+                            {call.data.length > 50 ? `${call.data.slice(0, 50)}...` : call.data}
+                          </span>
+                          <span className="hidden sm:inline">
+                            {call.data.length > 100 ? `${call.data.slice(0, 100)}...` : call.data}
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                    
+                    {value && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Value</label>
+                        <div className="mt-1">
+                          <p className="font-semibold text-sm">{value.formatted}</p>
+                          <p className="font-mono text-xs text-muted-foreground break-all">{value.wei}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {call.gas && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Gas Limit</label>
+                        <div className="mt-1">
+                          <DecHexToggle 
+                            value={call.gas} 
+                            className="font-mono text-sm bg-muted px-2 py-1 rounded"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* State Overrides */}
+      {hasStateOverrides && (
+        <div>
+          <h3 className="font-semibold text-lg mb-4">
+            State Overrides ({stateOverrides.length})
+          </h3>
+          <div className="space-y-4">
+            {stateOverrides.map((override, index) => (
+              <Card key={index} className="border-l-4 border-l-orange-500">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Override #{index + 1}</CardTitle>
+                    <Badge variant="outline" className="text-xs">
+                      {getStateOverrideSummary(override)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Address</label>
+                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
+                      <span className="sm:hidden">{`${override.address.slice(0, 10)}...${override.address.slice(-8)}`}</span>
+                      <span className="hidden sm:inline">{override.address}</span>
+                    </p>
+                  </div>
+                  
+                  {override.balance && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Balance Override</label>
+                      <div className="mt-1">
+                        <DecHexToggle 
+                          value={override.balance} 
+                          className="font-mono text-sm bg-muted px-2 py-1 rounded break-all"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ≈ {(Number(BigInt(override.balance)) / 1e18).toFixed(6)} ETH
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {override.nonce !== null && override.nonce !== undefined && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Nonce Override</label>
+                      <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">{override.nonce}</p>
+                    </div>
+                  )}
+                  
+                  {override.code && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Code Override</label>
+                      <p className="font-mono text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
+                        {override.code.length > 100 ? `${override.code.slice(0, 100)}...` : override.code}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {override.code === '0x' ? 'Empty contract' : `${(override.code.length - 2) / 2} bytes`}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {override.state && override.state.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Storage Overrides</label>
+                      <div className="mt-1 space-y-2">
+                        {override.state.map((slot, slotIndex) => (
+                          <div key={slotIndex} className="border rounded p-2 bg-muted/30">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="font-medium">Slot:</span>
+                                <p className="font-mono bg-background px-1 py-0.5 rounded mt-1 break-all">
+                                  {slot.slot}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-medium">Value:</span>
+                                <p className="font-mono bg-background px-1 py-0.5 rounded mt-1 break-all">
+                                  {slot.value}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Other Parameters */}
+      <div>
+        <h3 className="font-semibold text-lg mb-4">Simulation Parameters</h3>
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            {params.blockNumber && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Block Number</label>
+                <div className="mt-1">
+                  <DecHexToggle 
+                    value={params.blockNumber} 
+                    className="font-mono text-sm bg-muted px-2 py-1 rounded"
+                  />
+                </div>
+              </div>
+            )}
+            
+            {params.blockTag && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Block Tag</label>
+                <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">{params.blockTag}</p>
+              </div>
+            )}
+            
+            {params.account && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Account (for asset tracking)</label>
+                <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
+                  <span className="sm:hidden">{`${params.account.slice(0, 10)}...${params.account.slice(-8)}`}</span>
+                  <span className="hidden sm:inline">{params.account}</span>
+                </p>
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-2 pt-2">
+              {params.traceAssetChanges && (
+                <Badge variant="secondary">Asset Tracking</Badge>
+              )}
+              {params.traceTransfers && (
+                <Badge variant="secondary">Transfer Tracking</Badge>
+              )}
+              {params.validation !== false && (
+                <Badge variant="secondary">Validation Enabled</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

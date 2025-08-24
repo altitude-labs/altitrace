@@ -71,19 +71,24 @@ export function DecHexToggle({
           {formattedValue}
         </code>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowHex(!showHex)}
-          className="h-6 w-6 p-0"
-          title={`Switch to ${showHex ? 'decimal' : 'hexadecimal'}`}
-        >
-          <RefreshCwIcon className="h-3 w-3" />
-        </Button>
-
-        <span className="text-xs text-muted-foreground min-w-[24px]">
-          {showHex ? 'Hex' : 'Dec'}
-        </span>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowHex(!showHex)}
+            className="group inline-flex items-center px-2 py-1 text-xs font-medium rounded-md 
+                       transition-all duration-200 ease-in-out
+                       bg-secondary/60 text-secondary-foreground 
+                       hover:bg-secondary hover:scale-105 hover:shadow-sm
+                       active:scale-95 active:bg-secondary/80 active:border-border/80 active:duration-75
+                       border border-border/40 hover:border-border
+                       focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1
+                       transform-gpu"
+            title={`Switch to ${showHex ? 'decimal' : 'hexadecimal'}`}
+          >
+            <span className="mr-1.5 transition-colors duration-200">{showHex ? 'Hex' : 'Dec'}</span>
+            <RefreshCwIcon className="h-3 w-3 opacity-70 transition-all duration-200 group-hover:opacity-90 group-hover:rotate-180" />
+          </button>
+        </div>
       </div>
     </div>
   )

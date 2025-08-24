@@ -130,31 +130,72 @@ export async function executeEnhancedSimulation(
         })(),
 
         // Trace API for call hierarchy (fallback silently if not available)
-        client
-          .trace()
-          .call(primaryCall)
-          .atBlock(
-            request.params.blockNumber || request.params.blockTag || 'latest',
-          )
-          .withCallTracer({ onlyTopCall: false, withLogs: true })
-          .with4ByteTracer()
-          .execute()
-          .catch(() => null), // Silently fail if trace API not available
+        (async () => {
+          console.log('🔍 [Trace API] Starting trace call...')
+          
+          let traceBuilder = client
+            .trace()
+            .call(primaryCall)
+          
+          // Add state overrides if available (must be called before other builder methods)
+          if (request.options?.stateOverrides?.length) {
+            console.log('🎯 [Trace API] Adding state overrides to trace call:', request.options.stateOverrides.length)
+            console.log('   State override addresses:', request.options.stateOverrides.map(o => o.address))
+            
+            // Convert array format to Record format expected by SDK
+            const stateOverridesRecord: Record<string, typeof request.options.stateOverrides[0]> = {}
+            request.options.stateOverrides.forEach(override => {
+              if (override.address) {
+                stateOverridesRecord[override.address] = override
+              }
+            })
+            
+            traceBuilder = traceBuilder.withStateOverrides(stateOverridesRecord)
+          } else {
+            console.log('📝 [Trace API] No state overrides to add')
+          }
+          
+          // Add tracing configuration after state overrides
+          traceBuilder = traceBuilder
+            .atBlock(
+              request.params.blockNumber || request.params.blockTag || 'latest',
+            )
+            .withCallTracer({ onlyTopCall: false, withLogs: true })
+            .with4ByteTracer()
+          
+          const result = await traceBuilder.execute()
+          console.log('✅ [Trace API] Trace call completed successfully')
+          return result
+        })().catch((error) => {
+          console.log('❌ [Trace API] Trace call failed:', error?.message || error)
+          return null
+        }), // Silently fail if trace API not available
 
         // Access list comparison for gas optimization analysis
-        client
-          .compareAccessList()
-          .call(primaryCall)
-          .atBlock(
-            request.params.blockNumber || request.params.blockTag || 'latest',
-          )
-          .withAssetChanges(request.params.traceAssetChanges ?? false)
-          .withTransfers(request.params.traceTransfers ?? false)
-          .withValidation(request.params.validation ?? true)
-          .execute()
-          .catch((_error) => {
+        (async () => {
+          // Skip access list when state overrides are present (not supported by backend yet)
+          if (request.options?.stateOverrides?.length) {
+            console.log('⚠️ [Access List API] Skipping access list generation due to state overrides (not supported by backend yet)')
+            console.log('   This is a known limitation - access list API needs backend support for state overrides')
+            console.log('   State overrides count:', request.options.stateOverrides.length)
             return null
-          }), // Log error but continue with simulation
+          }
+          
+          const accessListBuilder = client
+            .compareAccessList()
+            .call(primaryCall)
+            .atBlock(
+              request.params.blockNumber || request.params.blockTag || 'latest',
+            )
+            .withAssetChanges(request.params.traceAssetChanges ?? false)
+            .withTransfers(request.params.traceTransfers ?? false)
+            .withValidation(request.params.validation ?? true)
+          
+          console.log('📊 [Access List API] Generating access list (no state overrides)')
+          return accessListBuilder.execute()
+        })().catch((_error) => {
+          return null
+        }), // Log error but continue with simulation
       ])
 
     // Create legacy gas comparison from the new comparison result

@@ -71,7 +71,7 @@ where
         args.log_args.max_log_files,
     );
 
-    init_tracing(LogFormat::Text, Some((args.log_args.logs_format, file_config)))
+    let _file_guard = init_tracing(LogFormat::Text, Some((args.log_args.logs_format, file_config)))
         .map_err(|e| eyre!("Failed to initialize tracing: {e}"))?;
 
     let app_config = AppConfig::default();
