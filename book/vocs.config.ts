@@ -9,8 +9,8 @@ export default defineConfig({
   basePath: '/docs',
   sidebar,
   topNav: [
-    { text: 'Simulator', link: '/webapp' },
-    { text: 'SDK', link: '/sdk' },
+    { text: 'Simulator', link: '/docs/webapp' },
+    { text: 'SDK', link: '/docs/sdk' },
     { text: 'GitHub', link: 'https://github.com/altitude-labs/altitrace' },
     {
       text: 'v0.1.0',

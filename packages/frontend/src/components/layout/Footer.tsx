@@ -57,28 +57,28 @@ export function Footer() {
             <h4 className="font-semibold">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="https://altitrace.reachaltitude.xyz/docs"
+                <Link
+                  href="/docs"
                   className="hover:text-primary transition-colors"
                 >
                   Documentation
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="https://altitrace.reachaltitude.xyz/docs/api"
+                <Link
+                  href="/docs/api"
                   className="hover:text-primary transition-colors"
                 >
                   API Reference
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="https://altitrace.reachaltitude.xyz/docs/sdk"
+                <Link
+                  href="/docs/sdk"
                   className="hover:text-primary transition-colors"
                 >
                   SDK Guide
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

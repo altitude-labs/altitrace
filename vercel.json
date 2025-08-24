@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "turbo build --filter='@altitrace/frontend' --filter='@altitrace/book'",
-  "outputDirectory": "packages/frontend/.next",
+  "buildCommand": "cd book && bun run build",
+  "outputDirectory": "book/docs/dist",
   "installCommand": "bun install"
 }
