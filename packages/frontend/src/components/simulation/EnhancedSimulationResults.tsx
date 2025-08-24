@@ -413,26 +413,39 @@ function SimulationQuickStats({
                   {(() => {
                     const errors = result.getErrors()
                     // Find the most specific error (contract error data)
-                    const specificError = errors.find(error => {
-                      const normalizedError = typeof error === 'string' ? error : {
-                        reason: error.reason,
-                        message: error.message || undefined
-                      }
+                    const specificError = errors.find((error) => {
+                      const normalizedError =
+                        typeof error === 'string'
+                          ? error
+                          : {
+                              reason: error.reason,
+                              message: error.message || undefined,
+                            }
                       const parsed = parseBlockchainError(normalizedError)
-                      return parsed.type === 'revert' && parsed.details && 
+                      return (
+                        parsed.type === 'revert' &&
+                        parsed.details &&
                         parsed.details !== 'execution reverted' &&
-                        parsed.details !== 'The transaction was reverted by the contract'
+                        parsed.details !==
+                          'The transaction was reverted by the contract'
+                      )
                     })
-                    
+
                     if (specificError) {
-                      const errorMessage = typeof specificError === 'string' ? specificError : (specificError.reason || specificError.message || '')
+                      const errorMessage =
+                        typeof specificError === 'string'
+                          ? specificError
+                          : specificError.reason || specificError.message || ''
                       return `Transaction reverted: ${errorMessage}`
                     }
-                    
-                    const normalizedFirstError = typeof errors[0] === 'string' ? errors[0] : {
-                      reason: errors[0].reason,
-                      message: errors[0].message || undefined
-                    }
+
+                    const normalizedFirstError =
+                      typeof errors[0] === 'string'
+                        ? errors[0]
+                        : {
+                            reason: errors[0].reason,
+                            message: errors[0].message || undefined,
+                          }
                     return getErrorSummary(normalizedFirstError)
                   })()}
                 </p>
@@ -600,46 +613,52 @@ function SimulationOverview({
   // Get transaction hash from receipt data (for trace results)
   const receiptData = (result as any).receipt
   const transactionHash = receiptData?.transactionHash
-  
+
   // Process errors to combine generic revert messages with actual error data
   const processedErrors = React.useMemo(() => {
     if (errors.length <= 1) return errors
-    
+
     // Parse all errors
-    const parsedErrors = errors.map(error => {
-      const normalizedError = typeof error === 'string' ? error : {
-        reason: error.reason,
-        message: error.message || undefined
-      }
+    const parsedErrors = errors.map((error) => {
+      const normalizedError =
+        typeof error === 'string'
+          ? error
+          : {
+              reason: error.reason,
+              message: error.message || undefined,
+            }
       return {
         original: error,
-        parsed: parseBlockchainError(normalizedError)
+        parsed: parseBlockchainError(normalizedError),
       }
     })
-    
+
     // Look for pairs of generic revert + specific error data
-    const genericReverts = parsedErrors.filter(e => 
-      e.parsed.type === 'revert' && 
-      (e.parsed.details === 'execution reverted' || 
-       e.parsed.details === 'The transaction was reverted by the contract' ||
-       !e.parsed.details)
+    const genericReverts = parsedErrors.filter(
+      (e) =>
+        e.parsed.type === 'revert' &&
+        (e.parsed.details === 'execution reverted' ||
+          e.parsed.details === 'The transaction was reverted by the contract' ||
+          !e.parsed.details),
     )
-    
-    const specificErrors = parsedErrors.filter(e => {
+
+    const specificErrors = parsedErrors.filter((e) => {
       // Contract error codes or specific error messages
       if (e.parsed.type === 'revert' && e.parsed.details) {
         const details = e.parsed.details
-        return details !== 'execution reverted' && 
-               details !== 'The transaction was reverted by the contract'
+        return (
+          details !== 'execution reverted' &&
+          details !== 'The transaction was reverted by the contract'
+        )
       }
       return e.parsed.type !== 'revert'
     })
-    
+
     // If we have both generic and specific errors, prefer specific ones
     if (genericReverts.length > 0 && specificErrors.length > 0) {
-      return specificErrors.map(e => e.original)
+      return specificErrors.map((e) => e.original)
     }
-    
+
     // Otherwise return all errors
     return errors
   }, [errors])
@@ -759,21 +778,29 @@ function SimulationOverview({
               <div className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/20">
                 <AlertTriangleIcon className="h-4 w-4 text-red-600 dark:text-red-500" />
               </div>
-              {processedErrors.length === 1 ? 'Error' : `Errors (${processedErrors.length})`}
+              {processedErrors.length === 1
+                ? 'Error'
+                : `Errors (${processedErrors.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {processedErrors.map((error, index: number) => {
-                const normalizedError = typeof error === 'string' ? error : {
-                  reason: error.reason,
-                  message: error.message || undefined
-                }
+                const normalizedError =
+                  typeof error === 'string'
+                    ? error
+                    : {
+                        reason: error.reason,
+                        message: error.message || undefined,
+                      }
                 const parsedError = parseBlockchainError(normalizedError)
                 // For short error codes or specific contract errors, show them prominently
-                const isContractError = parsedError.type === 'revert' && parsedError.details && 
-                  parsedError.details !== 'The transaction was reverted by the contract'
-                
+                const isContractError =
+                  parsedError.type === 'revert' &&
+                  parsedError.details &&
+                  parsedError.details !==
+                    'The transaction was reverted by the contract'
+
                 return (
                   <div
                     key={`error-${error.reason || error.message || index}`}
@@ -787,7 +814,9 @@ function SimulationOverview({
                         {isContractError ? 'Contract Error' : parsedError.title}
                       </div>
                       {parsedError.details && (
-                        <div className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                        <div
+                          className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
+                        >
                           {parsedError.details}
                         </div>
                       )}
@@ -810,36 +839,12 @@ function SimulationOverview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {assetChanges.map((change, index: number) => (
-                <div
+                <AssetChangeSummaryCard
                   key={`asset-${change.tokenAddress}-${change.type}-${index}`}
-                  className="flex items-center justify-between p-2 bg-muted/50 rounded"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm">{change.symbol}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {change.tokenAddress.slice(0, 6)}...
-                    </Badge>
-                  </div>
-                  <div
-                    className={`flex items-center gap-1 ${
-                      change.type === 'gain' ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {change.type === 'gain' ? (
-                      <TrendingUpIcon className="h-3 w-3" />
-                    ) : (
-                      <TrendingDownIcon className="h-3 w-3" />
-                    )}
-                    <span className="font-mono text-sm">
-                      {formatTokenAmount(
-                        change.netChange,
-                        change.decimals ?? undefined,
-                      )}
-                    </span>
-                  </div>
-                </div>
+                  change={change}
+                />
               ))}
             </div>
           </CardContent>
@@ -1122,6 +1127,108 @@ const formatTokenAmount = (amount: string, decimals?: number) => {
   } catch {
     return amount
   }
+}
+
+// Enhanced asset change summary card with better UI
+function AssetChangeSummaryCard({ change }: { change: any }) {
+  const [copied, setCopied] = useState(false)
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.warn('Failed to copy to clipboard:', error)
+    }
+  }
+
+  const getExplorerUrl = (address: string) => {
+    return `https://hyperscan.com/address/${address}`
+  }
+
+  const isHYPE =
+    change.tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+  const displaySymbol =
+    change.symbol && change.symbol !== 'null'
+      ? change.symbol
+      : isHYPE
+        ? 'HYPE'
+        : `Token (${change.tokenAddress.slice(0, 6)}...)`
+
+  return (
+    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div
+          className={`p-1.5 rounded-full ${
+            change.type === 'gain'
+              ? 'bg-green-100 dark:bg-green-900'
+              : 'bg-red-100 dark:bg-red-900'
+          }`}
+        >
+          {change.type === 'gain' ? (
+            <TrendingUpIcon className="h-3 w-3 text-green-600 dark:text-green-400" />
+          ) : (
+            <TrendingDownIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm">{displaySymbol}</span>
+            {change.symbol && change.symbol !== 'null' && (
+              <Badge variant="outline" className="text-xs">
+                {isHYPE ? 'Native' : 'ERC-20'}
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {isHYPE ? (
+              <span>Native Token</span>
+            ) : (
+              <>
+                <a
+                  href={getExplorerUrl(change.tokenAddress)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono hover:text-blue-600 transition-colors"
+                  title={change.tokenAddress}
+                >
+                  {change.tokenAddress.slice(0, 8)}...
+                  {change.tokenAddress.slice(-6)}
+                </a>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(change.tokenAddress)}
+                  className="h-3 w-3 p-0 hover:bg-transparent"
+                  title="Copy token address"
+                >
+                  {copied ? (
+                    <CheckIcon className="h-2 w-2 text-green-500" />
+                  ) : (
+                    <CopyIcon className="h-2 w-2" />
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`flex items-center gap-1.5 ${
+          change.type === 'gain' ? 'text-green-600' : 'text-red-600'
+        }`}
+      >
+        <span className="font-mono text-sm font-medium">
+          {change.type === 'gain' ? '+' : ''}
+          {formatTokenAmount(change.netChange, change.decimals ?? undefined)}
+        </span>
+      </div>
+    </div>
+  )
 }
 
 function AssetChangeCard({ change }: { change: any }) {
@@ -1452,12 +1559,8 @@ function RequestParametersView({
                           Call Data
                         </label>
                         <p className="font-mono text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
-                          <span className="sm:hidden">
-                            {call.data}
-                          </span>
-                          <span className="hidden sm:inline">
-                            {call.data}
-                          </span>
+                          <span className="sm:hidden">{call.data}</span>
+                          <span className="hidden sm:inline">{call.data}</span>
                         </p>
                       </div>
                     )}
