@@ -44,18 +44,21 @@ export default function Home() {
                 View Simulator
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full sm:w-auto text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 border-muted-foreground/30 text-muted-foreground opacity-60 font-medium cursor-not-allowed"
-              disabled
+            <Link
+              href="https://docs.altitrace.reachaltitude.xyz"
+              target="_blank"
+              className="w-full sm:w-auto"
             >
-              <BookOpenIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">
-                Documentation (Coming Soon)
-              </span>
-              <span className="sm:hidden">Docs (Soon)</span>
-            </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 border-brand-light-3/30 text-brand-light-2 hover:bg-brand-light-3/10 font-medium"
+              >
+                <BookOpenIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span className="hidden sm:inline">Documentation</span>
+                <span className="sm:hidden">Docs</span>
+              </Button>
+            </Link>
           </div>
         </div>
 

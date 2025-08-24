@@ -102,9 +102,13 @@ export function ContractImportDialog({
     setSavedContractId(contractId)
   }
 
-  const handleImportFetchedContract = () => {
-    if (fetchedContract && savedContractId) {
-      const contract = getContract(savedContractId)
+  const handleContractConfirm = (
+    fetchResult: ContractFetchResult,
+    contractId?: string,
+  ) => {
+    // If we have a saved contract, use it
+    if (contractId) {
+      const contract = getContract(contractId)
       if (contract) {
         onImport(contract)
         onClose()
@@ -112,7 +116,42 @@ export function ContractImportDialog({
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('contractsUpdated'))
         }, 100)
+        return
       }
+    }
+
+    // Save the fetched contract and import it
+    const contractData: StoredContract['contractData'] = {
+      address: fetchResult.address,
+      name: fetchResult.name,
+      abi: fetchResult.abi,
+      sourceCode: fetchResult.sourceCode,
+      constructorArgs: fetchResult.constructorArgs,
+      language: fetchResult.language,
+      additionalSources: fetchResult.additionalSources,
+    }
+
+    const metadata: StoredContract['metadata'] = {
+      compiler: fetchResult.compiler,
+      version: fetchResult.version,
+      verified: fetchResult.verified,
+      explorerSource: fetchResult.explorerSource,
+      compilerSettings: fetchResult.compilerSettings,
+      isProxy: fetchResult.isProxy,
+      implementationAddress: fetchResult.implementationAddress,
+      implementationName: fetchResult.implementationName,
+      proxyType: fetchResult.proxyType,
+    }
+
+    const newContractId = saveContract(contractData, metadata, 'imported')
+    const savedContract = getContract(newContractId)
+    if (savedContract) {
+      onImport(savedContract)
+      onClose()
+      // Force update of saved contracts count in parent
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('contractsUpdated'))
+      }, 100)
     }
   }
 
@@ -189,7 +228,7 @@ export function ContractImportDialog({
     : contracts
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={(e) => {
         // Close when clicking on the backdrop
@@ -229,7 +268,8 @@ export function ContractImportDialog({
               </TabsTrigger>
               <TabsTrigger value="saved" className="flex-1 py-2 px-3 text-sm">
                 <CheckIcon className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Saved </span>({contracts.length})
+                <span className="hidden sm:inline">Saved </span>(
+                {contracts.length})
               </TabsTrigger>
             </TabsList>
 
@@ -244,39 +284,13 @@ export function ContractImportDialog({
                     onChange={setContractAddress}
                     onContractFetched={handleContractFetched}
                     onContractSaved={handleContractSaved}
+                    onConfirmContract={handleContractConfirm}
                     autoFetch={true}
                     placeholder="0x"
                     showFetchButton={true}
+                    showConfirmButton={true}
                   />
                 </div>
-
-                {fetchedContract && savedContractId && (
-                  <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-green-800 dark:text-green-200">
-                          ✅ Contract Ready to Import
-                        </h4>
-                        <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                          "{fetchedContract.name}" with{' '}
-                          {fetchedContract.abi.length} functions has been
-                          fetched and saved.
-                        </p>
-                        <div className="text-xs text-green-600 dark:text-green-400 mt-2">
-                          Click "Import & Use Contract" to proceed with function
-                          selection
-                        </div>
-                      </div>
-                      <Button
-                        onClick={handleImportFetchedContract}
-                        className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
-                        size="lg"
-                      >
-                        Import & Use Contract
-                      </Button>
-                    </div>
-                  </div>
-                )}
 
                 {!fetchedContract && contractAddress && (
                   <div className="text-sm text-muted-foreground p-4 border rounded-lg">

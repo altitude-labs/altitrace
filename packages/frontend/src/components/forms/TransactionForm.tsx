@@ -8,7 +8,13 @@ import type {
   SimulationRequest,
   StateOverride,
 } from '@altitrace/sdk/types'
-import { HashIcon, Loader2Icon, PlayIcon, SendIcon, ZapIcon } from 'lucide-react'
+import {
+  HashIcon,
+  Loader2Icon,
+  PlayIcon,
+  SendIcon,
+  ZapIcon,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Hash } from 'viem'
 import {
@@ -124,22 +130,27 @@ export function TransactionForm({
         ...prev,
         ...initialData,
         // Convert hex values to decimal for display
-        value: initialData.value && isHexFormat(initialData.value) 
-          ? hexToDecimal(initialData.value) 
-          : initialData.value || prev.value,
-        gas: initialData.gas && isHexFormat(initialData.gas)
-          ? hexToDecimal(initialData.gas)
-          : initialData.gas || prev.gas,
-        blockNumber: initialData.blockNumber && isHexFormat(initialData.blockNumber)
-          ? hexToDecimal(initialData.blockNumber)
-          : initialData.blockNumber || prev.blockNumber,
+        value:
+          initialData.value && isHexFormat(initialData.value)
+            ? hexToDecimal(initialData.value)
+            : initialData.value || prev.value,
+        gas:
+          initialData.gas && isHexFormat(initialData.gas)
+            ? hexToDecimal(initialData.gas)
+            : initialData.gas || prev.gas,
+        blockNumber:
+          initialData.blockNumber && isHexFormat(initialData.blockNumber)
+            ? hexToDecimal(initialData.blockNumber)
+            : initialData.blockNumber || prev.blockNumber,
         // Convert state override balance values from hex to decimal for display
-        stateOverrides: initialData.stateOverrides?.map(override => ({
-          ...override,
-          balance: override.balance && isHexFormat(override.balance)
-            ? hexToDecimal(override.balance)
-            : override.balance
-        })) || prev.stateOverrides,
+        stateOverrides:
+          initialData.stateOverrides?.map((override) => ({
+            ...override,
+            balance:
+              override.balance && isHexFormat(override.balance)
+                ? hexToDecimal(override.balance)
+                : override.balance,
+          })) || prev.stateOverrides,
       }))
       setUseBlockNumber(!!initialData.blockNumber)
     }
@@ -167,10 +178,18 @@ export function TransactionForm({
         to: txData.to || '',
         from: txData.from,
         data: txData.data,
-        value: isHexFormat(txData.value) ? hexToDecimal(txData.value) : txData.value, // Convert to decimal
-        gas: txData.gas && isHexFormat(txData.gas) ? hexToDecimal(txData.gas) : txData.gas || '', // Convert to decimal
+        value: isHexFormat(txData.value)
+          ? hexToDecimal(txData.value)
+          : txData.value, // Convert to decimal
+        gas:
+          txData.gas && isHexFormat(txData.gas)
+            ? hexToDecimal(txData.gas)
+            : txData.gas || '', // Convert to decimal
         blockTag: 'latest',
-        blockNumber: txData.blockNumber && isHexFormat(txData.blockNumber) ? hexToDecimal(txData.blockNumber) : txData.blockNumber || '', // Convert to decimal
+        blockNumber:
+          txData.blockNumber && isHexFormat(txData.blockNumber)
+            ? hexToDecimal(txData.blockNumber)
+            : txData.blockNumber || '', // Convert to decimal
         validation: true,
         stateOverrides: [], // Clear any existing state overrides
       })
@@ -179,18 +198,6 @@ export function TransactionForm({
       if (txData.blockNumber) {
         setUseBlockNumber(true)
       }
-
-
-
-
-
-
-
-
-
-
-
-
 
       // Switch to manual tab to show the loaded data
       setActiveTab('manual')
@@ -268,7 +275,13 @@ export function TransactionForm({
     }
 
     try {
-      validateValue(formData.value, 'value')
+      // Ensure value has a default and isn't empty
+      const value = formData.value || '0x0'
+      if (value.trim() === '') {
+        validateValue('0x0', 'value')
+      } else {
+        validateValue(value, 'value')
+      }
     } catch (error) {
       if (error instanceof ValidationError) {
         newErrors.value = error.message
@@ -311,12 +324,17 @@ export function TransactionForm({
     }
 
     // Convert and validate all values to ensure they're in proper hex format for the SDK
-    const validatedData = formData.data ? validateOptionalData(formData.data) : undefined
-    const validatedValue = validateValue(formData.value)
-    const validatedGas = formData.gas ? validateOptionalGas(formData.gas) : undefined
-    const validatedBlockNumber = useBlockNumber && formData.blockNumber 
-      ? validateOptionalBlockNumber(formData.blockNumber) 
+    const validatedData = formData.data
+      ? validateOptionalData(formData.data)
       : undefined
+    const validatedValue = validateValue(formData.value)
+    const validatedGas = formData.gas
+      ? validateOptionalGas(formData.gas)
+      : undefined
+    const validatedBlockNumber =
+      useBlockNumber && formData.blockNumber
+        ? validateOptionalBlockNumber(formData.blockNumber)
+        : undefined
 
     const request: SimulationRequest = {
       params: {
@@ -325,7 +343,8 @@ export function TransactionForm({
             to: formData.to as Address,
             ...(formData.from && { from: formData.from as Address }),
             ...(validatedData && { data: validatedData }),
-            ...(validatedValue && validatedValue !== '0x0' && { value: validatedValue }),
+            ...(validatedValue &&
+              validatedValue !== '0x0' && { value: validatedValue }),
             ...(validatedGas && { gas: validatedGas }),
           },
         ],
@@ -343,14 +362,16 @@ export function TransactionForm({
       ...(formData.stateOverrides.length > 0 && {
         options: {
           stateOverrides: formData.stateOverrides
-            .filter(override => override.address) // Only include overrides with addresses
-            .map(override => cleanStateOverride(override)) // Clean and normalize each override
-            .filter(override => {
+            .filter((override) => override.address) // Only include overrides with addresses
+            .map((override) => cleanStateOverride(override)) // Clean and normalize each override
+            .filter((override) => {
               // Only include overrides that actually override something
-              return override.balance || 
-                     override.nonce !== null && override.nonce !== undefined ||
-                     override.code ||
-                     (override.state && override.state.length > 0)
+              return (
+                override.balance ||
+                (override.nonce !== null && override.nonce !== undefined) ||
+                override.code ||
+                (override.state && override.state.length > 0)
+              )
             }),
         },
       }),
@@ -375,14 +396,20 @@ export function TransactionForm({
           onValueChange={(v) => setActiveTab(v as 'manual' | 'hash')}
         >
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="manual" className="flex items-center gap-1 sm:gap-2">
+            <TabsTrigger
+              value="manual"
+              className="flex items-center gap-1 sm:gap-2"
+            >
               <SendIcon className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="text-xs sm:text-sm">
                 <span className="hidden sm:inline">Manual Input</span>
                 <span className="sm:hidden">Manual</span>
               </span>
             </TabsTrigger>
-            <TabsTrigger value="hash" className="flex items-center gap-1 sm:gap-2">
+            <TabsTrigger
+              value="hash"
+              className="flex items-center gap-1 sm:gap-2"
+            >
               <HashIcon className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="text-xs sm:text-sm">
                 <span className="hidden sm:inline">Load from Hash</span>
@@ -428,7 +455,7 @@ export function TransactionForm({
                     </>
                   )}
                 </Button>
-                
+
                 {onTraceTransaction && (
                   <Button
                     onClick={async () => {
@@ -436,17 +463,17 @@ export function TransactionForm({
                         setTxLoadError('Invalid transaction hash format')
                         return
                       }
-                      
+
                       setTracingTx(true)
                       setTxLoadError(null)
-                      
+
                       try {
                         await onTraceTransaction(txHash)
                       } catch (error) {
                         setTxLoadError(
                           error instanceof Error
                             ? error.message
-                            : 'Failed to trace transaction'
+                            : 'Failed to trace transaction',
                         )
                       } finally {
                         setTracingTx(false)
@@ -474,9 +501,14 @@ export function TransactionForm({
               {!loadingTx && !tracingTx && !txLoadError && (
                 <Alert>
                   <AlertDescription>
-                    <strong>Load:</strong> Import transaction parameters to simulate with modifications.<br/>
+                    <strong>Load:</strong> Import transaction parameters to
+                    simulate with modifications.
+                    <br />
                     {onTraceTransaction && (
-                      <><strong>Trace:</strong> Directly trace the original transaction without simulation.</>
+                      <>
+                        <strong>Trace:</strong> Directly trace the original
+                        transaction without simulation.
+                      </>
                     )}
                   </AlertDescription>
                 </Alert>

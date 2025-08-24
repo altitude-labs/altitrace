@@ -4,31 +4,29 @@ const nextConfig = {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL
     const isProduction = process.env.NODE_ENV === 'production'
 
+    const rewrites = []
+
+    // API rewrites
     if (apiUrl) {
-      return [
-        {
-          source: '/api/altitrace/:path*',
-          destination: `${apiUrl}/v1/:path*`,
-        },
-      ]
-    }
-
-    if (isProduction) {
-      const internalApiUrl = process.env.INTERNAL_API_URL || 'http://127.0.0.1:8080'
-      return [
-        {
-          source: '/api/altitrace/:path*',
-          destination: `${internalApiUrl}/v1/:path*`,
-        },
-      ]
-    }
-
-    return [
-      {
+      rewrites.push({
+        source: '/api/altitrace/:path*',
+        destination: `${apiUrl}/v1/:path*`,
+      })
+    } else if (isProduction) {
+      const internalApiUrl =
+        process.env.INTERNAL_API_URL || 'http://127.0.0.1:8080'
+      rewrites.push({
+        source: '/api/altitrace/:path*',
+        destination: `${internalApiUrl}/v1/:path*`,
+      })
+    } else {
+      rewrites.push({
         source: '/api/altitrace/:path*',
         destination: 'https://api.altitrace.reachaltitude.xyz/v1/:path*',
-      },
-    ]
+      })
+    }
+
+    return rewrites
   },
   async headers() {
     return [

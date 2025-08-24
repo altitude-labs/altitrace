@@ -12,9 +12,15 @@ interface UseStateOverridesReturn {
   addStateOverride: (override?: Partial<StateOverride>) => void
   removeStateOverride: (index: number) => void
   updateStateOverride: (index: number, updates: Partial<StateOverride>) => void
-  validateAllOverrides: () => { isValid: boolean; errors: Record<number, string[]> }
+  validateAllOverrides: () => {
+    isValid: boolean
+    errors: Record<number, string[]>
+  }
   clearAllOverrides: () => void
-  addFromPreset: (presetKey: keyof typeof STATE_OVERRIDE_PRESETS, address?: string) => void
+  addFromPreset: (
+    presetKey: keyof typeof STATE_OVERRIDE_PRESETS,
+    address?: string,
+  ) => void
   getCleanOverrides: () => StateOverride[]
   hasValidOverrides: boolean
 }
@@ -25,15 +31,19 @@ interface UseStateOverridesReturn {
 export function useStateOverrides(
   initialOverrides: StateOverride[] = [],
 ): UseStateOverridesReturn {
-  const [stateOverrides, setStateOverrides] = useState<StateOverride[]>(initialOverrides)
+  const [stateOverrides, setStateOverrides] =
+    useState<StateOverride[]>(initialOverrides)
 
-  const addStateOverride = useCallback((override: Partial<StateOverride> = {}) => {
-    const newOverride: StateOverride = {
-      address: '',
-      ...override,
-    }
-    setStateOverrides((prev) => [...prev, newOverride])
-  }, [])
+  const addStateOverride = useCallback(
+    (override: Partial<StateOverride> = {}) => {
+      const newOverride: StateOverride = {
+        address: '',
+        ...override,
+      }
+      setStateOverrides((prev) => [...prev, newOverride])
+    },
+    [],
+  )
 
   const removeStateOverride = useCallback((index: number) => {
     setStateOverrides((prev) => prev.filter((_, i) => i !== index))
@@ -42,7 +52,9 @@ export function useStateOverrides(
   const updateStateOverride = useCallback(
     (index: number, updates: Partial<StateOverride>) => {
       setStateOverrides((prev) =>
-        prev.map((override, i) => (i === index ? { ...override, ...updates } : override))
+        prev.map((override, i) =>
+          i === index ? { ...override, ...updates } : override,
+        ),
       )
     },
     [],
@@ -70,7 +82,7 @@ export function useStateOverrides(
   const addFromPreset = useCallback(
     (presetKey: keyof typeof STATE_OVERRIDE_PRESETS, address?: string) => {
       const preset = STATE_OVERRIDE_PRESETS[presetKey]
-      
+
       let override: StateOverride
       switch (presetKey) {
         case 'customBalance':
@@ -82,7 +94,7 @@ export function useStateOverrides(
         default:
           override = (preset as any)(address)
       }
-      
+
       addStateOverride(override)
     },
     [addStateOverride],
@@ -138,7 +150,7 @@ export function useStorageSlots(
   const updateSlot = useCallback(
     (index: number, updates: Partial<{ slot: string; value: string }>) => {
       setSlots((prev) =>
-        prev.map((slot, i) => (i === index ? { ...slot, ...updates } : slot))
+        prev.map((slot, i) => (i === index ? { ...slot, ...updates } : slot)),
       )
     },
     [],

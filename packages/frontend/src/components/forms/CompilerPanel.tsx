@@ -22,7 +22,7 @@ interface CompilerPanelProps {
   }) => void
   compilerVersion?: string
   optimization?: { enabled: boolean; runs: number }
-  filePath?: string 
+  filePath?: string
   additionalSources?: Array<{
     filePath: string
     sourceCode: string
@@ -243,11 +243,6 @@ export function CompilerPanel({
         if (matchingVersion && matchingVersion !== selectedVersion) {
           setSelectedVersion(matchingVersion)
           setIsAutoDetected(true)
-
-          // Show user that version was auto-detected
-          console.log(
-            `Auto-detected compiler version: ${output.detectedVersion} -> ${matchingVersion}`,
-          )
         }
       }
 

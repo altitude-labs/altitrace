@@ -19,7 +19,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)
-      setSidebarCollapsed(true)
+      setSidebarCollapsed(mobile) // Open on desktop, collapsed on mobile
       setSidebarOpen(false)
     }
 

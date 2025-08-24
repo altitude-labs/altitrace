@@ -231,8 +231,7 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
             compilerCache.set(actualVersion, result)
             return result
           }
-        } catch {
-        }
+        } catch {}
       }
 
       // Fallback: try the complex cached compiler system
