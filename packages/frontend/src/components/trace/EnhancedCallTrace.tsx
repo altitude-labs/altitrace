@@ -360,7 +360,7 @@ function CallNode({
             marginLeft: `${12 + 96 + (showGas ? 80 : 0) + 16 + indentLevel + 12}px`
           }}
         >
-          <div className="py-1 px-3 flex flex-wrap items-center gap-x-4 gap-y-1 overflow-x-auto whitespace-nowrap">
+          <div className="py-1 px-3 flex items-center gap-x-4 whitespace-nowrap overflow-visible" style={{ minWidth: 'max-content' }}>
             {/* Value transfer */}
             {frame.value && frame.value !== '0x0' && (
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -384,10 +384,10 @@ function CallNode({
             
             {/* Output data (only show for successful calls or when no decoded error) */}
             {frame.output && frame.output !== '0x' && (isSuccess || !frame.error) && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`${!isSuccess ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} font-semibold text-xs`}>OUTPUT:</span>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className={`${!isSuccess ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} font-semibold text-xs flex-shrink-0`}>OUTPUT:</span>
                 <span className={`${!isSuccess ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'} font-mono text-xs`}>
-                  {frame.output.length > 50 ? `${frame.output.slice(0, 50)}...` : frame.output}
+                  {frame.output}
                 </span>
               </div>
             )}
