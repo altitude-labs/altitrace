@@ -9,7 +9,7 @@ export default defineConfig({
   sidebar,
   topNav: [
     { text: 'Simulator', link: '/webapp' },
-    { text: 'SDK', link: '/sdk/overview' },
+    { text: 'SDK', link: '/sdk' },
     { text: 'GitHub', link: 'https://github.com/altitude-labs/altitrace' },
     {
       text: 'v0.1.0',
