@@ -155,6 +155,8 @@ function NewSimulationPageContent() {
                         ? hexToDecimal(override.balance)
                         : override.balance,
                   })) || [],
+                // Include block overrides if they exist
+                blockOverrides: singleRequest.options?.blockOverrides || null,
               }))
             }
           } else if (
@@ -193,6 +195,9 @@ function NewSimulationPageContent() {
                       ? hexToDecimal(override.balance)
                       : override.balance,
                 })) || [],
+              // Include block overrides if they exist
+              blockOverrides:
+                bundleRequest.bundleRequest.blockOverrides || null,
             }
 
             setBundleFormData(bundleData)

@@ -3,6 +3,7 @@
 import type {
   Address,
   BlockTag,
+  BlockOverrides,
   HexString as Hex,
   StateOverride,
 } from '@altitrace/sdk/types'
@@ -34,6 +35,8 @@ import {
   TabsTrigger,
 } from '@/components/ui'
 import { StateOverrideForm } from './StateOverrideForm'
+import { BlockOverrideForm } from './BlockOverrideForm'
+import { useBlockOverrides } from '@/hooks/useBlockOverrides'
 import {
   isValidTransactionHash,
   loadTransactionFromHash,
@@ -96,6 +99,13 @@ export function BundleTransactionForm({
   const [txHash, setTxHash] = useState('')
   const [loadingTx, setLoadingTx] = useState(false)
   const [txLoadError, setTxLoadError] = useState<string | null>(null)
+
+  // Block overrides
+  const {
+    blockOverrides,
+    setBlockOverrides,
+    getCleanOverrides: getCleanBlockOverrides,
+  } = useBlockOverrides(initialData?.blockOverrides)
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(
     new Set(formData.transactions.map((tx) => tx.id)),
   )
@@ -126,8 +136,13 @@ export function BundleTransactionForm({
           })) || prev.stateOverrides,
       }))
       setUseBlockNumber(!!initialData.blockNumber)
+
+      // Set block overrides if provided
+      if (initialData.blockOverrides) {
+        setBlockOverrides(initialData.blockOverrides)
+      }
     }
-  }, [initialData])
+  }, [initialData, setBlockOverrides])
 
   const blockTagOptions = [
     { value: 'latest', label: 'Latest' },
@@ -395,6 +410,10 @@ export function BundleTransactionForm({
                 : override.balance,
           })),
       }),
+      // Include block overrides if any are defined
+      ...(getCleanBlockOverrides() && {
+        blockOverrides: getCleanBlockOverrides(),
+      }),
     }
 
     onSubmit(request)
@@ -480,7 +499,7 @@ export function BundleTransactionForm({
 
             <Input
               label="From Address (optional)"
-              placeholder="0x..."
+              placeholder="0x0000000000000000000000000000000000000000"
               value={tx.transaction.from || ''}
               onChange={(e) =>
                 updateTransaction(tx.id, { from: e.target.value })
@@ -697,6 +716,15 @@ export function BundleTransactionForm({
                       stateOverrides,
                     }))
                   }
+                  compact={compact}
+                />
+              )}
+
+              {/* Block Overrides */}
+              {showAdvanced && (
+                <BlockOverrideForm
+                  blockOverrides={blockOverrides}
+                  onChange={setBlockOverrides}
                   compact={compact}
                 />
               )}
