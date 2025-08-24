@@ -58,26 +58,26 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <a
-                  href="#"
-                  className="hover:text-primary transition-colors opacity-50 cursor-not-allowed"
+                  href="https://altitrace.valtitude.xyz/docs"
+                  className="hover:text-primary transition-colors"
                 >
-                  Documentation (Coming Soon)
+                  Documentation
                 </a>
               </li>
               <li>
                 <a
-                  href="#"
-                  className="hover:text-primary transition-colors opacity-50 cursor-not-allowed"
+                  href="https://altitrace.valtitude.xyz/docs/api"
+                  className="hover:text-primary transition-colors"
                 >
-                  API Reference (Coming Soon)
+                  API Reference
                 </a>
               </li>
               <li>
                 <a
-                  href="#"
-                  className="hover:text-primary transition-colors opacity-50 cursor-not-allowed"
+                  href="https://altitrace.valtitude.xyz/docs/sdk"
+                  className="hover:text-primary transition-colors"
                 >
-                  SDK Guide (Coming Soon)
+                  SDK Guide
                 </a>
               </li>
             </ul>
