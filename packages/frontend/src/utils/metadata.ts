@@ -44,7 +44,7 @@ export function generateSimulationMetadata(
       description,
       images: [
         {
-          url: '/banner.png',
+          url: `${baseUrl}/banner.png`,
           width: 1200,
           height: 630,
           alt: title,
@@ -58,7 +58,7 @@ export function generateSimulationMetadata(
       creator: '@altitrace',
       title,
       description,
-      images: ['/banner.png'],
+      images: [`${baseUrl}/banner.png`],
     },
     alternates: {
       canonical: url,
@@ -94,7 +94,7 @@ export function generateHomeMetadata(
         'Simulate, debug, and analyze EVM transactions within the HyperEVM network with precision and control.',
       images: [
         {
-          url: '/banner.png',
+          url: `${baseUrl}/banner.png`,
           width: 1200,
           height: 630,
           alt: 'Altitrace - Simulateur de Transactions HyperEVM',
@@ -109,7 +109,7 @@ export function generateHomeMetadata(
       title: 'Altitrace - HyperEVM Transaction Simulator',
       description:
         'Simulate, debug, and analyze EVM transactions within the HyperEVM network with precision and control.',
-      images: ['/banner.png'],
+      images: [`${baseUrl}/banner.png`],
     },
     alternates: {
       canonical: baseUrl,
