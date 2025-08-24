@@ -235,10 +235,14 @@ function CallNode({
   // Pass all storage operations down to child calls  
   const storageOpsForPassing = allStorageOps
   
-  // Simple strategy: Only show storage operations that match this call's exact depth
-  // This prevents duplicates by ensuring each operation appears only at its correct call level
+  // Advanced strategy: Match storage operations by contract address and call depth exactly
+  // Only show storage operations that belong specifically to this exact call frame
   const callStorageOperations: StorageOperation[] = showStorage && allStorageOps.length > 0
-    ? allStorageOps.filter(op => op.depth === depth)
+    ? allStorageOps.filter(op => {
+        // Strict matching: operation must be for this exact contract AND at this exact depth
+        // This ensures each operation appears only once in the UI hierarchy
+        return op.contract === frame.to && op.depth === depth
+      })
     : []
   
   // Format addresses - short format for display
@@ -465,6 +469,14 @@ function CallNode({
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">→</span>
                     <code className="bg-green-500/10 text-green-700 dark:text-green-400 px-1 py-0.5 rounded text-xs">
+                      {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
+                    </code>
+                  </div>
+                )}
+                {op.opcode === 'SLOAD' && op.value && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Value:</span>
+                    <code className="bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 px-1 py-0.5 rounded text-xs">
                       {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
                     </code>
                   </div>

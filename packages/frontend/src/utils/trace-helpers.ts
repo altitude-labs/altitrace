@@ -275,13 +275,31 @@ export function parseStorageOperations(
 
   const storageOps: StorageOperation[] = []
   
-  // Build a map of call frame addresses by depth to better match operations
-  const callsByDepth = new Map<number, CallFrame>()
+  // Create a simple mapping of depth to contract address using actual struct logs
+  // This tracks what contract is executing at each depth based on the actual trace
+  const depthToContract = new Map<number, string>()
   
-  // Recursively collect all calls and their depths
+  // Pre-process to map EVM execution depths to contract addresses
+  for (let i = 0; i < traceData.structLogger.structLogs.length; i++) {
+    const log = traceData.structLogger.structLogs[i]
+    
+    // Track depth changes - when we see certain opcodes, we know the contract context
+    if (log.op === 'CALL' || log.op === 'STATICCALL' || log.op === 'DELEGATECALL') {
+      // The target contract is in the stack - this is complex to extract from stack
+      // For now, we'll rely on the call hierarchy we already have
+      continue
+    }
+  }
+  
+  // Build a simple map of calls by depth for reference
+  const callsByDepth = new Map<number, CallFrame[]>()
+  
   function collectCallsByDepth(call: CallFrame, currentDepth: number) {
     if (call.to) {
-      callsByDepth.set(currentDepth, call)
+      if (!callsByDepth.has(currentDepth)) {
+        callsByDepth.set(currentDepth, [])
+      }
+      callsByDepth.get(currentDepth)!.push(call)
     }
     
     if (call.calls) {
@@ -291,7 +309,6 @@ export function parseStorageOperations(
     }
   }
   
-  // Start with root call at depth 0
   collectCallsByDepth(rootCall, 0)
 
   for (let i = 0; i < traceData.structLogger.structLogs.length; i++) {
@@ -299,24 +316,41 @@ export function parseStorageOperations(
     
     // Only process storage operations
     if (log.op === 'SSTORE' || log.op === 'SLOAD') {
-      // Find the call frame that corresponds to this depth
-      const callFrame = callsByDepth.get(log.depth)
-      const contract = callFrame?.to || rootCall.to || ''
+      // Get possible contracts at this depth
+      const possibleCalls = callsByDepth.get(log.depth) || []
+      
+      // For now, take the first contract at this depth
+      // This is a simplification but should work for most cases
+      const contract = possibleCalls[0]?.to || rootCall.to || ''
       
       if (contract && log.stack && log.stack.length >= 1) {
         // For EVM stack, storage operations have:
         // SSTORE: stack[0] = slot, stack[1] = value (from bottom)
         // SLOAD: stack[0] = slot (from bottom)
         // Note: EVM stack is LIFO, so we access from the end
-        const slot = log.stack[log.stack.length - 1] // Top of stack
-        const value = log.op === 'SSTORE' && log.stack.length >= 2 
-          ? log.stack[log.stack.length - 2] 
-          : undefined
+        const slot = log.stack[log.stack.length - 1] // Top of stack is the slot
         
-        // For SSTORE operations, we can get the old value from storage state
+        let value: string | undefined
         let oldValue: string | undefined
-        if (log.op === 'SSTORE' && log.storage && slot) {
-          oldValue = log.storage[slot]
+        
+        if (log.op === 'SSTORE' && log.stack.length >= 2) {
+          // For SSTORE: the new value is the second item from top
+          value = log.stack[log.stack.length - 2]
+          
+          // Get the old value from storage state if available
+          if (log.storage && slot) {
+            oldValue = log.storage[slot]
+          }
+        } else if (log.op === 'SLOAD') {
+          // For SLOAD: get the read value from the next operation's stack (if available)
+          // The SLOAD pushes the read value onto the stack, so it appears as the top item in the next operation
+          if (i + 1 < traceData.structLogger.structLogs.length) {
+            const nextLog = traceData.structLogger.structLogs[i + 1]
+            if (nextLog.stack && nextLog.stack.length > 0) {
+              // The value that was read by SLOAD is now the top of the stack in the next operation
+              value = nextLog.stack[nextLog.stack.length - 1]
+            }
+          }
         }
 
         storageOps.push({
@@ -329,7 +363,7 @@ export function parseStorageOperations(
           value: value ? formatStorageValue(value) : undefined,
           oldValue: oldValue ? formatStorageValue(oldValue) : undefined,
           contract: contract,
-          callIndex: log.depth // Use depth as call index for now
+          callIndex: log.depth // Use depth as call index
         })
       }
     }

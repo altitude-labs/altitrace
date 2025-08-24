@@ -303,6 +303,29 @@ function StorageOperationCard({ operation, index }: StorageOperationCardProps) {
               </div>
             </div>
           )}
+
+          {/* Value information for SLOAD */}
+          {operation.opcode === 'SLOAD' && operation.value && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">READ VALUE:</span>
+              <div className="flex items-center gap-1">
+                <code className="text-xs font-mono bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 px-2 py-1 rounded">
+                  {formatHexValue(operation.value, 16)}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => copyToClipboard(operation.value!, `sload-value-${index}`)}
+                >
+                  <CopyIcon className="h-3 w-3" />
+                </Button>
+                {copied === `sload-value-${index}` && (
+                  <span className="text-xs text-green-600">Copied!</span>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* Gas and execution info */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
