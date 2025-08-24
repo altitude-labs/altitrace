@@ -441,54 +441,92 @@ function CallNode({
       
       {/* Inline storage operations display for this specific call */}
       {showStorage && callStorageOperations.length > 0 && (
-        <div 
-          className="bg-muted/10 border-l-2 border-muted/50 text-xs"
-          style={{ 
-            marginLeft: `${12 + 96 + (showGas ? 80 : 0) + 16 + indentLevel + 12}px`
-          }}
-        >
-          <div className="py-1 px-3 space-y-1">
-            <div className="text-blue-600 dark:text-blue-400 font-semibold text-xs mb-2">
-              STORAGE ({callStorageOperations.length} ops)
-            </div>
-            {callStorageOperations.map((op, index) => (
-              <div key={`${op.pc}-${index}`} className="flex items-center gap-2 text-xs py-1">
-                <div className={`px-2 py-0.5 rounded font-mono text-xs ${
-                  op.opcode === 'SSTORE' 
-                    ? 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
-                    : 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
-                }`}>
+        <>
+          {callStorageOperations.map((op, index) => (
+            <div
+              key={`storage-${op.pc}-${index}`}
+              className={`
+                group grid items-center py-1.5 hover:bg-muted/30 transition-colors bg-muted/5
+                ${showGas ? 'grid-cols-[12px_96px_80px_16px_1fr]' : 'grid-cols-[12px_96px_16px_1fr]'}
+              `}
+            >
+              {/* Left padding that grows with indentation */}
+              <div style={{ width: `${indentLevel}px` }} />
+              
+              {/* Storage operation type column - always aligned */}
+              <div className="flex justify-center px-1">
+                <Badge 
+                  className={`text-xs font-mono px-2 py-0.5 w-full max-w-[96px] justify-center ${
+                    op.opcode === 'SSTORE' 
+                      ? 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
+                      : 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                  }`}
+                  variant="outline"
+                >
                   {op.opcode}
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground">Slot:</span>
-                  <code className="bg-muted/50 px-1 py-0.5 rounded text-xs">
-                    {op.slot}
-                  </code>
-                </div>
-                {op.opcode === 'SSTORE' && op.value && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">→</span>
-                    <code className="bg-green-500/10 text-green-700 dark:text-green-400 px-1 py-0.5 rounded text-xs">
-                      {op.value}
-                    </code>
-                  </div>
-                )}
-                {op.opcode === 'SLOAD' && op.value && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">Value:</span>
-                    <code className="bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 px-1 py-0.5 rounded text-xs">
-                      {op.value}
-                    </code>
-                  </div>
-                )}
-                <div className="text-muted-foreground text-xs ml-auto">
-                  Gas: {op.gasCost}
-                </div>
+                </Badge>
               </div>
-            ))}
-          </div>
-        </div>
+              
+              {/* Gas column (if enabled) - always aligned */}
+              {showGas && (
+                <div className="text-right px-1">
+                  <span className="text-muted-foreground text-xs font-mono">
+                    {op.gasCost.toLocaleString()}
+                  </span>
+                </div>
+              )}
+              
+              {/* Spacer column for alignment */}
+              <div className="w-4" />
+              
+              {/* Storage operation details - indented based on depth */}
+              <div 
+                className="flex items-center gap-1 min-w-0 px-3 whitespace-nowrap call-node-content" 
+                style={{ 
+                  paddingLeft: `${indentLevel + 12}px`,
+                }}
+              >
+                {/* Slot information */}
+                <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
+                  SLOT
+                </span>
+                <code className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
+                  {op.slot.length > 12 ? `${op.slot.slice(0, 8)}...${op.slot.slice(-4)}` : op.slot}
+                </code>
+                
+                {/* Operation-specific value display */}
+                {op.opcode === 'SSTORE' && op.value && (
+                  <>
+                    <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">→</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
+                      VALUE
+                    </span>
+                    <code className="text-green-600 dark:text-green-400 text-sm font-mono flex-shrink-0">
+                      {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
+                    </code>
+                  </>
+                )}
+                
+                {op.opcode === 'SLOAD' && op.value && (
+                  <>
+                    <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">→</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
+                      READ
+                    </span>
+                    <code className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
+                      {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
+                    </code>
+                  </>
+                )}
+                
+                {/* Program counter info */}
+                <span className="text-slate-400 dark:text-slate-500 text-xs font-mono ml-2 flex-shrink-0">
+                  PC:{op.pc}
+                </span>
+              </div>
+            </div>
+          ))}
+        </>
       )}
       
       {/* Render subcalls */}
