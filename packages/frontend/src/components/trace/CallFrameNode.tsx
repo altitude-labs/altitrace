@@ -267,18 +267,30 @@ export function CallFrameNode({
                         <div className="flex-1 space-y-1">
                           <div className="font-medium text-xs">
                             {(() => {
-                              const parsedError = parseBlockchainError(call.error)
-                              const isContractError = parsedError.type === 'revert' && parsedError.details && 
-                                parsedError.details !== 'The transaction was reverted by the contract'
-                              return isContractError ? 'Contract Error' : parsedError.title
+                              const parsedError = parseBlockchainError(
+                                call.error,
+                              )
+                              const isContractError =
+                                parsedError.type === 'revert' &&
+                                parsedError.details &&
+                                parsedError.details !==
+                                  'The transaction was reverted by the contract'
+                              return isContractError
+                                ? 'Contract Error'
+                                : parsedError.title
                             })()}
                           </div>
                           {(() => {
                             const parsedError = parseBlockchainError(call.error)
-                            const isContractError = parsedError.type === 'revert' && parsedError.details && 
-                              parsedError.details !== 'The transaction was reverted by the contract'
+                            const isContractError =
+                              parsedError.type === 'revert' &&
+                              parsedError.details &&
+                              parsedError.details !==
+                                'The transaction was reverted by the contract'
                             return parsedError.details ? (
-                              <div className={`text-xs ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                              <div
+                                className={`text-xs ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
+                              >
                                 {parsedError.details}
                               </div>
                             ) : null
@@ -465,17 +477,27 @@ export function CallFrameNode({
                 <div className="font-medium text-sm">
                   {(() => {
                     const parsedError = parseBlockchainError(frame.error)
-                    const isContractError = parsedError.type === 'revert' && parsedError.details && 
-                      parsedError.details !== 'The transaction was reverted by the contract'
-                    return isContractError ? 'Contract Error' : parsedError.title
+                    const isContractError =
+                      parsedError.type === 'revert' &&
+                      parsedError.details &&
+                      parsedError.details !==
+                        'The transaction was reverted by the contract'
+                    return isContractError
+                      ? 'Contract Error'
+                      : parsedError.title
                   })()}
                 </div>
                 {(() => {
                   const parsedError = parseBlockchainError(frame.error)
-                  const isContractError = parsedError.type === 'revert' && parsedError.details && 
-                    parsedError.details !== 'The transaction was reverted by the contract'
+                  const isContractError =
+                    parsedError.type === 'revert' &&
+                    parsedError.details &&
+                    parsedError.details !==
+                      'The transaction was reverted by the contract'
                   return parsedError.details ? (
-                    <div className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                    <div
+                      className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
+                    >
                       {parsedError.details}
                     </div>
                   ) : null

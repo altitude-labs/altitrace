@@ -284,9 +284,9 @@ export async function executeBundleSimulation(
       structLogger: {
         cleanStructLogs: false,
         disableMemory: true,
-        disableStack: false,  
+        disableStack: false,
         disableStorage: false,
-        disableReturnData: false
+        disableReturnData: false,
       },
       // Add state overrides if provided
       ...(request.stateOverrides &&

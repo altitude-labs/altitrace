@@ -18,8 +18,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui'
-import { parseBlockchainError, parseBlockchainErrorWithOutput } from '@/utils/error-parser'
-import { parseStorageOperations, type StorageOperation } from '@/utils/trace-helpers'
+import {
+  parseBlockchainError,
+  parseBlockchainErrorWithOutput,
+} from '@/utils/error-parser'
+import {
+  parseStorageOperations,
+  type StorageOperation,
+} from '@/utils/trace-helpers'
 import { StorageOperationsView } from './StorageOperationsView'
 
 interface EnhancedCallTraceProps {
@@ -108,94 +114,94 @@ export function EnhancedCallTrace({
           position: relative;
         }
       `}</style>
-      
+
       <Card className={className}>
         <CardHeader className="pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <CardTitle className="flex items-center gap-2">
-            <SettingsIcon className="h-5 w-5" />
-            Call Trace
-          </CardTitle>
-          
-          <div className="flex gap-1 sm:gap-2 flex-wrap justify-center sm:justify-end">
-            <Button
-              variant={showGas ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowGas(!showGas)}
-              className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3"
-            >
-              <FuelIcon className="h-4 w-4 mr-1" />
-              Gas
-            </Button>
-            <Button
-              variant={showFullTrace ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowFullTrace(!showFullTrace)}
-              className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-            >
-              <EyeIcon className="h-4 w-4 mr-0.5 sm:mr-1" />
-              <span className="sm:hidden">Detail</span>
-              <span className="hidden sm:inline">Full Trace</span>
-            </Button>
-            <Button
-              variant={showStorage ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowStorage(!showStorage)}
-              className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3"
-            >
-              <DatabaseIcon className="h-4 w-4 mr-0.5 sm:mr-1" />
-              <span className="sm:hidden">Store</span>
-              <span className="hidden sm:inline">Storage</span>
-            </Button>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <SettingsIcon className="h-5 w-5" />
+              Call Trace
+            </CardTitle>
+
+            <div className="flex gap-1 sm:gap-2 flex-wrap justify-center sm:justify-end">
+              <Button
+                variant={showGas ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowGas(!showGas)}
+                className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                <FuelIcon className="h-4 w-4 mr-1" />
+                Gas
+              </Button>
+              <Button
+                variant={showFullTrace ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowFullTrace(!showFullTrace)}
+                className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <EyeIcon className="h-4 w-4 mr-0.5 sm:mr-1" />
+                <span className="sm:hidden">Detail</span>
+                <span className="hidden sm:inline">Full Trace</span>
+              </Button>
+              <Button
+                variant={showStorage ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowStorage(!showStorage)}
+                className="h-8 flex-1 sm:flex-none min-w-0 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                <DatabaseIcon className="h-4 w-4 mr-0.5 sm:mr-1" />
+                <span className="sm:hidden">Store</span>
+                <span className="hidden sm:inline">Storage</span>
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="p-0">
-        <div className="border-t font-mono text-sm">
-          {/* Scrollable container for header and all call nodes */}
-          <div 
-            className="call-trace-container overflow-x-auto"
-            onWheel={(e) => {
-              // Allow horizontal scrolling with mouse wheel on the entire trace
-              if (e.deltaY !== 0) {
-                e.currentTarget.scrollLeft += e.deltaY;
-                e.preventDefault();
-              }
-            }}
-            style={{ 
-              scrollBehavior: 'smooth',
-             }}
-          >
-            {/* Header row for column alignment - now inside scrollable container */}
-            <div 
-              className="flex items-center py-2 px-3 border-b bg-muted/20 text-xs font-medium text-muted-foreground whitespace-nowrap"
-              style={{ 
-                paddingLeft: '12px',
-                minWidth: '100vw',
-                width: 'max-content',
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <div className="border-t font-mono text-sm">
+            {/* Scrollable container for header and all call nodes */}
+            <div
+              className="call-trace-container overflow-x-auto"
+              onWheel={(e) => {
+                // Allow horizontal scrolling with mouse wheel on the entire trace
+                if (e.deltaY !== 0) {
+                  e.currentTarget.scrollLeft += e.deltaY
+                  e.preventDefault()
+                }
+              }}
+              style={{
+                scrollBehavior: 'smooth',
               }}
             >
-              <div className="w-24 text-center">Type</div>
-              {showGas && <div className="w-20 text-right pr-2">Gas</div>}
-              <div className="w-4" />
-              <div className="flex-1 text-left">Call Details</div>
-              <div className="w-48" />
+              {/* Header row for column alignment - now inside scrollable container */}
+              <div
+                className="flex items-center py-2 px-3 border-b bg-muted/20 text-xs font-medium text-muted-foreground whitespace-nowrap"
+                style={{
+                  paddingLeft: '12px',
+                  minWidth: '100vw',
+                  width: 'max-content',
+                }}
+              >
+                <div className="w-24 text-center">Type</div>
+                {showGas && <div className="w-20 text-right pr-2">Gas</div>}
+                <div className="w-4" />
+                <div className="flex-1 text-left">Call Details</div>
+                <div className="w-48" />
+              </div>
+              <CallNode
+                frame={rootCall}
+                depth={0}
+                index={0}
+                isRoot={true}
+                showGas={showGas}
+                showFullTrace={showFullTrace}
+                showStorage={showStorage}
+                traceData={traceData}
+              />
             </div>
-            <CallNode
-              frame={rootCall}
-              depth={0}
-              index={0}
-              isRoot={true}
-              showGas={showGas}
-              showFullTrace={showFullTrace}
-              showStorage={showStorage}
-              traceData={traceData}
-            />
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
     </>
   )
 }
@@ -226,34 +232,36 @@ function CallNode({
   parentCallContext = '',
 }: CallNodeProps) {
   const [isExpanded, setIsExpanded] = useState(true) // Auto-expand all levels
-  
+
   const hasSubcalls = frame.calls && frame.calls.length > 0
   const gasUsed = Number.parseInt(frame.gasUsed, 16)
   const isSuccess = !frame.reverted
-  
+
   // Build current call context identifier
   const currentCallContext = isRoot ? '0.0' : `${depth}.${index}`
-  
+
   // Parse storage operations for all calls (only once at root level)
-  const allStorageOps: StorageOperation[] = showStorage && isRoot
-    ? parseStorageOperations(traceData, frame)
-    : allStorageOperations || []
-  
-  // Pass all storage operations down to child calls  
+  const allStorageOps: StorageOperation[] =
+    showStorage && isRoot
+      ? parseStorageOperations(traceData, frame)
+      : allStorageOperations || []
+
+  // Pass all storage operations down to child calls
   const storageOpsForPassing = allStorageOps
-  
+
   // Match storage operations by exact call context
   // This ensures each storage operation appears only in its correct call frame
-  const callStorageOperations: StorageOperation[] = showStorage && allStorageOps.length > 0
-    ? allStorageOps.filter(op => op.callContext === currentCallContext)
-    : []
-  
+  const callStorageOperations: StorageOperation[] =
+    showStorage && allStorageOps.length > 0
+      ? allStorageOps.filter((op) => op.callContext === currentCallContext)
+      : []
+
   // Format addresses - short format for display
   const formatAddress = (address: string) => {
     if (!address) return 'N/A'
     return `${address}`
   }
-  
+
   // Get function selector and format it
   const getFunctionSelector = () => {
     if (!frame.input || frame.input === '0x' || frame.input.length < 10) {
@@ -261,31 +269,34 @@ function CallNode({
     }
     return frame.input.slice(0, 10)
   }
-  
+
   const functionSelector = getFunctionSelector()
-  
+
   // Get call type color similar
   const getCallTypeColor = (callType: string, success: boolean) => {
     if (!success) return 'bg-red-500/10 text-red-700 dark:text-red-400'
-    
+
     const colors = {
       CALL: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
-      DELEGATECALL: 'bg-purple-500/10 text-purple-700 dark:text-purple-400', 
+      DELEGATECALL: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
       STATICCALL: 'bg-green-500/10 text-green-700 dark:text-green-400',
       CREATE: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
       CREATE2: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
       CALLCODE: 'bg-gray-500/10 text-gray-700 dark:text-gray-400',
     }
-    return colors[callType as keyof typeof colors] || 'bg-gray-500/10 text-gray-700 dark:text-gray-400'
+    return (
+      colors[callType as keyof typeof colors] ||
+      'bg-gray-500/10 text-gray-700 dark:text-gray-400'
+    )
   }
-  
+
   // Calculate indentation for subcalls
   const indentLevel = depth * 16 // 16px per level
 
   return (
     <div>
-            {/* Main call row using CSS Grid for perfect alignment */}
-      <div 
+      {/* Main call row using CSS Grid for perfect alignment */}
+      <div
         className={`
           group grid items-center py-1.5 hover:bg-muted/30 transition-colors
           ${!isSuccess ? 'bg-red-50/50 dark:bg-red-950/10' : ''}
@@ -294,17 +305,17 @@ function CallNode({
       >
         {/* Left padding that grows with indentation */}
         <div style={{ width: `${indentLevel}px` }} />
-        
+
         {/* Call type column - always aligned */}
         <div className="flex justify-center px-1">
-          <Badge 
+          <Badge
             className={`text-xs font-mono px-2 py-0.5 w-full max-w-[96px] justify-center ${getCallTypeColor(frame.callType, isSuccess)}`}
             variant="outline"
           >
             {frame.callType}
           </Badge>
         </div>
-        
+
         {/* Gas column (if enabled) - always aligned */}
         {showGas && (
           <div className="text-right px-1">
@@ -313,14 +324,17 @@ function CallNode({
             </span>
           </div>
         )}
-        
+
         {/* Expand/collapse button - indented based on depth */}
-        <div className="flex justify-start relative z-10" style={{ paddingLeft: `${indentLevel}px` }}>
+        <div
+          className="flex justify-start relative z-10"
+          style={{ paddingLeft: `${indentLevel}px` }}
+        >
           {hasSubcalls ? (
             <button
               onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(!isExpanded);
+                e.stopPropagation()
+                setIsExpanded(!isExpanded)
               }}
               className="p-0.5 rounded hover:bg-muted transition-colors relative z-10 cursor-pointer"
             >
@@ -334,11 +348,11 @@ function CallNode({
             <div className="w-3" />
           )}
         </div>
-        
+
         {/* Call information - indented based on depth */}
-        <div 
-          className="flex items-center gap-1 min-w-0 px-3 whitespace-nowrap call-node-content" 
-          style={{ 
+        <div
+          className="flex items-center gap-1 min-w-0 px-3 whitespace-nowrap call-node-content"
+          style={{
             paddingLeft: `${indentLevel + 12}px`,
           }}
         >
@@ -354,10 +368,12 @@ function CallNode({
           >
             {formatAddress(frame.from)}
           </a>
-          
+
           {/* Arrow */}
-          <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">→</span>
-          
+          <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">
+            →
+          </span>
+
           {/* To address or CREATE */}
           {frame.to ? (
             <>
@@ -378,17 +394,19 @@ function CallNode({
               CREATE
             </span>
           )}
-          
+
           {/* Function selector */}
           {frame.to && functionSelector && (
             <>
-              <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">.</span>
+              <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">
+                .
+              </span>
               <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm flex-shrink-0">
                 {functionSelector}
               </span>
             </>
           )}
-          
+
           {/* Data (if full trace mode and has input beyond selector) */}
           {showFullTrace && frame.input && frame.input.length > 10 && (
             <span className="text-violet-600 dark:text-violet-400 text-xs font-mono ml-2 flex-shrink-0">
@@ -397,155 +415,193 @@ function CallNode({
           )}
         </div>
       </div>
-      
+
       {/* Full trace mode additional details */}
-      {showFullTrace && (frame.value !== '0x0' || (frame.output && frame.output !== '0x') || (!isSuccess && frame.error)) && (
-        <div 
-          className="bg-muted/10 border-l-2 border-muted/50 text-xs"
-          style={{ 
-            marginLeft: `${12 + 96 + (showGas ? 80 : 0) + 16 + indentLevel + 12}px`
-          }}
-        >
-          <div className="py-1 px-3 flex items-center gap-x-4 whitespace-nowrap overflow-visible" style={{ minWidth: 'max-content' }}>
-            {/* Value transfer */}
-            {frame.value && frame.value !== '0x0' && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-amber-600 dark:text-amber-400 font-semibold text-xs">VALUE:</span>
-                <span className="text-amber-700 dark:text-amber-300 font-mono text-sm">{BigInt(frame.value).toLocaleString()} wei</span>
-              </div>
-            )}
-            
-            {/* Error information with decoded output */}
-            {!isSuccess && (frame.error || frame.output) && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-red-600 dark:text-red-400 font-semibold text-xs">ERROR:</span>
-                <span className="text-red-700 dark:text-red-300 font-medium text-sm">
-                  {(() => {
-                    const parsedError = parseBlockchainErrorWithOutput(frame.error || '', frame.output || '')
-                    return parsedError.details || parsedError.title || 'execution reverted'
-                  })()}
-                </span>
-              </div>
-            )}
-            
-            {/* Output data (only show for successful calls or when no decoded error) */}
-            {frame.output && frame.output !== '0x' && (isSuccess || !frame.error) && (
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className={`${!isSuccess ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} font-semibold text-xs flex-shrink-0`}>OUTPUT:</span>
-                <span className={`${!isSuccess ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'} font-mono text-xs`}>
-                  {frame.output}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {/* Inline storage operations display for this specific call */}
-      {showStorage && callStorageOperations.length > 0 && (
-        callStorageOperations.map((op, index) => (
+      {showFullTrace &&
+        (frame.value !== '0x0' ||
+          (frame.output && frame.output !== '0x') ||
+          (!isSuccess && frame.error)) && (
+          <div
+            className="bg-muted/10 border-l-2 border-muted/50 text-xs"
+            style={{
+              marginLeft: `${12 + 96 + (showGas ? 80 : 0) + 16 + indentLevel + 12}px`,
+            }}
+          >
             <div
-              key={`storage-${op.pc}-${index}`}
-              className={`
-                group grid items-center py-1.5 hover:bg-muted/30 transition-colors bg-muted/5
-                ${showGas ? 'grid-cols-[12px_96px_80px_16px_1fr]' : 'grid-cols-[12px_96px_16px_1fr]'}
-              `}
+              className="py-1 px-3 flex items-center gap-x-4 whitespace-nowrap overflow-visible"
+              style={{ minWidth: 'max-content' }}
             >
-              {/* Left padding that grows with indentation */}
-              <div style={{ width: `${indentLevel}px` }} />
-              
-              {/* Storage operation type column - always aligned */}
-              <div className="flex justify-center px-1">
-                <Badge 
-                  className={`text-xs font-mono px-2 py-0.5 w-full max-w-[96px] justify-center ${
-                    op.opcode === 'SSTORE' 
-                      ? 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
-                      : 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
-                  }`}
-                  variant="outline"
-                >
-                  {op.opcode}
-                </Badge>
-              </div>
-              
-              {/* Gas column (if enabled) - always aligned */}
-              {showGas && (
-                <div className="text-right px-1">
-                  <span className="text-muted-foreground text-xs font-mono">
-                    {op.gasCost.toLocaleString()}
+              {/* Value transfer */}
+              {frame.value && frame.value !== '0x0' && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold text-xs">
+                    VALUE:
+                  </span>
+                  <span className="text-amber-700 dark:text-amber-300 font-mono text-sm">
+                    {BigInt(frame.value).toLocaleString()} wei
                   </span>
                 </div>
               )}
-              
-              {/* Spacer column for alignment */}
-              <div className="w-4" />
-              
-              {/* Storage operation details - indented based on depth */}
-              <div 
-                className="flex items-center gap-1 min-w-0 px-3 whitespace-nowrap call-node-content" 
-                style={{ 
-                  paddingLeft: `${indentLevel + 12}px`,
-                }}
+
+              {/* Error information with decoded output */}
+              {!isSuccess && (frame.error || frame.output) && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-red-600 dark:text-red-400 font-semibold text-xs">
+                    ERROR:
+                  </span>
+                  <span className="text-red-700 dark:text-red-300 font-medium text-sm">
+                    {(() => {
+                      const parsedError = parseBlockchainErrorWithOutput(
+                        frame.error || '',
+                        frame.output || '',
+                      )
+                      return (
+                        parsedError.details ||
+                        parsedError.title ||
+                        'execution reverted'
+                      )
+                    })()}
+                  </span>
+                </div>
+              )}
+
+              {/* Output data (only show for successful calls or when no decoded error) */}
+              {frame.output &&
+                frame.output !== '0x' &&
+                (isSuccess || !frame.error) && (
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span
+                      className={`${!isSuccess ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} font-semibold text-xs flex-shrink-0`}
+                    >
+                      OUTPUT:
+                    </span>
+                    <span
+                      className={`${!isSuccess ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'} font-mono text-xs`}
+                    >
+                      {frame.output}
+                    </span>
+                  </div>
+                )}
+            </div>
+          </div>
+        )}
+
+      {/* Inline storage operations display for this specific call */}
+      {showStorage &&
+        callStorageOperations.length > 0 &&
+        callStorageOperations.map((op, index) => (
+          <div
+            key={`storage-${op.pc}-${index}`}
+            className={`
+                group grid items-center py-1.5 hover:bg-muted/30 transition-colors bg-muted/5
+                ${showGas ? 'grid-cols-[12px_96px_80px_16px_1fr]' : 'grid-cols-[12px_96px_16px_1fr]'}
+              `}
+          >
+            {/* Left padding that grows with indentation */}
+            <div style={{ width: `${indentLevel}px` }} />
+
+            {/* Storage operation type column - always aligned */}
+            <div className="flex justify-center px-1">
+              <Badge
+                className={`text-xs font-mono px-2 py-0.5 w-full max-w-[96px] justify-center ${
+                  op.opcode === 'SSTORE'
+                    ? 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
+                    : 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                }`}
+                variant="outline"
               >
-                {/* Slot information */}
-                <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
-                  SLOT
-                </span>
-                <code className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
-                  {op.slot.length > 12 ? `${op.slot.slice(0, 8)}...${op.slot.slice(-4)}` : op.slot}
-                </code>
-                
-                {/* Operation-specific value display */}
-                {op.opcode === 'SSTORE' && op.value && (
-                  <>
-                    <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">→</span>
-                    <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
-                      VALUE
-                    </span>
-                    <code className="text-green-600 dark:text-green-400 text-sm font-mono flex-shrink-0">
-                      {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
-                    </code>
-                  </>
-                )}
-                
-                {op.opcode === 'SLOAD' && op.value && (
-                  <>
-                    <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">→</span>
-                    <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
-                      READ
-                    </span>
-                    <code className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
-                      {op.value.length > 12 ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}` : op.value}
-                    </code>
-                  </>
-                )}
-                
-                {/* Program counter info */}
-                <span className="text-slate-400 dark:text-slate-500 text-xs font-mono ml-2 flex-shrink-0">
-                  PC:{op.pc}
+                {op.opcode}
+              </Badge>
+            </div>
+
+            {/* Gas column (if enabled) - always aligned */}
+            {showGas && (
+              <div className="text-right px-1">
+                <span className="text-muted-foreground text-xs font-mono">
+                  {op.gasCost.toLocaleString()}
                 </span>
               </div>
+            )}
+
+            {/* Spacer column for alignment */}
+            <div className="w-4" />
+
+            {/* Storage operation details - indented based on depth */}
+            <div
+              className="flex items-center gap-1 min-w-0 px-3 whitespace-nowrap call-node-content"
+              style={{
+                paddingLeft: `${indentLevel + 12}px`,
+              }}
+            >
+              {/* Slot information */}
+              <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
+                SLOT
+              </span>
+              <code className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
+                {op.slot.length > 12
+                  ? `${op.slot.slice(0, 8)}...${op.slot.slice(-4)}`
+                  : op.slot}
+              </code>
+
+              {/* Operation-specific value display */}
+              {op.opcode === 'SSTORE' && op.value && (
+                <>
+                  <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">
+                    →
+                  </span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
+                    VALUE
+                  </span>
+                  <code className="text-green-600 dark:text-green-400 text-sm font-mono flex-shrink-0">
+                    {op.value.length > 12
+                      ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}`
+                      : op.value}
+                  </code>
+                </>
+              )}
+
+              {op.opcode === 'SLOAD' && op.value && (
+                <>
+                  <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">
+                    →
+                  </span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
+                    READ
+                  </span>
+                  <code className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
+                    {op.value.length > 12
+                      ? `${op.value.slice(0, 8)}...${op.value.slice(-4)}`
+                      : op.value}
+                  </code>
+                </>
+              )}
+
+              {/* Program counter info */}
+              <span className="text-slate-400 dark:text-slate-500 text-xs font-mono ml-2 flex-shrink-0">
+                PC:{op.pc}
+              </span>
             </div>
-          ))
-      )}
-      
+          </div>
+        ))}
+
       {/* Render subcalls */}
-      {hasSubcalls && isExpanded && frame.calls && (
+      {hasSubcalls &&
+        isExpanded &&
+        frame.calls &&
         frame.calls.map((subcall, subIndex) => (
-            <CallNode
-              key={`${depth}-${subIndex}-${subcall.from}-${subcall.to}`}
-              frame={subcall}
-              depth={depth + 1}
-              index={subIndex}
-              showGas={showGas}
-              showFullTrace={showFullTrace}
-              showStorage={showStorage}
-              traceData={traceData}
-              allStorageOperations={storageOpsForPassing}
-              parentCallContext={currentCallContext}
-            />
-          ))
-      )}
+          <CallNode
+            key={`${depth}-${subIndex}-${subcall.from}-${subcall.to}`}
+            frame={subcall}
+            depth={depth + 1}
+            index={subIndex}
+            showGas={showGas}
+            showFullTrace={showFullTrace}
+            showStorage={showStorage}
+            traceData={traceData}
+            allStorageOperations={storageOpsForPassing}
+            parentCallContext={currentCallContext}
+          />
+        ))}
     </div>
   )
 }

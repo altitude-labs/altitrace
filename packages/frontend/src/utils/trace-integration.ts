@@ -991,11 +991,11 @@ export async function executeEnhancedSimulation(
               disableStorage: false,
             })
             .withStructLogger({
-              cleanStructLogs: false,    // Enable detailed opcodes for storage operations
-              disableMemory: true,       // Disable memory for performance
-              disableStack: false,       // Enable stack for storage slot extraction
-              disableStorage: false,     // Enable storage operations tracking
-              disableReturnData: false   // Keep return data enabled
+              cleanStructLogs: false, // Enable detailed opcodes for storage operations
+              disableMemory: true, // Disable memory for performance
+              disableStack: false, // Enable stack for storage slot extraction
+              disableStorage: false, // Enable storage operations tracking
+              disableReturnData: false, // Keep return data enabled
             })
             .with4ByteTracer()
 
@@ -1340,11 +1340,11 @@ export async function executeTransactionTrace(
         disableStorage: false,
       })
       .withStructLogger({
-        cleanStructLogs: false,    // Enable detailed opcodes for storage operations
-        disableMemory: true,       // Disable memory for performance
-        disableStack: false,       // Enable stack for storage slot extraction
-        disableStorage: false,     // Enable storage operations tracking
-        disableReturnData: false   // Keep return data enabled
+        cleanStructLogs: false, // Enable detailed opcodes for storage operations
+        disableMemory: true, // Disable memory for performance
+        disableStack: false, // Enable stack for storage slot extraction
+        disableStorage: false, // Enable storage operations tracking
+        disableReturnData: false, // Keep return data enabled
       })
       .with4ByteTracer()
       .execute()

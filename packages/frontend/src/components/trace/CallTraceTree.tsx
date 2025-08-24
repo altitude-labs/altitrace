@@ -70,36 +70,39 @@ export function CallTraceTree({
   // Process errors to combine generic revert messages with actual error data
   const processedErrors = React.useMemo(() => {
     if (errors.length <= 1) return errors
-    
+
     // Parse all errors
-    const parsedErrors = errors.map(error => ({
+    const parsedErrors = errors.map((error) => ({
       original: error,
-      parsed: parseBlockchainError(error)
+      parsed: parseBlockchainError(error),
     }))
-    
+
     // Look for pairs of generic revert + specific error data
-    const genericReverts = parsedErrors.filter(e => 
-      e.parsed.type === 'revert' && 
-      (e.parsed.details === 'execution reverted' || 
-       e.parsed.details === 'The transaction was reverted by the contract' ||
-       !e.parsed.details)
+    const genericReverts = parsedErrors.filter(
+      (e) =>
+        e.parsed.type === 'revert' &&
+        (e.parsed.details === 'execution reverted' ||
+          e.parsed.details === 'The transaction was reverted by the contract' ||
+          !e.parsed.details),
     )
-    
-    const specificErrors = parsedErrors.filter(e => {
+
+    const specificErrors = parsedErrors.filter((e) => {
       // Contract error codes or specific error messages
       if (e.parsed.type === 'revert' && e.parsed.details) {
         const details = e.parsed.details
-        return details !== 'execution reverted' && 
-               details !== 'The transaction was reverted by the contract'
+        return (
+          details !== 'execution reverted' &&
+          details !== 'The transaction was reverted by the contract'
+        )
       }
       return e.parsed.type !== 'revert'
     })
-    
+
     // If we have both generic and specific errors, prefer specific ones
     if (genericReverts.length > 0 && specificErrors.length > 0) {
-      return specificErrors.map(e => e.original)
+      return specificErrors.map((e) => e.original)
     }
-    
+
     // Otherwise return all errors
     return errors
   }, [errors])
@@ -154,7 +157,8 @@ export function CallTraceTree({
                   {isSuccess ? 'Success' : 'Failed'}
                   {processedErrors.length > 0 && (
                     <Badge variant="destructive" className="ml-2 text-xs">
-                      {processedErrors.length} error{processedErrors.length !== 1 ? 's' : ''}
+                      {processedErrors.length} error
+                      {processedErrors.length !== 1 ? 's' : ''}
                     </Badge>
                   )}
                 </div>
@@ -167,19 +171,26 @@ export function CallTraceTree({
 
       {/* Call tree visualization */}
       {useEnhanced ? (
-        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'enhanced' | 'legacy')}>
+        <Tabs
+          value={viewMode}
+          onValueChange={(value) => setViewMode(value as 'enhanced' | 'legacy')}
+        >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 className="text-lg font-medium">Call Stack</h3>
             <TabsList className="w-full sm:w-auto">
-              <TabsTrigger value="enhanced" className="flex-1 sm:flex-none">Enhanced</TabsTrigger>
-              <TabsTrigger value="legacy" className="flex-1 sm:flex-none">Legacy</TabsTrigger>
+              <TabsTrigger value="enhanced" className="flex-1 sm:flex-none">
+                Enhanced
+              </TabsTrigger>
+              <TabsTrigger value="legacy" className="flex-1 sm:flex-none">
+                Legacy
+              </TabsTrigger>
             </TabsList>
           </div>
-          
+
           <TabsContent value="enhanced" className="space-y-0">
             <EnhancedCallTrace traceData={traceData} />
           </TabsContent>
-          
+
           <TabsContent value="legacy" className="space-y-0">
             <Card>
               <CardHeader>
@@ -201,7 +212,12 @@ export function CallTraceTree({
 
                 {/* Desktop: Vertical layout */}
                 <div className="hidden sm:block space-y-2">
-                  <CallFrameNode frame={rootCall} depth={0} index={0} isRoot={true} />
+                  <CallFrameNode
+                    frame={rootCall}
+                    depth={0}
+                    index={0}
+                    isRoot={true}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -228,7 +244,12 @@ export function CallTraceTree({
 
             {/* Desktop: Vertical layout */}
             <div className="hidden sm:block space-y-2">
-              <CallFrameNode frame={rootCall} depth={0} index={0} isRoot={true} />
+              <CallFrameNode
+                frame={rootCall}
+                depth={0}
+                index={0}
+                isRoot={true}
+              />
             </div>
           </CardContent>
         </Card>
@@ -242,7 +263,9 @@ export function CallTraceTree({
               <div className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/20">
                 <AlertTriangleIcon className="h-4 w-4 text-red-600 dark:text-red-500" />
               </div>
-              {processedErrors.length === 1 ? 'Execution Error' : `Execution Errors (${processedErrors.length})`}
+              {processedErrors.length === 1
+                ? 'Execution Error'
+                : `Execution Errors (${processedErrors.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -250,9 +273,12 @@ export function CallTraceTree({
               {processedErrors.map((error, index: number) => {
                 const parsedError = parseBlockchainError(error)
                 // For short error codes or specific contract errors, show them prominently
-                const isContractError = parsedError.type === 'revert' && parsedError.details && 
-                  parsedError.details !== 'The transaction was reverted by the contract'
-                
+                const isContractError =
+                  parsedError.type === 'revert' &&
+                  parsedError.details &&
+                  parsedError.details !==
+                    'The transaction was reverted by the contract'
+
                 return (
                   <div
                     key={`error-${index}`}
@@ -266,7 +292,9 @@ export function CallTraceTree({
                         {isContractError ? 'Contract Error' : parsedError.title}
                       </div>
                       {parsedError.details && (
-                        <div className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                        <div
+                          className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
+                        >
                           {parsedError.details}
                         </div>
                       )}
