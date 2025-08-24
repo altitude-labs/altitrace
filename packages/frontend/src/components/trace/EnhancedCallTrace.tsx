@@ -228,15 +228,17 @@ function CallNode({
   const isSuccess = !frame.reverted
   
   // Parse storage operations for all calls (only once at root level)
-  const storageOpsForPassing: StorageOperation[] = showStorage && isRoot
+  const allStorageOps: StorageOperation[] = showStorage && isRoot
     ? parseStorageOperations(traceData, frame)
-    : allStorageOperations
+    : allStorageOperations || []
   
-  // Filter storage operations for this specific call by depth and contract
-  const callStorageOperations: StorageOperation[] = showStorage
-    ? storageOpsForPassing.filter(op => 
-        op.depth === depth && op.contract === (frame.to || frame.from || '')
-      )
+  // Pass all storage operations down to child calls  
+  const storageOpsForPassing = allStorageOps
+  
+  // Simple strategy: Only show storage operations that match this call's exact depth
+  // This prevents duplicates by ensuring each operation appears only at its correct call level
+  const callStorageOperations: StorageOperation[] = showStorage && allStorageOps.length > 0
+    ? allStorageOps.filter(op => op.depth === depth)
     : []
   
   // Format addresses - short format for display

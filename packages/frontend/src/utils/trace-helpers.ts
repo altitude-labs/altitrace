@@ -274,33 +274,44 @@ export function parseStorageOperations(
   }
 
   const storageOps: StorageOperation[] = []
-  const callStack: Array<{ contract: string; depth: number; index: number }> = []
   
-  // Initialize with root call
-  if (rootCall.to) {
-    callStack.push({ 
-      contract: rootCall.to, 
-      depth: 0, 
-      index: 0 
-    })
+  // Build a map of call frame addresses by depth to better match operations
+  const callsByDepth = new Map<number, CallFrame>()
+  
+  // Recursively collect all calls and their depths
+  function collectCallsByDepth(call: CallFrame, currentDepth: number) {
+    if (call.to) {
+      callsByDepth.set(currentDepth, call)
+    }
+    
+    if (call.calls) {
+      call.calls.forEach(subcall => {
+        collectCallsByDepth(subcall, currentDepth + 1)
+      })
+    }
   }
+  
+  // Start with root call at depth 0
+  collectCallsByDepth(rootCall, 0)
 
   for (let i = 0; i < traceData.structLogger.structLogs.length; i++) {
     const log = traceData.structLogger.structLogs[i]
     
-    // Update call stack based on depth changes
-    updateCallStack(callStack, log, rootCall)
-    
     // Only process storage operations
     if (log.op === 'SSTORE' || log.op === 'SLOAD') {
-      const currentCall = callStack[callStack.length - 1]
+      // Find the call frame that corresponds to this depth
+      const callFrame = callsByDepth.get(log.depth)
+      const contract = callFrame?.to || rootCall.to || ''
       
-      if (currentCall && log.stack && log.stack.length >= 2) {
+      if (contract && log.stack && log.stack.length >= 1) {
         // For EVM stack, storage operations have:
-        // SSTORE: stack[0] = slot, stack[1] = value
-        // SLOAD: stack[0] = slot
+        // SSTORE: stack[0] = slot, stack[1] = value (from bottom)
+        // SLOAD: stack[0] = slot (from bottom)
+        // Note: EVM stack is LIFO, so we access from the end
         const slot = log.stack[log.stack.length - 1] // Top of stack
-        const value = log.op === 'SSTORE' ? log.stack[log.stack.length - 2] : undefined
+        const value = log.op === 'SSTORE' && log.stack.length >= 2 
+          ? log.stack[log.stack.length - 2] 
+          : undefined
         
         // For SSTORE operations, we can get the old value from storage state
         let oldValue: string | undefined
@@ -317,8 +328,8 @@ export function parseStorageOperations(
           slot: formatStorageSlot(slot),
           value: value ? formatStorageValue(value) : undefined,
           oldValue: oldValue ? formatStorageValue(oldValue) : undefined,
-          contract: currentCall.contract,
-          callIndex: currentCall.index
+          contract: contract,
+          callIndex: log.depth // Use depth as call index for now
         })
       }
     }
