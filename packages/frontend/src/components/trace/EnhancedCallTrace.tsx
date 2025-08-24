@@ -301,28 +301,28 @@ function CallNode({
           }}
         >
           {/* From address */}
-          <span className="text-muted-foreground text-sm flex-shrink-0">
-            [CALLER]
+          <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
+            CALLER
           </span>
-          <span className="text-muted-foreground text-sm flex-shrink-0">
+          <span className="text-cyan-800 dark:text-cyan-600 text-sm font-mono flex-shrink-0">
             {formatAddress(frame.from)}
           </span>
           
           {/* Arrow */}
-          <span className="text-muted-foreground flex-shrink-0">→</span>
+          <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">→</span>
           
           {/* To address or CREATE */}
           {frame.to ? (
             <>
-              <span className="text-muted-foreground text-sm flex-shrink-0">
-                [RECEIVER]
+              <span className="text-slate-500 dark:text-slate-400 text-xs font-medium flex-shrink-0">
+                RECEIVER
               </span>
-              <span className="text-muted-foreground text-sm flex-shrink-0">
+              <span className="text-cyan-600 dark:text-cyan-400 text-sm font-mono flex-shrink-0">
                 {formatAddress(frame.to)}
               </span>
             </>
           ) : (
-            <span className="text-orange-600 dark:text-orange-400 font-medium text-sm flex-shrink-0">
+            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm flex-shrink-0">
               CREATE
             </span>
           )}
@@ -330,8 +330,8 @@ function CallNode({
           {/* Function selector */}
           {frame.to && functionSelector && (
             <>
-              <span className="text-muted-foreground flex-shrink-0">.</span>
-              <span className="text-blue-600 dark:text-blue-400 font-medium text-sm flex-shrink-0">
+              <span className="text-slate-400 dark:text-slate-500 flex-shrink-0">.</span>
+              <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm flex-shrink-0">
                 {functionSelector}
               </span>
             </>
@@ -339,7 +339,7 @@ function CallNode({
           
           {/* Data (if full trace mode and has input beyond selector) */}
           {showFullTrace && frame.input && frame.input.length > 10 && (
-            <span className="text-xs text-muted-foreground ml-1 flex-shrink-0">
+            <span className="text-violet-600 dark:text-violet-400 text-xs font-mono ml-2 flex-shrink-0">
               ({frame.input})
             </span>
           )}
@@ -394,17 +394,17 @@ function CallNode({
           <div className="py-1 px-3 space-y-1">
             {/* Value transfer */}
             {frame.value && frame.value !== '0x0' && (
-              <div className="text-muted-foreground">
-                <span className="font-medium">Value:</span>{' '}
-                <span className="font-mono">{BigInt(frame.value).toLocaleString()} wei</span>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-600 dark:text-amber-400 font-semibold text-xs">VALUE:</span>
+                <span className="text-amber-700 dark:text-amber-300 font-mono text-sm">{BigInt(frame.value).toLocaleString()} wei</span>
               </div>
             )}
             
             {/* Output data */}
             {frame.output && frame.output !== '0x' && (
-              <div className="text-muted-foreground">
-                <span className="font-medium">Output:</span>{' '}
-                <span className="font-mono break-all">
+              <div className="flex items-start gap-2">
+                <span className="text-green-600 dark:text-green-400 font-semibold text-xs flex-shrink-0">OUTPUT:</span>
+                <span className="text-green-700 dark:text-green-300 font-mono text-xs break-all">
                   {frame.output}
                 </span>
               </div>
@@ -412,12 +412,14 @@ function CallNode({
             
             {/* Error information */}
             {!isSuccess && frame.error && (
-              <div className="text-red-600 dark:text-red-400">
-                <span className="font-medium">Error:</span>{' '}
-                {(() => {
-                  const parsedError = parseBlockchainError(frame.error)
-                  return parsedError.details || parsedError.title || frame.error
-                })()}
+              <div className="flex items-start gap-2">
+                <span className="text-red-600 dark:text-red-400 font-semibold text-xs flex-shrink-0">ERROR:</span>
+                <span className="text-red-700 dark:text-red-300 font-medium text-sm">
+                  {(() => {
+                    const parsedError = parseBlockchainError(frame.error)
+                    return parsedError.details || parsedError.title || frame.error
+                  })()}
+                </span>
               </div>
             )}
           </div>
