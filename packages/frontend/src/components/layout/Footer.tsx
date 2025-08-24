@@ -58,7 +58,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <a
-                  href="https://altitrace.valtitude.xyz/docs"
+                  href="https://altitrace.reachaltitude.xyz/docs"
                   className="hover:text-primary transition-colors"
                 >
                   Documentation
@@ -66,7 +66,7 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="https://altitrace.valtitude.xyz/docs/api"
+                  href="https://altitrace.reachaltitude.xyz/docs/api"
                   className="hover:text-primary transition-colors"
                 >
                   API Reference
@@ -74,7 +74,7 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="https://altitrace.valtitude.xyz/docs/sdk"
+                  href="https://altitrace.reachaltitude.xyz/docs/sdk"
                   className="hover:text-primary transition-colors"
                 >
                   SDK Guide

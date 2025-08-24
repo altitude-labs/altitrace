@@ -44,7 +44,10 @@ export default function Home() {
                 View Simulator
               </Button>
             </Link>
-            <a href="https://altitrace.valtitude.xyz/docs" className="w-full sm:w-auto">
+            <a
+              href="https://altitrace.reachaltitude.xyz/docs"
+              className="w-full sm:w-auto"
+            >
               <Button
                 variant="outline"
                 size="lg"
