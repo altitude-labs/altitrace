@@ -4,7 +4,7 @@ import type { StateOverride } from '@altitrace/sdk/types'
  * Convert ETH amount to wei in hex format
  */
 export function ethToWeiHex(ethAmount: number | string): string {
-  const ethValue = typeof ethAmount === 'string' ? parseFloat(ethAmount) : ethAmount
+  const ethValue = typeof ethAmount === 'string' ? Number.parseFloat(ethAmount) : ethAmount
   const weiValue = Math.floor(ethValue * 1e18)
   return `0x${weiValue.toString(16)}`
 }

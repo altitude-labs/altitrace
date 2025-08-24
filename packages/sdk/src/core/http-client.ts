@@ -38,7 +38,9 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
 /**
  * Default configuration values for the HTTP client.
  */
-const DEFAULT_CONFIG: Required<AltitraceClientConfig> = {
+const DEFAULT_CONFIG: Required<Omit<AltitraceClientConfig, 'viemClient'>> & {
+  viemClient?: unknown
+} = {
   baseUrl: 'http://localhost:8080/v1',
   timeout: 30_000, // 30 seconds
   retryConfig: DEFAULT_RETRY_CONFIG,
@@ -51,6 +53,7 @@ const DEFAULT_CONFIG: Required<AltitraceClientConfig> = {
   debug: false,
   apiKey: '',
   userAgent: '',
+  viemClient: undefined,
 } as const
 
 /**
@@ -85,6 +88,7 @@ export class HttpClient {
         ? config.fetch.bind(globalThis)
         : DEFAULT_CONFIG.fetch,
       debug: config.debug ?? DEFAULT_CONFIG.debug,
+      viemClient: config.viemClient,
     }
   }
 

@@ -2,7 +2,6 @@
 
 import { CheckIcon, XIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Input } from '@/components/ui'
 import { updateMetadata } from '@/utils/storage'
 
 interface InlineTitleEditorProps {
@@ -21,12 +20,26 @@ export function InlineTitleEditor({
   const [title, setTitle] = useState(currentTitle)
   const [isLoading, setIsLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Focus and select text on mount
     if (inputRef.current) {
       inputRef.current.focus()
       inputRef.current.select()
+    }
+
+    // Add click outside listener
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        // Click outside - cancel editing without saving
+        handleCancel()
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
 
@@ -63,14 +76,15 @@ export function InlineTitleEditor({
   }
 
   return (
-    <div className="flex items-center gap-2 min-w-0 flex-1">
-      <Input
+    <div ref={containerRef} className="flex items-center gap-2 min-w-0 flex-1">
+      <input
         ref={inputRef}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="h-6 px-2 py-1 text-sm font-medium border-2 border-blue-500 focus:border-blue-600 focus:ring-1 focus:ring-blue-500/20"
+        className="flex-1 min-w-0 text-lg sm:text-xl font-bold bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-0 py-0 placeholder:text-muted-foreground"
         disabled={isLoading}
+        placeholder="Enter title..."
       />
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
@@ -80,7 +94,7 @@ export function InlineTitleEditor({
           className="p-1 hover:bg-green-100 hover:text-green-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Save changes"
         >
-          <CheckIcon className="h-3 w-3" />
+          <CheckIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -89,7 +103,7 @@ export function InlineTitleEditor({
           className="p-1 hover:bg-red-100 hover:text-red-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Cancel editing"
         >
-          <XIcon className="h-3 w-3" />
+          <XIcon className="h-4 w-4" />
         </button>
       </div>
     </div>

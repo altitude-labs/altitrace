@@ -15,6 +15,7 @@ export interface StoredSimulation {
     title?: string
     tags?: string[]
     description?: string
+    traceHash?: string
   }
   result?: {
     status: 'success' | 'reverted' | 'failed'
@@ -38,6 +39,7 @@ interface SerializedStoredSimulation {
     title?: string
     tags?: string[]
     description?: string
+    traceHash?: string // For storing transaction hash when tracing existing transactions
   }
   result?: {
     status: 'success' | 'reverted' | 'failed'

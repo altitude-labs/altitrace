@@ -212,9 +212,6 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
     // For other 0.8.x versions, the default 0.8.30 compiler is usually compatible
     const majorMinor = actualVersion.substring(0, 4) // e.g., "0.7.", "0.8."
     if (majorMinor === '0.8.' || actualVersion.startsWith('0.8')) {
-      console.log(
-        `Using default 0.8.30 compiler for ${actualVersion} (should be compatible)`,
-      )
       const result = { compiler: solc, usedFallback: false }
       compilerCache.set(requestedVersion, result)
       return result
@@ -223,38 +220,25 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
     // For 0.7.x versions, check if preloading is in progress, then try loading
     if (majorMinor === '0.7.' || actualVersion.startsWith('0.7')) {
       // Skip the unreliable preloading system for now
-      console.log(
-        `⏭️  Skipping preloading wait for ${actualVersion} - using direct methods`,
-      )
 
       // First try direct cached compiler loading for 0.7.6
       if (actualVersion === '0.7.6') {
-        console.log('🎯 Attempting direct cached 0.7.6 compiler loading...')
         try {
           const cachedCompiler = loadCached076Compiler()
           if (cachedCompiler) {
-            console.log('✅ Using direct cached 0.7.6 compiler!')
             const result = { compiler: cachedCompiler, usedFallback: false }
             compilerCache.set(requestedVersion, result)
             compilerCache.set(actualVersion, result)
             return result
           }
-          console.log('❌ Direct cached 0.7.6 compiler loading failed')
-        } catch (error) {
-          console.log(
-            `❌ Error with direct cached compiler: ${error instanceof Error ? error.message : error}`,
-          )
+        } catch {
         }
       }
 
       // Fallback: try the complex cached compiler system
-      console.log(
-        `🔍 Trying complex cached compiler system for ${actualVersion}...`,
-      )
       try {
         const cached = getCachedCompiler(actualVersion)
         if (cached) {
-          console.log(`✅ Using cached compiler for ${actualVersion}`)
           const result = {
             compiler: cached.compiler,
             usedFallback: cached.usedFallback,
@@ -264,13 +248,10 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
           return result
         }
       } catch (error) {
-        console.log(
-          `❌ Complex cached compiler failed: ${error instanceof Error ? error.message : error}`,
-        )
+        console.error(error)
       }
 
       // Fallback to dynamic loading
-      console.log(`🔄 Trying dynamic load for ${actualVersion}...`)
       try {
         const compiler = (await Promise.race([
           loadSolcVersion(actualVersion),
@@ -280,16 +261,13 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
         ])) as any
 
         if (compiler) {
-          console.log(`✅ Successfully loaded ${actualVersion} dynamically`)
           const result = { compiler, usedFallback: false }
           compilerCache.set(requestedVersion, result)
           compilerCache.set(actualVersion, result)
           return result
         }
       } catch (error) {
-        console.log(
-          `❌ Dynamic load failed for ${actualVersion}: ${error instanceof Error ? error.message : error}`,
-        )
+        console.error(error)
       }
     }
 
@@ -316,19 +294,13 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
  * Dynamically load a specific solc version using solc's built-in capabilities
  */
 async function loadSolcVersion(version: string): Promise<any> {
-  console.log(`🔧 loadSolcVersion called with version: ${version}`)
-
   try {
     // For version format conversion (e.g., "0.8.19" -> "v0.8.19+commit.7dd6d404")
     const fullVersionString = getFullVersionString(version)
-    console.log(`🔧 Full version string: ${fullVersionString}`)
 
     // Load the remote version with timeout using solc.loadRemoteVersion
     const compiler = await new Promise((resolve, reject) => {
-      console.log(`🔧 Starting loadRemoteVersion for: ${fullVersionString}`)
-
       const timeout = setTimeout(() => {
-        console.log(`🔧 Timeout reached for: ${fullVersionString}`)
         reject(
           new Error(`Timeout loading compiler version ${fullVersionString}`),
         )
@@ -337,9 +309,6 @@ async function loadSolcVersion(version: string): Promise<any> {
       solc.loadRemoteVersion(
         fullVersionString,
         (err: any, solcSnapshot: any) => {
-          console.log(
-            `🔧 loadRemoteVersion callback called for ${fullVersionString}`,
-          )
           clearTimeout(timeout)
 
           if (err) {
@@ -351,16 +320,12 @@ async function loadSolcVersion(version: string): Promise<any> {
               ),
             )
           } else {
-            console.log(
-              `🔧 Successfully got compiler snapshot for ${fullVersionString}, version: ${solcSnapshot.version?.() || 'unknown'}`,
-            )
             resolve(solcSnapshot)
           }
         },
       )
     })
 
-    console.log(`🔧 Returning compiler for ${version}`)
     return compiler
   } catch (_error) {
     return null

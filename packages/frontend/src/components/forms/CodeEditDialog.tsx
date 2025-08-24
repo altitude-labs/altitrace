@@ -143,26 +143,11 @@ export function CodeEditDialog({
           timestamp: new Date(),
         }
 
-        console.log(
-          '✅ [Contract Update] Contract saved with updated ABI/bytecode:',
-          {
-            id: contract.id,
-            name: contractName,
-            hasNewAbi: !!compilationResult?.abi,
-            hasNewBytecode: !!compilationResult?.bytecode,
-            compilationStatus: updatedMetadata.compilationStatus,
-            abiMatches: compilationResult?.abiMatches,
-          },
-        )
-
         onSave(updatedContract)
         onClose()
         setIsModified(false)
 
         // Force update of contracts list
-        console.log(
-          '📡 [Event Dispatch] Notifying ContractManager of contract update...',
-        )
         setTimeout(() => {
           window.dispatchEvent(
             new CustomEvent('contractsUpdated', {

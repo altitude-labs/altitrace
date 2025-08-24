@@ -22,6 +22,8 @@ export interface AltitraceClientConfig {
   fetch?: typeof globalThis.fetch
   /** User agent string */
   userAgent?: string
+  /** Optional viem public client for blockchain data access */
+  viemClient?: unknown // Avoiding direct viem dependency in types
 }
 
 /**
@@ -58,6 +60,8 @@ export interface ResolvedClientConfig {
   fetch: typeof globalThis.fetch
   /** Enable debug logging */
   debug: boolean
+  /** Optional viem public client for blockchain data access */
+  viemClient?: unknown
 }
 
 /**
