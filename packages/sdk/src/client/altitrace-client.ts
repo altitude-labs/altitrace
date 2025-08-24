@@ -22,7 +22,14 @@ import type {
   TraceRequestBuilder,
   TransactionCall,
 } from '@sdk/types'
-import type { Bundle, StateContext, TracerManyResponse } from '@sdk/types/trace'
+import type {
+  Bundle,
+  CallTracerConfig,
+  PrestateTracerConfig,
+  StateContext,
+  StructLoggerConfig,
+  TracerManyResponse
+} from '@sdk/types/trace'
 import { AccessListClient } from './access-list-client'
 import { SimulationClient } from './simulation-client'
 import { TraceClient } from './trace-client'
@@ -228,9 +235,9 @@ export class AltitraceClient {
     bundles: Bundle[],
     options?: {
       stateContext?: StateContext
-      callTracer?: boolean
-      prestateTracer?: boolean
-      structLogger?: boolean
+      callTracer?: CallTracerConfig | boolean
+      prestateTracer?: PrestateTracerConfig | boolean
+      structLogger?: StructLoggerConfig | boolean
       fourByteTracer?: boolean
     },
   ): Promise<TracerManyResponse> {
@@ -245,33 +252,35 @@ export class AltitraceClient {
    * Build trace configuration from options.
    */
   private buildTraceConfig(options?: {
-    callTracer?: boolean
-    prestateTracer?: boolean
-    structLogger?: boolean
-    fourByteTracer?: boolean
+    callTracer?: CallTracerConfig | boolean | undefined
+    prestateTracer?: PrestateTracerConfig | boolean | undefined
+    structLogger?: StructLoggerConfig | boolean | undefined
+    fourByteTracer?: boolean | undefined
   }) {
     if (!options) return undefined
 
     const config: any = {}
 
     if (options.callTracer) {
-      config.callTracer = { onlyTopCall: false, withLogs: true }
+      config.callTracer = typeof options.callTracer === 'boolean'
+        ? { onlyTopCall: false, withLogs: true }
+        : options.callTracer
     }
     if (options.prestateTracer) {
-      config.prestateTracer = {
-        diffMode: false,
-        disableCode: false,
-        disableStorage: false,
-      }
+      config.prestateTracer = typeof options.prestateTracer === 'boolean'
+        ? { diffMode: true, disableCode: false, disableStorage: false }
+        : options.prestateTracer
     }
     if (options.structLogger) {
-      config.structLogger = {
-        cleanStructLogs: true,
-        disableMemory: true,
-        disableReturnData: false,
-        disableStack: false,
-        disableStorage: false,
-      }
+      config.structLogger = typeof options.structLogger === 'boolean'
+        ? {
+          cleanStructLogs: true,
+          disableMemory: true,
+          disableReturnData: false,
+          disableStack: false,
+          disableStorage: false,
+        }
+        : options.structLogger
     }
     if (options.fourByteTracer) {
       config['4byteTracer'] = true

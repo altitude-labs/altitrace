@@ -55,7 +55,7 @@ export class TraceClient {
   constructor(
     private httpClient: HttpClient,
     private viemClient?: any,
-  ) {}
+  ) { }
 
   /**
    * Get the viem client if available
@@ -403,7 +403,7 @@ export class TraceClient {
  * Implementation of the trace request builder.
  */
 class TraceRequestBuilderImpl implements TraceRequestBuilder {
-  constructor(private client: TraceClient) {}
+  constructor(private client: TraceClient) { }
 
   transaction(hash: string): TraceTransactionBuilder {
     return new TraceTransactionBuilderImpl(this.client, hash)
@@ -429,7 +429,7 @@ class TraceTransactionBuilderImpl implements TraceTransactionBuilder {
   constructor(
     private client: TraceClient,
     private transactionHash: string,
-  ) {}
+  ) { }
 
   withTracers(config: TraceConfig): TraceTransactionBuilder {
     this.config = { ...config }
@@ -482,9 +482,9 @@ class TraceTransactionBuilderImpl implements TraceTransactionBuilder {
     if (this.includeReceipt && this.client.getViemClient()) {
       try {
         const receipt = await this.fetchTransactionReceipt()
-        // Add receipt data to the extended response
-        ;(traceResult as any).receipt = receipt
-      } catch (_error) {}
+          // Add receipt data to the extended response
+          ; (traceResult as any).receipt = receipt
+      } catch (_error) { }
     }
 
     return traceResult
@@ -507,7 +507,7 @@ class TraceTransactionBuilderImpl implements TraceTransactionBuilder {
       block = await viemClient.getBlock({
         blockNumber: receipt.blockNumber,
       })
-    } catch (_error) {}
+    } catch (_error) { }
 
     // Convert viem receipt and block data to our format
     const receiptData: TransactionReceiptData = {
@@ -542,7 +542,7 @@ class TraceCallBuilderImpl implements TraceCallBuilder {
   constructor(
     private client: TraceClient,
     private call: TransactionCall,
-  ) {}
+  ) { }
 
   atBlock(block: string | number): TraceCallBuilder {
     this.block = typeof block === 'number' ? `0x${block.toString(16)}` : block
@@ -637,7 +637,7 @@ class TraceCallManyBuilderImpl implements TraceCallManyBuilder {
   constructor(
     private client: TraceClient,
     private bundles: Bundle[],
-  ) {}
+  ) { }
 
   withStateContext(context: StateContext): TraceCallManyBuilder {
     this.stateContext = { ...context }
@@ -690,7 +690,7 @@ class TraceCallManyBuilderImpl implements TraceCallManyBuilder {
 
   withPrestateTracer(config?: PrestateTracerConfig): TraceCallManyBuilder {
     this.config.prestateTracer = config || {
-      diffMode: false,
+      diffMode: true,
       disableCode: false,
       disableStorage: false,
     }
