@@ -3,6 +3,7 @@
 import type { CallFrame } from '@altitrace/sdk/types'
 import {
   AlertCircleIcon,
+  AlertTriangleIcon,
   ArrowRightIcon,
   CheckCircleIcon,
   CheckIcon,
@@ -20,6 +21,7 @@ import {
   CallTypeIconOnly,
 } from '@/components/shared/CallTypeIcon'
 import { Badge, Card, CardContent } from '@/components/ui'
+import { parseBlockchainError } from '@/utils/error-parser'
 import { useMultipleCopyToClipboard } from '@/hooks/useCopyToClipboard'
 
 interface CallFrameNodeProps {
@@ -258,15 +260,29 @@ export function CallFrameNode({
 
                     {/* Error information */}
                     {!callIsSuccess && call.error && (
-                      <div className="bg-red-100 border border-red-200 rounded-md p-2">
-                        <div className="flex items-center gap-2">
-                          <AlertCircleIcon className="h-3 w-3 text-red-600" />
-                          <span className="font-medium text-red-800 text-xs">
-                            Failed
-                          </span>
+                      <div className="flex gap-2 p-2 rounded-lg bg-muted/50">
+                        <div className="mt-0.5">
+                          <div className="h-2 w-2 rounded-full bg-red-500" />
                         </div>
-                        <div className="text-xs text-red-700 mt-1 break-words">
-                          {call.error}
+                        <div className="flex-1 space-y-1">
+                          <div className="font-medium text-xs">
+                            {(() => {
+                              const parsedError = parseBlockchainError(call.error)
+                              const isContractError = parsedError.type === 'revert' && parsedError.details && 
+                                parsedError.details !== 'The transaction was reverted by the contract'
+                              return isContractError ? 'Contract Error' : parsedError.title
+                            })()}
+                          </div>
+                          {(() => {
+                            const parsedError = parseBlockchainError(call.error)
+                            const isContractError = parsedError.type === 'revert' && parsedError.details && 
+                              parsedError.details !== 'The transaction was reverted by the contract'
+                            return parsedError.details ? (
+                              <div className={`text-xs ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                                {parsedError.details}
+                              </div>
+                            ) : null
+                          })()}
                         </div>
                       </div>
                     )}
@@ -440,15 +456,31 @@ export function CallFrameNode({
           )}
 
           {/* Error information */}
-          {!isSuccess && (
-            <div className="bg-red-100 border border-red-200 rounded-md p-2 mb-1">
-              <div className="flex items-center gap-2 mb-1">
-                <AlertCircleIcon className="h-3 w-3 text-red-600" />
-                <span className="font-medium text-red-800 text-sm">Failed</span>
+          {!isSuccess && frame.error && (
+            <div className="flex gap-2 p-3 rounded-lg bg-muted/50 mb-2">
+              <div className="mt-0.5">
+                <div className="h-2 w-2 rounded-full bg-red-500" />
               </div>
-              {frame.error && (
-                <div className="text-xs text-red-700">{frame.error}</div>
-              )}
+              <div className="flex-1 space-y-1">
+                <div className="font-medium text-sm">
+                  {(() => {
+                    const parsedError = parseBlockchainError(frame.error)
+                    const isContractError = parsedError.type === 'revert' && parsedError.details && 
+                      parsedError.details !== 'The transaction was reverted by the contract'
+                    return isContractError ? 'Contract Error' : parsedError.title
+                  })()}
+                </div>
+                {(() => {
+                  const parsedError = parseBlockchainError(frame.error)
+                  const isContractError = parsedError.type === 'revert' && parsedError.details && 
+                    parsedError.details !== 'The transaction was reverted by the contract'
+                  return parsedError.details ? (
+                    <div className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                      {parsedError.details}
+                    </div>
+                  ) : null
+                })()}
+              </div>
             </div>
           )}
 
