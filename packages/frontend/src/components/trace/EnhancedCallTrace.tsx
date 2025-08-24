@@ -99,7 +99,12 @@ export function EnhancedCallTrace({
         
         /* Ensure content width is at least the sum of all fixed columns */
         .call-trace-container .call-node-content {
-          min-width: ${showGas ? '192px' : '112px'}; /* Minimum width for fixed columns */
+          min-width: max-content; /* Allow content to expand to fit all data */
+        }
+        
+        /* Sticky header behavior while maintaining scroll sync */
+        .call-trace-container {
+          position: relative;
         }
       `}</style>
       
@@ -136,21 +141,7 @@ export function EnhancedCallTrace({
       
       <CardContent className="p-0">
         <div className="border-t font-mono text-sm">
-          {/* Header row for column alignment */}
-          <div 
-            className={`
-              grid items-center py-2 px-3 border-b bg-muted/20 text-xs font-medium text-muted-foreground
-              ${showGas ? 'grid-cols-[96px_80px_16px_1fr_80px]' : 'grid-cols-[96px_16px_1fr_80px]'}
-            `}
-            style={{ paddingLeft: '12px' }}
-          >
-            <div className="text-left text-center">Type</div>
-            {showGas && <div className="text-right text-center">Gas</div>}
-            <div />
-            <div className="text-left">Call Details</div>
-          </div>
-          
-          {/* Scrollable container for all call nodes */}
+          {/* Scrollable container for header and all call nodes */}
           <div 
             className="call-trace-container overflow-x-auto"
             onWheel={(e) => {
@@ -162,6 +153,19 @@ export function EnhancedCallTrace({
             }}
             style={{ scrollBehavior: 'smooth' }}
           >
+            {/* Header row for column alignment - now inside scrollable container */}
+            <div 
+              className={`
+                grid items-center py-2 px-3 border-b bg-muted/20 text-xs font-medium text-muted-foreground call-node-content
+                ${showGas ? 'grid-cols-[96px_80px_16px_1fr_80px]' : 'grid-cols-[96px_16px_1fr_80px]'}
+              `}
+              style={{ paddingLeft: '12px' }}
+            >
+              <div className="text-left text-center">Type</div>
+              {showGas && <div className="text-right text-center">Gas</div>}
+              <div />
+              <div className="text-left">Call Details</div>
+            </div>
             <CallNode
               frame={rootCall}
               depth={0}
