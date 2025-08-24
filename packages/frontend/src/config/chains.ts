@@ -22,7 +22,6 @@ export const hyperevm = defineChain({
   testnet: false,
 }) satisfies Chain
 
-
 export const viemClient = createPublicClient({
   chain: hyperevm,
   transport: http(),

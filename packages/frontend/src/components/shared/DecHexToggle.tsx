@@ -85,7 +85,9 @@ export function DecHexToggle({
                        transform-gpu"
             title={`Switch to ${showHex ? 'decimal' : 'hexadecimal'}`}
           >
-            <span className="mr-1.5 transition-colors duration-200">{showHex ? 'Hex' : 'Dec'}</span>
+            <span className="mr-1.5 transition-colors duration-200">
+              {showHex ? 'Hex' : 'Dec'}
+            </span>
             <RefreshCwIcon className="h-3 w-3 opacity-70 transition-all duration-200 group-hover:opacity-90 group-hover:rotate-180" />
           </button>
         </div>

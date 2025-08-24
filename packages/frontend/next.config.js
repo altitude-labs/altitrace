@@ -14,7 +14,8 @@ const nextConfig = {
     }
 
     if (isProduction) {
-      const internalApiUrl = process.env.INTERNAL_API_URL || 'http://127.0.0.1:8080'
+      const internalApiUrl =
+        process.env.INTERNAL_API_URL || 'http://127.0.0.1:8080'
       return [
         {
           source: '/api/altitrace/:path*',

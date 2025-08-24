@@ -42,9 +42,15 @@ export async function loadTransactionFromHash(
       value: `0x${transaction.value.toString(16)}`,
       data: transaction.input || '0x',
       gas: transaction.gas ? `0x${transaction.gas.toString(16)}` : undefined,
-      gasPrice: transaction.gasPrice ? `0x${transaction.gasPrice.toString(16)}` : undefined,
-      maxFeePerGas: transaction.maxFeePerGas ? `0x${transaction.maxFeePerGas.toString(16)}` : undefined,
-      maxPriorityFeePerGas: transaction.maxPriorityFeePerGas ? `0x${transaction.maxPriorityFeePerGas.toString(16)}` : undefined,
+      gasPrice: transaction.gasPrice
+        ? `0x${transaction.gasPrice.toString(16)}`
+        : undefined,
+      maxFeePerGas: transaction.maxFeePerGas
+        ? `0x${transaction.maxFeePerGas.toString(16)}`
+        : undefined,
+      maxPriorityFeePerGas: transaction.maxPriorityFeePerGas
+        ? `0x${transaction.maxPriorityFeePerGas.toString(16)}`
+        : undefined,
       nonce: Number(transaction.nonce),
       blockNumber: `0x${receipt.blockNumber.toString(16)}`,
       transactionType: transaction.type || 'legacy',

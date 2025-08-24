@@ -4,7 +4,8 @@ import type { StateOverride } from '@altitrace/sdk/types'
  * Convert ETH amount to wei in hex format
  */
 export function ethToWeiHex(ethAmount: number | string): string {
-  const ethValue = typeof ethAmount === 'string' ? Number.parseFloat(ethAmount) : ethAmount
+  const ethValue =
+    typeof ethAmount === 'string' ? Number.parseFloat(ethAmount) : ethAmount
   const weiValue = Math.floor(ethValue * 1e18)
   return `0x${weiValue.toString(16)}`
 }
@@ -114,7 +115,10 @@ export function validateStateOverride(override: StateOverride): {
     errors.push('Invalid code format (must be hex)')
   }
 
-  if (override.nonce && (override.nonce < 0 || !Number.isInteger(override.nonce))) {
+  if (
+    override.nonce &&
+    (override.nonce < 0 || !Number.isInteger(override.nonce))
+  ) {
     errors.push('Invalid nonce (must be non-negative integer)')
   }
 
@@ -157,7 +161,11 @@ export function cleanStateOverride(override: StateOverride): StateOverride {
     cleaned.balance = normalizeBalance(override.balance)
   }
 
-  if (override.nonce !== null && override.nonce !== undefined && override.nonce > 0) {
+  if (
+    override.nonce !== null &&
+    override.nonce !== undefined &&
+    override.nonce > 0
+  ) {
     cleaned.nonce = override.nonce
   }
 
@@ -167,7 +175,11 @@ export function cleanStateOverride(override: StateOverride): StateOverride {
 
   if (override.state && override.state.length > 0) {
     const validSlots = override.state.filter(
-      (slot) => slot.slot && slot.value && isValidStorageSlot(slot.slot) && isValidStorageSlot(slot.value)
+      (slot) =>
+        slot.slot &&
+        slot.value &&
+        isValidStorageSlot(slot.slot) &&
+        isValidStorageSlot(slot.value),
     )
     if (validSlots.length > 0) {
       cleaned.state = validSlots.map((slot) => ({
@@ -237,6 +249,8 @@ export function importStateOverrides(json: string): StateOverride[] {
       return validation.isValid
     })
   } catch (error) {
-    throw new Error(`Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    throw new Error(
+      `Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
   }
 }

@@ -95,7 +95,7 @@ export function validateOptionalData(
     if (value.startsWith('0x')) {
       return validateHex(value, fieldName)
     }
-    
+
     // Handle decimal format - convert to hex
     const num = BigInt(value)
     if (num < 0n) {
@@ -106,7 +106,10 @@ export function validateOptionalData(
     if (error instanceof ValidationError) {
       throw error
     }
-    throw new ValidationError('Invalid data format - must be hex (0x...) or decimal', fieldName)
+    throw new ValidationError(
+      'Invalid data format - must be hex (0x...) or decimal',
+      fieldName,
+    )
   }
 }
 

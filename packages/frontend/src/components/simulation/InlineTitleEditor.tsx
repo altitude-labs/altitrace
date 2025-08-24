@@ -31,7 +31,10 @@ export function InlineTitleEditor({
 
     // Add click outside listener
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         // Click outside - cancel editing without saving
         handleCancel()
       }
