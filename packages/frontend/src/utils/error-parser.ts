@@ -1,4 +1,4 @@
-import { formatEther, formatGwei } from 'viem'
+import { decodeErrorResult, formatEther, formatGwei } from 'viem'
 
 /**
  * Parse and format blockchain error messages for better readability
@@ -8,6 +8,37 @@ interface ParsedError {
   title: string
   details?: string
   type: 'insufficient-funds' | 'gas-limit' | 'revert' | 'rpc' | 'unknown'
+}
+
+/**
+ * Decode error data from output hex string using Error(string) ABI
+ */
+function decodeErrorData(outputData: string): string | null {
+  try {
+    if (!outputData || outputData === '0x') return null
+    
+    // Use viem to decode Error(string) - the standard revert reason format
+    const result = decodeErrorResult({
+      abi: [
+        {
+          type: 'error',
+          name: 'Error',
+          inputs: [
+            {
+              name: 'reason',
+              type: 'string'
+            }
+          ]
+        }
+      ],
+      data: outputData as `0x${string}`
+    })
+    
+    return result.args?.[0] as string || null
+  } catch {
+    // If decoding fails, it might be a different error format or not an error at all
+    return null
+  }
 }
 
 /**
@@ -26,14 +57,14 @@ export function parseBlockchainError(error: string | { reason?: string; message?
     // Convert to more readable format using viem
     const formatWei = (wei: bigint): string => {
       const ethValue = formatEther(wei)
-      const eth = parseFloat(ethValue)
+      const eth = Number.parseFloat(ethValue)
       
       if (eth >= 0.001) {
         return `${eth.toFixed(6)} HYPE`
       }
       
       const gweiValue = formatGwei(wei)
-      const gwei = parseFloat(gweiValue)
+      const gwei = Number.parseFloat(gweiValue)
       
       if (gwei >= 1) {
         return `${gwei.toFixed(2)} Gwei`
@@ -124,6 +155,26 @@ export function parseBlockchainError(error: string | { reason?: string; message?
     title: 'Transaction failed',
     details: errorMessage || 'An unknown error occurred'
   }
+}
+
+/**
+ * Parse blockchain error with output data context (when we have decoded details)
+ */
+export function parseBlockchainErrorWithOutput(error: string | { reason?: string; message?: string }, outputData?: string): ParsedError {
+  // If we have output data, try to decode it first
+  if (outputData && outputData !== '0x') {
+    const decodedReason = decodeErrorData(outputData)
+    if (decodedReason) {
+      return {
+        type: 'revert',
+        title: 'Execution reverted',
+        details: decodedReason
+      }
+    }
+  }
+  
+  // Fall back to regular error parsing
+  return parseBlockchainError(error)
 }
 
 /**

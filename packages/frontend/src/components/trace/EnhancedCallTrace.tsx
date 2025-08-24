@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui'
-import { parseBlockchainError } from '@/utils/error-parser'
+import { parseBlockchainError, parseBlockchainErrorWithOutput } from '@/utils/error-parser'
 
 interface EnhancedCallTraceProps {
   traceData: ExtendedTracerResponse
@@ -369,25 +369,25 @@ function CallNode({
               </div>
             )}
             
-            {/* Output data */}
-            {frame.output && frame.output !== '0x' && (
-              <div className="flex items-start gap-2">
-                <span className="text-green-600 dark:text-green-400 font-semibold text-xs flex-shrink-0">OUTPUT:</span>
-                <span className="text-green-700 dark:text-green-300 font-mono text-xs break-all">
-                  {frame.output}
+            {/* Error information with decoded output */}
+            {!isSuccess && (frame.error || frame.output) && (
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="text-red-600 dark:text-red-400 font-semibold text-xs flex-shrink-0">ERROR:</span>
+                <span className="text-red-700 dark:text-red-300 font-medium text-sm flex-shrink-0">
+                  {(() => {
+                    const parsedError = parseBlockchainErrorWithOutput(frame.error || '', frame.output || '')
+                    return parsedError.details || parsedError.title || 'execution reverted'
+                  })()}
                 </span>
               </div>
             )}
             
-            {/* Error information */}
-            {!isSuccess && frame.error && (
+            {/* Output data (only show for successful calls or when no decoded error) */}
+            {frame.output && frame.output !== '0x' && (isSuccess || !frame.error) && (
               <div className="flex items-start gap-2">
-                <span className="text-red-600 dark:text-red-400 font-semibold text-xs flex-shrink-0">ERROR:</span>
-                <span className="text-red-700 dark:text-red-300 font-medium text-sm">
-                  {(() => {
-                    const parsedError = parseBlockchainError(frame.error)
-                    return parsedError.details || parsedError.title || frame.error
-                  })()}
+                <span className={`${!isSuccess ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} font-semibold text-xs flex-shrink-0`}>OUTPUT:</span>
+                <span className={`${!isSuccess ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'} font-mono text-xs break-all`}>
+                  {frame.output}
                 </span>
               </div>
             )}
