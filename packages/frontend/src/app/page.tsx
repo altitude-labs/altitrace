@@ -13,11 +13,11 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center space-y-6 sm:space-y-8 mb-12 sm:mb-16">
           <div className="space-y-6">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-brand-light-1 tracking-tight">
+            <h1 className="hidden sm:block text-4xl sm:text-5xl lg:text-6xl font-bold text-brand-light-1 tracking-tight">
               Altitrace
             </h1>
-            <div className="w-24 h-1 bg-gradient-primary mx-auto rounded-full" />
-            <p className="text-lg sm:text-xl text-brand-light-2 max-w-2xl mx-auto px-4 sm:px-0 leading-relaxed">
+            <div className="hidden sm:block w-24 h-1 bg-gradient-primary mx-auto rounded-full" />
+            <p className="text-lg sm:text-xl text-brand-light-2 max-w-2xl mx-auto px-4 sm:px-0 leading-relaxed mt-4 sm:mt-0">
               Simulate, debug, and analyze EVM transactions within the HyperEVM
               network. Test your transactions before they hit the chain with
               full traceability and state control.

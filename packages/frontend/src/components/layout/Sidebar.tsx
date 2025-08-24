@@ -22,12 +22,14 @@ interface SidebarProps {
   isCollapsed?: boolean
   onToggle?: () => void
   isMobile?: boolean
+  onNavigate?: () => void
 }
 
 export function Sidebar({
   isCollapsed = false,
   onToggle,
   isMobile = false,
+  onNavigate,
 }: SidebarProps) {
   const pathname = usePathname()
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -56,7 +58,8 @@ export function Sidebar({
 
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/'
-    return pathname.startsWith(path)
+    // For exact matching of specific routes
+    return pathname === path
   }
 
   const NavItem = ({
@@ -74,7 +77,12 @@ export function Sidebar({
   }) => (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
+      onClick={() => {
+        if (isMobile && onNavigate) {
+          onNavigate()
+        }
+      }}
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ${
         isActive(href)
           ? 'bg-brand-dark-1 text-brand-light-1 border border-brand-light-3/20 shadow-sm'
           : 'text-muted-foreground hover:text-brand-light-2 hover:bg-brand-dark-2/50 hover:border hover:border-brand-light-3/10'
@@ -129,7 +137,7 @@ export function Sidebar({
       <div>
         <button
           onClick={handleClick}
-          className={`flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg transition-all duration-200 ${
+          className={`flex items-center gap-3 px-3 py-2 w-full text-left rounded-lg transition-colors duration-150 ${
             isActiveSection
               ? 'bg-brand-dark-1 text-brand-light-1 border border-brand-light-3/20 shadow-sm'
               : 'text-muted-foreground hover:text-brand-light-2 hover:bg-brand-dark-2/50 hover:border hover:border-brand-light-3/10'
@@ -184,7 +192,7 @@ export function Sidebar({
             <div className="w-8 h-8 flex items-center justify-center">
               <Image
                 src="/logo.svg"
-                alt="Logo"
+                alt="Altitrace"
                 width={32}
                 height={32}
                 className="w-8 h-8"
