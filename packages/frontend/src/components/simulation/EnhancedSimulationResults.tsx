@@ -39,6 +39,7 @@ import {
   TabsTrigger,
 } from '@/components/ui'
 import type { EnhancedSimulationResult } from '@/utils/trace-integration'
+import { getErrorSummary, parseBlockchainError } from '@/utils/error-parser'
 import { AccessListView } from './AccessListView'
 import { EnhancedEventDisplay } from './EnhancedEventDisplay'
 import { EnhancedGasAnalysis } from './EnhancedGasAnalysis'
@@ -370,6 +371,11 @@ function SimulationQuickStats({
                   {result.status}
                 </p>
               </div>
+              {!result.isSuccess() && result.getErrors().length > 0 && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1 line-clamp-2">
+                  {getErrorSummary(result.getErrors()[0])}
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -598,23 +604,40 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
 
       {/* Errors */}
       {errors.length > 0 && (
-        <Card className="border-red-200 bg-red-50 dark:bg-red-950">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
-              <AlertTriangleIcon className="h-4 w-4" />
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/20">
+                <AlertTriangleIcon className="h-4 w-4 text-red-600 dark:text-red-500" />
+              </div>
               Errors ({errors.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {errors.map((error, index: number) => (
-                <div
-                  key={`error-${error.reason || error.message || index}`}
-                  className="text-sm text-red-600 dark:text-red-400"
-                >
-                  {error.reason || error.message || 'Unknown error'}
-                </div>
-              ))}
+            <div className="space-y-3">
+              {errors.map((error, index: number) => {
+                const parsedError = parseBlockchainError(error)
+                return (
+                  <div
+                    key={`error-${error.reason || error.message || index}`}
+                    className="flex gap-3 p-3 rounded-lg bg-muted/50"
+                  >
+                    <div className="mt-0.5">
+                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="font-medium">
+                        {parsedError.title}
+                      </div>
+                      {parsedError.details && (
+                        <div className="text-sm text-muted-foreground">
+                          {parsedError.details}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
