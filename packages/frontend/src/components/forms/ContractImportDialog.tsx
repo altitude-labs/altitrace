@@ -121,28 +121,29 @@ export function ContractImportDialog({
     }
 
     // Save the fetched contract and import it
-    const contractToSave: Omit<StoredContract, 'id' | 'savedAt'> = {
+    const contractData: StoredContract['contractData'] = {
       address: fetchResult.address,
       name: fetchResult.name,
       abi: fetchResult.abi,
       sourceCode: fetchResult.sourceCode,
       constructorArgs: fetchResult.constructorArgs,
+      language: fetchResult.language,
+      additionalSources: fetchResult.additionalSources,
+    }
+
+    const metadata: StoredContract['metadata'] = {
       compiler: fetchResult.compiler,
       version: fetchResult.version,
       verified: fetchResult.verified,
       explorerSource: fetchResult.explorerSource,
-      language: fetchResult.language,
       compilerSettings: fetchResult.compilerSettings,
-      additionalSources: fetchResult.additionalSources,
-      filePath: fetchResult.filePath,
       isProxy: fetchResult.isProxy,
       implementationAddress: fetchResult.implementationAddress,
       implementationName: fetchResult.implementationName,
       proxyType: fetchResult.proxyType,
-      combinedAbi: fetchResult.combinedAbi,
     }
 
-    const newContractId = saveContract(contractToSave, 'imported')
+    const newContractId = saveContract(contractData, metadata, 'imported')
     const savedContract = getContract(newContractId)
     if (savedContract) {
       onImport(savedContract)

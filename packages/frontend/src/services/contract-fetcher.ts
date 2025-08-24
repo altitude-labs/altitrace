@@ -31,12 +31,12 @@ export interface ContractFetchResult {
   implementationAddress?: Address
   implementationName?: string
   proxyType?:
-  | 'eip1967'
-  | 'transparent'
-  | 'uups'
-  | 'beacon'
-  | 'minimal'
-  | 'unknown'
+    | 'eip1967'
+    | 'transparent'
+    | 'uups'
+    | 'beacon'
+    | 'minimal'
+    | 'unknown'
   combinedAbi?: Abi // Proxy + Implementation ABIs combined
 }
 
@@ -228,7 +228,7 @@ export class ContractFetcher {
           }
         }
       }
-    } catch (_error) { }
+    } catch (_error) {}
 
     return null
   }
@@ -329,22 +329,22 @@ export class ContractFetcher {
       filePath: data.file_path,
       compilerSettings: data.compiler_settings
         ? {
-          optimization: data.compiler_settings.optimizer
-            ? {
-              enabled: data.compiler_settings.optimizer.enabled,
-              runs: data.compiler_settings.optimizer.runs,
-            }
-            : data.optimization_enabled !== undefined
+            optimization: data.compiler_settings.optimizer
               ? {
-                enabled: data.optimization_enabled,
-                runs: data.optimizations_runs || 200,
-              }
-              : undefined,
-          evmVersion: data.compiler_settings.evmVersion || data.evm_version,
-          compilationTarget: data.compiler_settings.compilationTarget,
-          libraries: data.compiler_settings.libraries,
-          remappings: data.compiler_settings.remappings,
-        }
+                  enabled: data.compiler_settings.optimizer.enabled,
+                  runs: data.compiler_settings.optimizer.runs,
+                }
+              : data.optimization_enabled !== undefined
+                ? {
+                    enabled: data.optimization_enabled,
+                    runs: data.optimizations_runs || 200,
+                  }
+                : undefined,
+            evmVersion: data.compiler_settings.evmVersion || data.evm_version,
+            compilationTarget: data.compiler_settings.compilationTarget,
+            libraries: data.compiler_settings.libraries,
+            remappings: data.compiler_settings.remappings,
+          }
         : undefined,
       additionalSources: data.additional_sources?.map((source: any) => ({
         filePath: source.file_path,
@@ -610,9 +610,10 @@ export class ContractFetcher {
 
     for (const source of sources) {
       try {
-        const result = source === 'hyperscan'
-          ? await ContractFetcher.fetchFromHyperScan(validAddress)
-          : await ContractFetcher.fetchFromEtherscan(validAddress)
+        const result =
+          source === 'hyperscan'
+            ? await ContractFetcher.fetchFromHyperScan(validAddress)
+            : await ContractFetcher.fetchFromEtherscan(validAddress)
 
         // If contract is verified, return immediately
         if (result.verified) {
@@ -626,9 +627,9 @@ export class ContractFetcher {
           error instanceof ContractFetchError
             ? error
             : new ContractFetchError(
-              error instanceof Error ? error.message : 'Unknown error',
-              source,
-            )
+                error instanceof Error ? error.message : 'Unknown error',
+                source,
+              )
       }
     }
 

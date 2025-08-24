@@ -674,7 +674,10 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
                       <TrendingDownIcon className="h-3 w-3" />
                     )}
                     <span className="font-mono text-sm">
-                      {formatTokenAmount(change.netChange, change.decimals)}
+                      {formatTokenAmount(
+                        change.netChange,
+                        change.decimals ?? undefined,
+                      )}
                     </span>
                   </div>
                 </div>
@@ -952,9 +955,7 @@ const formatTokenAmount = (amount: string, decimals?: number) => {
       if (fractionalPart === 0n) {
         return wholePart.toString()
       } else {
-        const fractionalStr = fractionalPart
-          .toString()
-          .padStart(decimals, '0')
+        const fractionalStr = fractionalPart.toString().padStart(decimals, '0')
         const trimmed = fractionalStr.replace(/0+$/, '')
         return `${wholePart}.${trimmed}`
       }

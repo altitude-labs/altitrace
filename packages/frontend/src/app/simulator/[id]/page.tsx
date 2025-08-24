@@ -486,7 +486,10 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 hasAccessList: false,
                 hasGasComparison: false,
                 hasStateChanges: traceResult.hasStateChanges,
-                hasAssetChanges: !!(traceResult.assetChanges && traceResult.assetChanges.length > 0),
+                hasAssetChanges: !!(
+                  traceResult.assetChanges &&
+                  traceResult.assetChanges.length > 0
+                ),
                 getStateChangesCount: () =>
                   getStateChangesCount(traceResult.traceData?.prestateTracer),
 
@@ -501,10 +504,13 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 getLogCount: () =>
                   traceResult.traceData.getAllLogs?.()?.length || 0,
                 getAssetChangesSummary: () => {
-                  if (!traceResult.assetChanges || traceResult.assetChanges.length === 0) {
+                  if (
+                    !traceResult.assetChanges ||
+                    traceResult.assetChanges.length === 0
+                  ) {
                     return []
                   }
-                  
+
                   // Convert trace asset changes to AssetChangeSummary format
                   return traceResult.assetChanges.map((change: any) => ({
                     tokenAddress: change.tokenAddress,

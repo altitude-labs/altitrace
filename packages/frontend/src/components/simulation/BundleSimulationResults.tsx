@@ -113,7 +113,7 @@ function convertToSimulationResult(
     hasGasComparison: false,
     hasStateChanges: (() => {
       const hasPrestate = !!txResult.traceData?.prestateTracer
-      if (!hasPrestate) return false
+      if (!hasPrestate || !txResult.traceData) return false
 
       return hasPrestateChanges(txResult.traceData.prestateTracer)
     })(),

@@ -28,7 +28,7 @@ import type {
   PrestateTracerConfig,
   StateContext,
   StructLoggerConfig,
-  TracerManyResponse
+  TracerManyResponse,
 } from '@sdk/types/trace'
 import { AccessListClient } from './access-list-client'
 import { SimulationClient } from './simulation-client'
@@ -262,25 +262,28 @@ export class AltitraceClient {
     const config: any = {}
 
     if (options.callTracer) {
-      config.callTracer = typeof options.callTracer === 'boolean'
-        ? { onlyTopCall: false, withLogs: true }
-        : options.callTracer
+      config.callTracer =
+        typeof options.callTracer === 'boolean'
+          ? { onlyTopCall: false, withLogs: true }
+          : options.callTracer
     }
     if (options.prestateTracer) {
-      config.prestateTracer = typeof options.prestateTracer === 'boolean'
-        ? { diffMode: true, disableCode: false, disableStorage: false }
-        : options.prestateTracer
+      config.prestateTracer =
+        typeof options.prestateTracer === 'boolean'
+          ? { diffMode: true, disableCode: false, disableStorage: false }
+          : options.prestateTracer
     }
     if (options.structLogger) {
-      config.structLogger = typeof options.structLogger === 'boolean'
-        ? {
-          cleanStructLogs: true,
-          disableMemory: true,
-          disableReturnData: false,
-          disableStack: false,
-          disableStorage: false,
-        }
-        : options.structLogger
+      config.structLogger =
+        typeof options.structLogger === 'boolean'
+          ? {
+              cleanStructLogs: true,
+              disableMemory: true,
+              disableReturnData: false,
+              disableStack: false,
+              disableStorage: false,
+            }
+          : options.structLogger
     }
     if (options.fourByteTracer) {
       config['4byteTracer'] = true

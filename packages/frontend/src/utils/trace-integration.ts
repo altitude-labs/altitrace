@@ -84,10 +84,10 @@ export interface GasComparisonAnalysis {
     isBeneficial?: boolean
     /** Human-readable recommendation */
     recommendation:
-    | 'use-access-list'
-    | 'skip-access-list'
-    | 'neutral'
-    | 'unknown'
+      | 'use-access-list'
+      | 'skip-access-list'
+      | 'neutral'
+      | 'unknown'
     /** Status of the comparison */
     status: 'success' | 'partial' | 'failed'
     /** Error message if comparison failed */
@@ -1380,7 +1380,7 @@ export async function executeTransactionTrace(
         const mockRequest = {
           params: {
             account: rootCall.from, // Use the transaction sender as account
-          }
+          },
         } as SimulationRequest
 
         // Use the trace-based asset tracking function
@@ -1413,25 +1413,25 @@ export async function executeTransactionTrace(
       assetChanges: assetChanges || [],
       receipt: traceResult.receipt
         ? {
-          blockNumber: BigInt((traceResult.receipt as any).blockNumber || 0),
-          blockHash: (traceResult.receipt as any).blockHash || '',
-          transactionIndex:
-            (traceResult.receipt as any).transactionIndex || 0,
-          effectiveGasPrice: BigInt(
-            (traceResult.receipt as any).effectiveGasPrice || 0,
-          ),
-          contractAddress:
-            (traceResult.receipt as any).contractAddress || undefined,
-          blockGasUsed: (traceResult.receipt as any).blockGasUsed
-            ? BigInt((traceResult.receipt as any).blockGasUsed)
-            : undefined,
-          blockGasLimit: (traceResult.receipt as any).blockGasLimit
-            ? BigInt((traceResult.receipt as any).blockGasLimit)
-            : undefined,
-          baseFeePerGas: (traceResult.receipt as any).baseFeePerGas
-            ? BigInt((traceResult.receipt as any).baseFeePerGas)
-            : undefined,
-        }
+            blockNumber: BigInt((traceResult.receipt as any).blockNumber || 0),
+            blockHash: (traceResult.receipt as any).blockHash || '',
+            transactionIndex:
+              (traceResult.receipt as any).transactionIndex || 0,
+            effectiveGasPrice: BigInt(
+              (traceResult.receipt as any).effectiveGasPrice || 0,
+            ),
+            contractAddress:
+              (traceResult.receipt as any).contractAddress || undefined,
+            blockGasUsed: (traceResult.receipt as any).blockGasUsed
+              ? BigInt((traceResult.receipt as any).blockGasUsed)
+              : undefined,
+            blockGasLimit: (traceResult.receipt as any).blockGasLimit
+              ? BigInt((traceResult.receipt as any).blockGasLimit)
+              : undefined,
+            baseFeePerGas: (traceResult.receipt as any).baseFeePerGas
+              ? BigInt((traceResult.receipt as any).baseFeePerGas)
+              : undefined,
+          }
         : undefined,
       fetchedContracts:
         fetchedContracts.length > 0 ? fetchedContracts : undefined,
