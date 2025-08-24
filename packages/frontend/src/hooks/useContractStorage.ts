@@ -90,6 +90,18 @@ export function useContractStorage(): UseContractStorageReturn {
     loadContracts()
   }, [loadContracts])
 
+  // Listen for contractsUpdated events to refresh the list
+  useEffect(() => {
+    const handleContractsUpdated = () => {
+      loadContracts()
+    }
+
+    window.addEventListener('contractsUpdated', handleContractsUpdated)
+    return () => {
+      window.removeEventListener('contractsUpdated', handleContractsUpdated)
+    }
+  }, [loadContracts])
+
   const saveContract = useCallback(
     (
       contractData: StoredContract['contractData'],

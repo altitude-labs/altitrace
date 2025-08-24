@@ -31,12 +31,12 @@ export interface ContractFetchResult {
   implementationAddress?: Address
   implementationName?: string
   proxyType?:
-    | 'eip1967'
-    | 'transparent'
-    | 'uups'
-    | 'beacon'
-    | 'minimal'
-    | 'unknown'
+  | 'eip1967'
+  | 'transparent'
+  | 'uups'
+  | 'beacon'
+  | 'minimal'
+  | 'unknown'
   combinedAbi?: Abi // Proxy + Implementation ABIs combined
 }
 
@@ -51,9 +51,22 @@ export class ContractFetchError extends Error {
     message: string,
     public source: 'etherscan' | 'hyperscan',
     public statusCode?: number,
+    public isUnverified = false,
   ) {
     super(message)
     this.name = 'ContractFetchError'
+  }
+}
+
+export class ContractNotVerifiedError extends ContractFetchError {
+  constructor() {
+    super(
+      'Contract is not verified on HyperScan or Etherscan. Unable to fetch ABI and source code.',
+      'etherscan', // Last tried source
+      undefined,
+      true,
+    )
+    this.name = 'ContractNotVerifiedError'
   }
 }
 
@@ -62,13 +75,34 @@ export class ContractFetcher {
     etherscan: {
       name: 'etherscan',
       baseUrl: 'https://api.etherscan.io/v2/api',
-      requiresApiKey: false,
+      requiresApiKey: true,
     },
     hyperscan: {
       name: 'hyperscan',
       baseUrl: 'https://www.hyperscan.com/api/v2',
       requiresApiKey: false,
     },
+  }
+
+  /**
+   * Build Etherscan API URL with required parameters
+   */
+  private static buildEtherscanUrl(params: Record<string, string>): string {
+    const apiKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY
+    if (!apiKey) {
+      throw new ContractFetchError(
+        'NEXT_PUBLIC_ETHERSCAN_API_KEY environment variable is required',
+        'etherscan',
+      )
+    }
+
+    const urlParams = new URLSearchParams({
+      ...params,
+      chainid: '999',
+      apikey: apiKey,
+    })
+
+    return `${ContractFetcher.APIS.etherscan.baseUrl}?${urlParams.toString()}`
   }
 
   // Common proxy implementation slot addresses
@@ -156,9 +190,12 @@ export class ContractFetcher {
     try {
       if (source === 'etherscan') {
         // Etherscan has a specific API for proxy contracts
-        const response = await fetch(
-          `${ContractFetcher.APIS.etherscan.baseUrl}?module=contract&action=getabi&address=${address}`,
-        )
+        const url = ContractFetcher.buildEtherscanUrl({
+          module: 'contract',
+          action: 'getabi',
+          address,
+        })
+        const response = await fetch(url)
 
         if (response.ok) {
           const data = await response.json()
@@ -191,7 +228,7 @@ export class ContractFetcher {
           }
         }
       }
-    } catch (_error) {}
+    } catch (_error) { }
 
     return null
   }
@@ -292,22 +329,22 @@ export class ContractFetcher {
       filePath: data.file_path,
       compilerSettings: data.compiler_settings
         ? {
-            optimization: data.compiler_settings.optimizer
+          optimization: data.compiler_settings.optimizer
+            ? {
+              enabled: data.compiler_settings.optimizer.enabled,
+              runs: data.compiler_settings.optimizer.runs,
+            }
+            : data.optimization_enabled !== undefined
               ? {
-                  enabled: data.compiler_settings.optimizer.enabled,
-                  runs: data.compiler_settings.optimizer.runs,
-                }
-              : data.optimization_enabled !== undefined
-                ? {
-                    enabled: data.optimization_enabled,
-                    runs: data.optimizations_runs || 200,
-                  }
-                : undefined,
-            evmVersion: data.compiler_settings.evmVersion || data.evm_version,
-            compilationTarget: data.compiler_settings.compilationTarget,
-            libraries: data.compiler_settings.libraries,
-            remappings: data.compiler_settings.remappings,
-          }
+                enabled: data.optimization_enabled,
+                runs: data.optimizations_runs || 200,
+              }
+              : undefined,
+          evmVersion: data.compiler_settings.evmVersion || data.evm_version,
+          compilationTarget: data.compiler_settings.compilationTarget,
+          libraries: data.compiler_settings.libraries,
+          remappings: data.compiler_settings.remappings,
+        }
         : undefined,
       additionalSources: data.additional_sources?.map((source: any) => ({
         filePath: source.file_path,
@@ -385,16 +422,18 @@ export class ContractFetcher {
   private static async fetchFromEtherscan(
     address: Address,
   ): Promise<ContractFetchResult> {
-    const response = await fetch(
-      `${ContractFetcher.APIS.etherscan.baseUrl}?module=contract&action=getsourcecode&address=${address}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
+    const url = ContractFetcher.buildEtherscanUrl({
+      module: 'contract',
+      action: 'getsourcecode',
+      address,
+    })
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
-    )
+    })
 
     if (!response.ok) {
       throw new ContractFetchError(
@@ -549,6 +588,8 @@ export class ContractFetcher {
 
   /**
    * Attempt to fetch contract from multiple sources with fallback
+   * If first source returns unverified contract, tries second source
+   * If both return unverified, throws ContractNotVerifiedError
    */
   static async fetchContract(
     address: string,
@@ -565,25 +606,38 @@ export class ContractFetcher {
         : ['etherscan', 'hyperscan']
 
     let lastError: ContractFetchError | null = null
+    let unverifiedResults: ContractFetchResult[] = []
 
     for (const source of sources) {
       try {
-        if (source === 'hyperscan') {
-          return await ContractFetcher.fetchFromHyperScan(validAddress)
+        const result = source === 'hyperscan'
+          ? await ContractFetcher.fetchFromHyperScan(validAddress)
+          : await ContractFetcher.fetchFromEtherscan(validAddress)
+
+        // If contract is verified, return immediately
+        if (result.verified) {
+          return result
         }
-        return await ContractFetcher.fetchFromEtherscan(validAddress)
+
+        // Store unverified result to potentially return later
+        unverifiedResults.push(result)
       } catch (error) {
         lastError =
           error instanceof ContractFetchError
             ? error
             : new ContractFetchError(
-                error instanceof Error ? error.message : 'Unknown error',
-                source,
-              )
+              error instanceof Error ? error.message : 'Unknown error',
+              source,
+            )
       }
     }
 
-    // If we get here, all sources failed
+    // If we have unverified results but no verified ones, throw specialized error
+    if (unverifiedResults.length > 0) {
+      throw new ContractNotVerifiedError()
+    }
+
+    // If we get here, all sources failed with errors
     throw (
       lastError ||
       new ContractFetchError(
