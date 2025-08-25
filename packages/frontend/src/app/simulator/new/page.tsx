@@ -155,6 +155,8 @@ function NewSimulationPageContent() {
                         ? hexToDecimal(override.balance)
                         : override.balance,
                   })) || [],
+                // Include block overrides if they exist
+                blockOverrides: singleRequest.options?.blockOverrides || null,
               }))
             }
           } else if (
@@ -193,14 +195,12 @@ function NewSimulationPageContent() {
                       ? hexToDecimal(override.balance)
                       : override.balance,
                 })) || [],
+              // Include block overrides if they exist
+              blockOverrides:
+                bundleRequest.bundleRequest.blockOverrides || null,
             }
 
             setBundleFormData(bundleData)
-            console.log(
-              '🔗 [Bundle Pre-fill] Loaded bundle with',
-              bundleData.transactions.length,
-              'transactions',
-            )
           } else {
             // Handle legacy format (backward compatibility) - pre-bundle implementation
             const legacyRequest = storedSimulation.request as any
@@ -290,9 +290,6 @@ function NewSimulationPageContent() {
     setError(null)
 
     try {
-      console.log('\n🔗 [Bundle Simulation Setup] Preparing bundle request...')
-      console.log('📦 Bundle transactions:', request.transactions.length)
-
       // Store bundle simulation parameters for execution on results page
       const simulationId = generateSimulationId()
 
@@ -306,13 +303,6 @@ function NewSimulationPageContent() {
         title: `Bundle Simulation (${request.transactions.length} txs)`,
         tags: ['recent', 'bundle'],
       })
-
-      console.log(
-        `📋 [Storage] Saved bundle parameters with ID: ${simulationId}`,
-      )
-      console.log(
-        '🚀 [Navigation] Navigating to bundle results page for execution...',
-      )
 
       // Navigate to results page for bundle execution
       router.push(`/simulator/${simulationId}`)

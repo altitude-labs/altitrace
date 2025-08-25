@@ -15,7 +15,7 @@ export default defineConfig({
     'src/builders/helpers/block-override-helpers.ts',
     'src/types/index.ts',
     'src/utils/validation.ts',
-    'src/utils/viem-integration.ts',
+    'src/utils/viem.ts',
   ],
   format: ['esm', 'cjs'],
   dts: true,

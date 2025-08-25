@@ -7,6 +7,7 @@ import {
   CheckIcon,
   CoinsIcon,
   CopyIcon,
+  DatabaseIcon,
   ExternalLinkIcon,
   FuelIcon,
   HashIcon,
@@ -20,7 +21,7 @@ import {
   WalletIcon,
   XCircleIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { DecHexToggle } from '@/components/shared/DecHexToggle'
 import {
   CallTraceTree,
@@ -38,10 +39,18 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui'
+import { getErrorSummary, parseBlockchainError } from '@/utils/error-parser'
 import type { EnhancedSimulationResult } from '@/utils/trace-integration'
 import { AccessListView } from './AccessListView'
 import { EnhancedEventDisplay } from './EnhancedEventDisplay'
 import { EnhancedGasAnalysis } from './EnhancedGasAnalysis'
+import {
+  detectBlockSize,
+  getBlockSizeLabel,
+  getBlockSizeBadgeVariant,
+  extractGasLimit,
+} from '@/utils/block-utils'
+import { StateChangesView } from './StateChangesView'
 
 interface EnhancedSimulationResultsProps {
   result: EnhancedSimulationResult
@@ -127,6 +136,15 @@ export function EnhancedSimulationResults({
       disabled: !result.hasAccessList && !result.hasGasComparison,
     },
     {
+      id: 'statechanges',
+      label: 'State Changes',
+      icon: DatabaseIcon,
+      count: result.hasStateChanges
+        ? result.getStateChangesCount?.() || 0
+        : null,
+      disabled: !result.hasStateChanges,
+    },
+    {
       id: 'events',
       label: 'Events',
       icon: ListIcon,
@@ -137,7 +155,7 @@ export function EnhancedSimulationResults({
       label: 'Asset Changes',
       icon: CoinsIcon,
       count: assetChanges.length,
-      disabled: isTraceOnly, // Disable for trace-only results since they don't have asset tracking
+      disabled: assetChanges.length === 0, // Disable only if there are no asset changes
     },
     {
       id: 'request',
@@ -208,17 +226,17 @@ export function EnhancedSimulationResults({
               </div>
             </div>
 
-            {/* Desktop: Horizontal tabs */}
-            <TabsList className="hidden sm:grid w-full grid-cols-6 gap-1">
+            {/* Desktop: Horizontal tabs - Allow wrapping for better tab visibility */}
+            <TabsList className="hidden sm:flex w-full flex-wrap gap-1 h-auto min-h-10 p-1">
               {tabConfig.map((tab) => (
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
                   disabled={tab.disabled}
-                  className="flex items-center gap-1 text-xs p-2"
+                  className="flex items-center gap-1 text-xs p-2 min-w-fit whitespace-nowrap"
                 >
                   <tab.icon className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{tab.label}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
                   {tab.count !== null && (
                     <Badge
                       variant="secondary"
@@ -233,7 +251,10 @@ export function EnhancedSimulationResults({
 
             <div className="mt-6" data-tab-content>
               <TabsContent value="overview">
-                <SimulationOverview result={result} />
+                <SimulationOverview
+                  result={result}
+                  simulationRequest={simulationRequest}
+                />
               </TabsContent>
 
               <TabsContent value="calls">
@@ -256,6 +277,16 @@ export function EnhancedSimulationResults({
                   />
                 ) : (
                   <AccessListFallback />
+                )}
+              </TabsContent>
+
+              <TabsContent value="statechanges">
+                {result.hasStateChanges && result.traceData?.prestateTracer ? (
+                  <StateChangesView
+                    prestateData={result.traceData.prestateTracer}
+                  />
+                ) : (
+                  <StateChangesFallback />
                 )}
               </TabsContent>
 
@@ -285,13 +316,20 @@ function SimulationQuickStats({
   result: EnhancedSimulationResult
   simulationRequest?: EnhancedSimulationResultsProps['simulationRequest']
 }) {
-  // For trace results with receipt, use receipt block number, otherwise parse hex
+  // For trace results with receipt, use receipt block number, otherwise parse hex or decimal
   const traceResult = result as any
   const receiptData = traceResult.receipt
   const blockNumberDecimal = receiptData?.blockNumber
     ? Number(receiptData.blockNumber)
     : result.blockNumber
-      ? Number.parseInt(result.blockNumber, 16)
+      ? (() => {
+          // Try hex parsing first, then decimal if that fails
+          const hexValue = Number.parseInt(result.blockNumber, 16)
+          if (!isNaN(hexValue)) return hexValue
+
+          const decimalValue = Number(result.blockNumber)
+          return !isNaN(decimalValue) ? decimalValue : 0
+        })()
       : 0
 
   const gasUsedDecimal = Number(result.getTotalGasUsed())
@@ -367,9 +405,51 @@ function SimulationQuickStats({
                   <XCircleIcon className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
                 )}
                 <p className="text-sm sm:text-lg font-bold truncate">
-                  {result.status}
+                  {result.isSuccess() ? result.status : 'failed'}
                 </p>
               </div>
+              {!result.isSuccess() && result.getErrors().length > 0 && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1 line-clamp-2">
+                  {(() => {
+                    const errors = result.getErrors()
+                    // Find the most specific error (contract error data)
+                    const specificError = errors.find((error) => {
+                      const normalizedError =
+                        typeof error === 'string'
+                          ? error
+                          : {
+                              reason: error.reason,
+                              message: error.message || undefined,
+                            }
+                      const parsed = parseBlockchainError(normalizedError)
+                      return (
+                        parsed.type === 'revert' &&
+                        parsed.details &&
+                        parsed.details !== 'execution reverted' &&
+                        parsed.details !==
+                          'The transaction was reverted by the contract'
+                      )
+                    })
+
+                    if (specificError) {
+                      const errorMessage =
+                        typeof specificError === 'string'
+                          ? specificError
+                          : specificError.reason || specificError.message || ''
+                      return `Transaction reverted: ${errorMessage}`
+                    }
+
+                    const normalizedFirstError =
+                      typeof errors[0] === 'string'
+                        ? errors[0]
+                        : {
+                            reason: errors[0].reason,
+                            message: errors[0].message || undefined,
+                          }
+                    return getErrorSummary(normalizedFirstError)
+                  })()}
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -420,9 +500,31 @@ function SimulationQuickStats({
                 Events
               </p>
               <p className="text-sm sm:text-lg font-bold">{eventCount}</p>
-              <p className="text-xs text-muted-foreground">
-                Block #{blockNumberDecimal.toLocaleString()}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {blockNumberDecimal > 0
+                    ? `Block #${blockNumberDecimal.toLocaleString()}`
+                    : 'Block Info N/A'}
+                </p>
+                {blockNumberDecimal > 0 &&
+                  (() => {
+                    const gasLimit =
+                      extractGasLimit(simulationRequest) ||
+                      extractGasLimit(result)
+                    const blockSize = detectBlockSize(gasLimit)
+                    if (blockSize !== 'unknown') {
+                      return (
+                        <Badge
+                          variant={getBlockSizeBadgeVariant(blockSize)}
+                          className="text-xs"
+                        >
+                          {getBlockSizeLabel(blockSize)}
+                        </Badge>
+                      )
+                    }
+                    return null
+                  })()}
+              </div>
             </div>
             <ListIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0 mt-1" />
           </div>
@@ -498,13 +600,68 @@ function SimulationQuickStats({
   )
 }
 
-function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
+function SimulationOverview({
+  result,
+  simulationRequest,
+}: {
+  result: EnhancedSimulationResult
+  simulationRequest?: EnhancedSimulationResultsProps['simulationRequest']
+}) {
   const errors = result.getErrors()
   const assetChanges = result.getAssetChangesSummary()
 
   // Get transaction hash from receipt data (for trace results)
   const receiptData = (result as any).receipt
   const transactionHash = receiptData?.transactionHash
+
+  // Process errors to combine generic revert messages with actual error data
+  const processedErrors = React.useMemo(() => {
+    if (errors.length <= 1) return errors
+
+    // Parse all errors
+    const parsedErrors = errors.map((error) => {
+      const normalizedError =
+        typeof error === 'string'
+          ? error
+          : {
+              reason: error.reason,
+              message: error.message || undefined,
+            }
+      return {
+        original: error,
+        parsed: parseBlockchainError(normalizedError),
+      }
+    })
+
+    // Look for pairs of generic revert + specific error data
+    const genericReverts = parsedErrors.filter(
+      (e) =>
+        e.parsed.type === 'revert' &&
+        (e.parsed.details === 'execution reverted' ||
+          e.parsed.details === 'The transaction was reverted by the contract' ||
+          !e.parsed.details),
+    )
+
+    const specificErrors = parsedErrors.filter((e) => {
+      // Contract error codes or specific error messages
+      if (e.parsed.type === 'revert' && e.parsed.details) {
+        const details = e.parsed.details
+        return (
+          details !== 'execution reverted' &&
+          details !== 'The transaction was reverted by the contract'
+        )
+      }
+      return e.parsed.type !== 'revert'
+    })
+
+    // If we have both generic and specific errors, prefer specific ones
+    if (genericReverts.length > 0 && specificErrors.length > 0) {
+      return specificErrors.map((e) => e.original)
+    }
+
+    // Otherwise return all errors
+    return errors
+  }, [errors])
 
   return (
     <div className="space-y-6">
@@ -550,8 +707,25 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
               >
                 Block Number
               </label>
-              <div className="mt-1">
+              <div className="mt-1 flex items-center gap-2">
                 <DecHexToggle value={result.blockNumber} />
+                {(() => {
+                  const gasLimit =
+                    extractGasLimit(simulationRequest) ||
+                    extractGasLimit(result)
+                  const blockSize = detectBlockSize(gasLimit)
+                  if (blockSize !== 'unknown') {
+                    return (
+                      <Badge
+                        variant={getBlockSizeBadgeVariant(blockSize)}
+                        className="text-xs"
+                      >
+                        {getBlockSizeLabel(blockSize)}
+                      </Badge>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             </div>
             <div>
@@ -597,24 +771,59 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
       </div>
 
       {/* Errors */}
-      {errors.length > 0 && (
-        <Card className="border-red-200 bg-red-50 dark:bg-red-950">
+      {processedErrors.length > 0 && (
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
-              <AlertTriangleIcon className="h-4 w-4" />
-              Errors ({errors.length})
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/20">
+                <AlertTriangleIcon className="h-4 w-4 text-red-600 dark:text-red-500" />
+              </div>
+              {processedErrors.length === 1
+                ? 'Error'
+                : `Errors (${processedErrors.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {errors.map((error, index: number) => (
-                <div
-                  key={`error-${error.reason || error.message || index}`}
-                  className="text-sm text-red-600 dark:text-red-400"
-                >
-                  {error.reason || error.message || 'Unknown error'}
-                </div>
-              ))}
+            <div className="space-y-3">
+              {processedErrors.map((error, index: number) => {
+                const normalizedError =
+                  typeof error === 'string'
+                    ? error
+                    : {
+                        reason: error.reason,
+                        message: error.message || undefined,
+                      }
+                const parsedError = parseBlockchainError(normalizedError)
+                // For short error codes or specific contract errors, show them prominently
+                const isContractError =
+                  parsedError.type === 'revert' &&
+                  parsedError.details &&
+                  parsedError.details !==
+                    'The transaction was reverted by the contract'
+
+                return (
+                  <div
+                    key={`error-${error.reason || error.message || index}`}
+                    className="flex gap-3 p-3 rounded-lg bg-muted/50"
+                  >
+                    <div className="mt-0.5">
+                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="font-medium">
+                        {isContractError ? 'Contract Error' : parsedError.title}
+                      </div>
+                      {parsedError.details && (
+                        <div
+                          className={`text-sm ${isContractError ? 'font-mono text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
+                        >
+                          {parsedError.details}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -630,33 +839,12 @@ function SimulationOverview({ result }: { result: EnhancedSimulationResult }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {assetChanges.map((change, index: number) => (
-                <div
+                <AssetChangeSummaryCard
                   key={`asset-${change.tokenAddress}-${change.type}-${index}`}
-                  className="flex items-center justify-between p-2 bg-muted/50 rounded"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm">{change.symbol}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {change.tokenAddress.slice(0, 6)}...
-                    </Badge>
-                  </div>
-                  <div
-                    className={`flex items-center gap-1 ${
-                      change.type === 'gain' ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {change.type === 'gain' ? (
-                      <TrendingUpIcon className="h-3 w-3" />
-                    ) : (
-                      <TrendingDownIcon className="h-3 w-3" />
-                    )}
-                    <span className="font-mono text-sm">
-                      {change.netChange}
-                    </span>
-                  </div>
-                </div>
+                  change={change}
+                />
               ))}
             </div>
           </CardContent>
@@ -844,6 +1032,7 @@ function EventsBreakdown({ result }: { result: EnhancedSimulationResult }) {
   // Extract ABI information if available (for trace results with auto-fetched ABIs)
   const availableABI = (result as any).combinedABI || undefined
   const fetchedContracts = (result as any).fetchedContracts || undefined
+  const contractsLoading = (result as any).contractsLoading || false
 
   // Filter calls that have logs
   const callsWithLogs = result.calls.filter(
@@ -866,6 +1055,16 @@ function EventsBreakdown({ result }: { result: EnhancedSimulationResult }) {
 
   return (
     <div className="space-y-4">
+      {/* Contract ABI Loading Indicator */}
+      {contractsLoading && (
+        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-dashed">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="text-sm text-muted-foreground">
+            Fetching contract ABIs for enhanced event decoding...
+          </div>
+        </div>
+      )}
+      
       {callsWithLogs.map((call, index: number) => (
         <EnhancedEventDisplay
           key={`event-${call.status}-${index}`}
@@ -917,7 +1116,32 @@ function AssetChangesBreakdown({
   )
 }
 
-function AssetChangeCard({ change }: { change: any }) {
+// Helper function to format token amounts with proper decimals
+const formatTokenAmount = (amount: string, decimals?: number) => {
+  if (!amount || amount === '0') return '0'
+
+  try {
+    const value = BigInt(amount)
+    if (decimals && decimals > 0) {
+      const divisor = BigInt(10 ** decimals)
+      const wholePart = value / divisor
+      const fractionalPart = value % divisor
+
+      if (fractionalPart === 0n) {
+        return wholePart.toString()
+      }
+      const fractionalStr = fractionalPart.toString().padStart(decimals, '0')
+      const trimmed = fractionalStr.replace(/0+$/, '')
+      return `${wholePart}.${trimmed}`
+    }
+    return value.toString()
+  } catch {
+    return amount
+  }
+}
+
+// Enhanced asset change summary card with better UI
+function AssetChangeSummaryCard({ change }: { change: any }) {
   const [copied, setCopied] = useState(false)
 
   const copyToClipboard = async (text: string) => {
@@ -931,34 +1155,109 @@ function AssetChangeCard({ change }: { change: any }) {
   }
 
   const getExplorerUrl = (address: string) => {
-    // Using HyperScan for HyperEVM
     return `https://hyperscan.com/address/${address}`
   }
 
-  const formatTokenAmount = (amount: string, decimals?: number) => {
-    if (!amount || amount === '0') return '0'
+  const isHYPE =
+    change.tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+  const displaySymbol =
+    change.symbol && change.symbol !== 'null'
+      ? change.symbol
+      : isHYPE
+        ? 'HYPE'
+        : `Token (${change.tokenAddress.slice(0, 6)}...)`
 
+  return (
+    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div
+          className={`p-1.5 rounded-full ${
+            change.type === 'gain'
+              ? 'bg-green-100 dark:bg-green-900'
+              : 'bg-red-100 dark:bg-red-900'
+          }`}
+        >
+          {change.type === 'gain' ? (
+            <TrendingUpIcon className="h-3 w-3 text-green-600 dark:text-green-400" />
+          ) : (
+            <TrendingDownIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm">{displaySymbol}</span>
+            {change.symbol && change.symbol !== 'null' && (
+              <Badge variant="outline" className="text-xs">
+                {isHYPE ? 'Native' : 'ERC-20'}
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {isHYPE ? (
+              <span>Native Token</span>
+            ) : (
+              <>
+                <a
+                  href={getExplorerUrl(change.tokenAddress)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono hover:text-blue-600 transition-colors"
+                  title={change.tokenAddress}
+                >
+                  {change.tokenAddress.slice(0, 8)}...
+                  {change.tokenAddress.slice(-6)}
+                </a>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(change.tokenAddress)}
+                  className="h-3 w-3 p-0 hover:bg-transparent"
+                  title="Copy token address"
+                >
+                  {copied ? (
+                    <CheckIcon className="h-2 w-2 text-green-500" />
+                  ) : (
+                    <CopyIcon className="h-2 w-2" />
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`flex items-center gap-1.5 ${
+          change.type === 'gain' ? 'text-green-600' : 'text-red-600'
+        }`}
+      >
+        <span className="font-mono text-sm font-medium">
+          {change.type === 'gain' ? '+' : ''}
+          {formatTokenAmount(change.netChange, change.decimals ?? undefined)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function AssetChangeCard({ change }: { change: any }) {
+  const [copied, setCopied] = useState(false)
+
+  const copyToClipboard = async (text: string) => {
     try {
-      const value = BigInt(amount)
-      if (decimals && decimals > 0) {
-        const divisor = BigInt(10 ** decimals)
-        const wholePart = value / divisor
-        const fractionalPart = value % divisor
-
-        if (fractionalPart === 0n) {
-          return wholePart.toString()
-        } else {
-          const fractionalStr = fractionalPart
-            .toString()
-            .padStart(decimals, '0')
-          const trimmed = fractionalStr.replace(/0+$/, '')
-          return `${wholePart}.${trimmed}`
-        }
-      }
-      return value.toString()
-    } catch (error) {
-      return amount
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Failed to copy to clipboard
     }
+  }
+
+  const getExplorerUrl = (address: string) => {
+    // Using HyperScan for HyperEVM
+    return `https://hyperscan.com/address/${address}`
   }
 
   const displaySymbol =
@@ -1088,6 +1387,36 @@ function AccessListFallback() {
   )
 }
 
+function StateChangesFallback() {
+  return (
+    <div className="text-center py-12 text-muted-foreground space-y-4">
+      <DatabaseIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium text-foreground">
+          State Changes Not Available
+        </h3>
+        <p className="text-sm max-w-md mx-auto">
+          State changes tracking failed or is not supported for this simulation.
+          This feature requires trace data with the prestate tracer enabled in
+          diff mode.
+        </p>
+      </div>
+      <div className="bg-muted/50 border rounded-lg max-w-lg mx-auto p-4 text-xs">
+        <p className="font-medium mb-2 text-foreground">
+          🔍 About State Changes Tracking
+        </p>
+        <ul className="text-left space-y-1 text-muted-foreground">
+          <li>• Track all account balance changes during execution</li>
+          <li>• Monitor nonce updates for transaction accounts</li>
+          <li>• View storage slot modifications with before/after values</li>
+          <li>• Identify contract code updates and deployments</li>
+          <li>• Essential for understanding transaction side effects</li>
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 function RequestParametersView({
   simulationRequest,
 }: {
@@ -1149,9 +1478,9 @@ function RequestParametersView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {options?.bundleId && (
                   <div>
-                    <label className="font-medium text-muted-foreground">
+                    <div className="font-medium text-muted-foreground">
                       Bundle ID
-                    </label>
+                    </div>
                     <p className="font-mono text-xs break-all mt-1">
                       {options.bundleId}
                     </p>
@@ -1159,26 +1488,26 @@ function RequestParametersView({
                 )}
                 {options?.bundleIndex !== undefined && (
                   <div>
-                    <label className="font-medium text-muted-foreground">
+                    <div className="font-medium text-muted-foreground">
                       Transaction Position
-                    </label>
+                    </div>
                     <p className="mt-1">
                       Transaction #{options.bundleIndex + 1} in bundle
                     </p>
                   </div>
                 )}
                 <div>
-                  <label className="font-medium text-muted-foreground">
+                  <div className="font-medium text-muted-foreground">
                     Execution Context
-                  </label>
+                  </div>
                   <p className="mt-1">
                     Part of sequential bundle execution with state dependency
                   </p>
                 </div>
                 <div>
-                  <label className="font-medium text-muted-foreground">
+                  <div className="font-medium text-muted-foreground">
                     Block Context
-                  </label>
+                  </div>
                   <p className="font-mono text-sm mt-1">
                     {params.blockNumber || params.blockTag || 'latest'}
                   </p>
@@ -1210,7 +1539,7 @@ function RequestParametersView({
                         htmlFor="from-address"
                         className="text-sm font-medium text-muted-foreground"
                       >
-                        From Address
+                        From
                       </label>
                       <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
                         <span className="sm:hidden">{`${call.from.slice(0, 10)}...${call.from.slice(-8)}`}</span>
@@ -1224,7 +1553,7 @@ function RequestParametersView({
                         htmlFor="to-address"
                         className="text-sm font-medium text-muted-foreground"
                       >
-                        To Address
+                        To
                       </label>
                       <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1 break-all sm:break-normal">
                         <span className="sm:hidden">{`${call.to.slice(0, 10)}...${call.to.slice(-8)}`}</span>
@@ -1241,16 +1570,8 @@ function RequestParametersView({
                           Call Data
                         </label>
                         <p className="font-mono text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
-                          <span className="sm:hidden">
-                            {call.data.length > 50
-                              ? `${call.data.slice(0, 50)}...`
-                              : call.data}
-                          </span>
-                          <span className="hidden sm:inline">
-                            {call.data.length > 100
-                              ? `${call.data.slice(0, 100)}...`
-                              : call.data}
-                          </span>
+                          <span className="sm:hidden">{call.data}</span>
+                          <span className="hidden sm:inline">{call.data}</span>
                         </p>
                       </div>
                     )}

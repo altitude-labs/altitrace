@@ -18,6 +18,12 @@ import {
   CardTitle,
 } from '@/components/ui'
 import { formatWeiValue } from '@/utils/abi'
+import {
+  detectBlockSize,
+  getBlockSizeLabel,
+  getBlockSizeBadgeVariant,
+  extractGasLimit,
+} from '@/utils/block-utils'
 
 interface SimulationResultsProps {
   result: ExtendedSimulationResult
@@ -46,11 +52,30 @@ export function SimulationResults({ result }: SimulationResultsProps) {
                   Block Number
                 </span>
               </div>
-              <div className="font-mono text-lg">
-                {blockNumberDecimal.toLocaleString()}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {result.blockNumber}
+              <div className="flex items-center gap-2">
+                <div>
+                  <div className="font-mono text-lg">
+                    {blockNumberDecimal.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {result.blockNumber}
+                  </div>
+                </div>
+                {(() => {
+                  const gasLimit = extractGasLimit(result)
+                  const blockSize = detectBlockSize(gasLimit)
+                  if (blockSize !== 'unknown') {
+                    return (
+                      <Badge
+                        variant={getBlockSizeBadgeVariant(blockSize)}
+                        className="text-xs"
+                      >
+                        {getBlockSizeLabel(blockSize)}
+                      </Badge>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             </div>
 

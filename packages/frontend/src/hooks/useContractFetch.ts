@@ -2,6 +2,7 @@ import type { Address } from '@altitrace/sdk/types'
 import { useCallback, useState } from 'react'
 import {
   ContractFetchError,
+  ContractNotVerifiedError,
   ContractFetcher,
   type ContractFetchResult,
 } from '@/services/contract-fetcher'
@@ -51,7 +52,9 @@ export function useContractFetch(): UseContractFetchReturn {
       } catch (err) {
         let errorMessage = 'Failed to fetch contract'
 
-        if (err instanceof ContractFetchError) {
+        if (err instanceof ContractNotVerifiedError) {
+          errorMessage = err.message
+        } else if (err instanceof ContractFetchError) {
           errorMessage = `${err.source === 'etherscan' ? 'Etherscan' : 'HyperScan'}: ${err.message}`
         } else if (err instanceof Error) {
           errorMessage = err.message
@@ -118,7 +121,9 @@ export function useAbiOnlyFetch(): UseAbiOnlyFetchReturn {
       } catch (err) {
         let errorMessage = 'Failed to fetch ABI'
 
-        if (err instanceof ContractFetchError) {
+        if (err instanceof ContractNotVerifiedError) {
+          errorMessage = err.message
+        } else if (err instanceof ContractFetchError) {
           errorMessage = `${err.source === 'etherscan' ? 'Etherscan' : 'HyperScan'}: ${err.message}`
         } else if (err instanceof Error) {
           errorMessage = err.message

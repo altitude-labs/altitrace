@@ -176,17 +176,10 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
 }> {
   try {
     // Disable automatic preloading to avoid interference with cached compilers
-    console.log(`🎯 getCompatibleSolc called with: ${requestedVersion}`)
-    // if (!isPreloading && !preloadingPromise) {
-    //   preloadCompilers().catch(err =>
-    //     console.log('Background preloading failed:', err?.message || err)
-    //   )
-    // }
 
     // Check cache first
     const cached = compilerCache.get(requestedVersion)
     if (cached) {
-      console.log(`📋 Using cached compiler for ${requestedVersion}`)
       return { compiler: cached.compiler, usedFallback: cached.usedFallback }
     }
 
@@ -199,8 +192,6 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
     if (versionMatch && !VERSION_MAP[requestedVersion]) {
       actualVersion = versionMatch[1] // Extract just the version number (e.g., "0.7.6")
     }
-
-    console.log(`🔄 Version mapping: ${requestedVersion} -> ${actualVersion}`)
 
     // For 0.8.30 (our installed version), use the default solc
     if (actualVersion === '0.8.30' || requestedVersion.includes('0.8.30')) {
@@ -246,8 +237,7 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
           compilerCache.set(actualVersion, result)
           return result
         }
-      } catch (error) {
-        console.error(error)
+      } catch {
       }
 
       // Fallback to dynamic loading
@@ -265,8 +255,7 @@ async function getCompatibleSolc(requestedVersion: string): Promise<{
           compilerCache.set(actualVersion, result)
           return result
         }
-      } catch (error) {
-        console.error(error)
+      } catch {
       }
     }
 
@@ -432,16 +421,11 @@ async function compileContract(
 
     // Auto-detect Solidity version from pragma
     const detectedVersion = extractSolidityVersion(sourceCode)
-    if (detectedVersion) {
-      console.log(`Detected Solidity version: ${detectedVersion}`)
-    }
 
     // Get compatible compiler - prefer user-selected version, fallback to detected version
     const targetVersion =
       data.compilerVersion || detectedVersion || 'v0.8.19+commit.7dd6d404'
-    console.log(
-      `🎯 Target version for compilation: ${targetVersion} (detected: ${detectedVersion}, user: ${data.compilerVersion})`,
-    )
+
     const compilerResult = await getCompatibleSolc(targetVersion)
     const compiler = compilerResult.compiler
     const usedFallback = compilerResult.usedFallback

@@ -240,7 +240,6 @@ export function CodeEditDialog({
                   onChange={handleSourceCodeChange}
                   language="solidity"
                   height="500px"
-                  onCompile={() => {}}
                 />
               </div>
 

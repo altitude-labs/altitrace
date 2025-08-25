@@ -243,11 +243,6 @@ export function CompilerPanel({
         if (matchingVersion && matchingVersion !== selectedVersion) {
           setSelectedVersion(matchingVersion)
           setIsAutoDetected(true)
-
-          // Show user that version was auto-detected
-          console.log(
-            `Auto-detected compiler version: ${output.detectedVersion} -> ${matchingVersion}`,
-          )
         }
       }
 

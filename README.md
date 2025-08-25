@@ -1,5 +1,8 @@
 # Altitrace
 
+<img width="1920" height="1080" alt="altitrace-embedded" src="https://github.com/user-attachments/assets/17b136ea-5e16-45a7-8471-157cf797af00" />
+
+
 A friendly transaction simulator for the HyperEVM ecosystem. Test, debug, and understand your transactions before they go on-chain.
 
 ## What is Altitrace?
@@ -10,7 +13,6 @@ Altitrace helps you simulate EVM transactions with precision and ease. Whether y
 - Simulate transactions against live or historical HyperEVM state
 - Override account balances, contract code, and storage
 - Get detailed gas usage, traces, and decoded events
-- Test complex transaction bundles and MEV strategies
 
 ## Getting Started
 
@@ -49,13 +51,11 @@ console.log('Status:', result.status)
 
 Altitrace consists of three main parts:
 
-**🔧 API Server** - REST and RPC endpoints for simulation and tracing
-- Rust-powered for speed and reliability
-- HyperEVM-native with full precompile support
+**🔧 API Server** - REST endpoint for simulation and tracing
 - Compatible with existing EVM tooling
 
 **📦 TypeScript SDK** - Developer-friendly client library
-- Strongly typed with zero `any` usage
+- Strongly typed
 - Fluent builder APIs for complex scenarios
 - Built-in retry logic and error handling
 
@@ -82,32 +82,10 @@ Altitrace consists of three main parts:
 - State changes and storage access patterns
 - Decoded event logs and function calls
 
-### Batch Operations
-- Simulate transaction bundles
-- Test MEV strategies and arbitrage
-- Analyze complex DeFi interactions
-
-## Use Cases
-
-**DeFi Development** - Test swaps, liquidations, and protocol interactions
-**Smart Contract Testing** - Validate logic before deployment
-**MEV Research** - Analyze arbitrage and sandwich opportunities
-**Wallet Development** - Preview transaction outcomes for users
-**Protocol Integration** - Understand third-party contract behavior
-
-## Community & Support
-
+## Support
 - 📖 [Documentation](https://docs.altitrace.reachaltitude.xyz) - Complete guides and API reference
-- 💬 [Discord](https://discord.gg/altitrace) - Community support and discussion
 - 🐛 [GitHub Issues](https://github.com/altitude-labs/altitrace/issues) - Bug reports and feature requests
-- 🔗 [Examples](https://github.com/altitude-dev/altitrace-examples) - Real-world usage patterns
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Contributing
-
-We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
-
-Built with ❤️ for the HyperEVM ecosystem.
+GNU GPL-3.0 License - see [LICENSE](LICENSE) for details.
