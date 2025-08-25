@@ -80,13 +80,14 @@
   },
   "files": [
     "dist/**/*",
+    "src/generated/api-types.ts",
     "README.md",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsup && bun run generate:types",
+    "build": "tsup",
     "build:types": "bun run generate:types",
-    "generate:types": "openapi-typescript ../api/swagger.json --output src/generated/api-types.ts",
+    "generate:types": "openapi-typescript swagger.json --output src/generated/api-types.ts",
     "dev": "tsup --watch",
     "test": "bun test",
     "test:watch": "bun test --watch",
@@ -96,7 +97,7 @@
     "lint": "biome check . --write --unsafe && biome format . --write",
     "lint:check": "biome check .",
     "clean": "rm -rf dist",
-    "prepublishOnly": "bun run clean && bun run build && bun run test && bun run typecheck"
+    "prepublishOnly": "bun run clean && bun run build:types && bun run build && bun run test && bun run typecheck"
   },
   "keywords": [
     "ethereum",

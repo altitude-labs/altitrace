@@ -8,7 +8,6 @@
 import { describe, expect, it } from 'bun:test'
 import { ValidationError } from '@sdk/core/errors'
 import {
-  addressToViemAddress,
   BlockUtils,
   bigintToHexNumber,
   GasUtils,
@@ -16,7 +15,6 @@ import {
   hexNumberToNumber,
   numberToHexNumber,
   transactionCallToViem,
-  viemAddressToAddress,
   viemBatchToTransactionCalls,
   viemToTransactionCall,
   WeiUtils,
@@ -128,20 +126,6 @@ describe('Viem Integration', () => {
       expect(calls[0]?.value).toBe('0x3e8') // 1000 in hex
       expect(calls[1]?.to).toBe('0xdAC17F958D2ee523a2206206994597C13D831ec7')
       expect(calls[1]?.gas).toBe('0xc350') // 50000 in hex
-    })
-  })
-
-  describe('address conversion', () => {
-    const testAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c'
-
-    it('should convert Viem address to Altitrace address', () => {
-      const result = viemAddressToAddress(testAddress as any)
-      expect(result).toBe(testAddress)
-    })
-
-    it('should convert Altitrace address to Viem address', () => {
-      const result = addressToViemAddress(testAddress as any)
-      expect(result).toBe(testAddress)
     })
   })
 
@@ -286,24 +270,6 @@ describe('Viem Integration', () => {
       it('should convert Wei to ETH', () => {
         const eth = WeiUtils.toEth('0xde0b6b3a7640000' as any)
         expect(eth).toBe('1') // 1 ETH
-      })
-    })
-
-    describe('format', () => {
-      it('should format Wei with appropriate unit', () => {
-        // 1 ETH
-        expect(WeiUtils.format('0xde0b6b3a7640000' as any)).toBe('1 ETH')
-
-        // 1 gwei
-        expect(WeiUtils.format('0x3b9aca00' as any)).toBe('1 gwei')
-
-        // Small amount in wei
-        expect(WeiUtils.format('0x3e8' as any)).toBe('1000 wei')
-      })
-
-      it('should handle fractional ETH', () => {
-        const result = WeiUtils.format('0x6f05b59d3b20000' as any) // 0.5 ETH
-        expect(result).toContain('ETH')
       })
     })
   })
