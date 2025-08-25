@@ -21,6 +21,8 @@ import {
   type EnhancedTraceResult,
   executeEnhancedSimulation,
   executeTransactionTrace,
+  fetchContractsForTrace,
+  getStateChangesCount,
 } from '@/utils/trace-integration'
 import {
   executeBundleSimulation,
@@ -99,6 +101,7 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
   const [executing, setExecuting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [contractsLoading, setContractsLoading] = useState(false)
 
   useEffect(() => {
     params.then(setResolvedParams)
@@ -174,6 +177,26 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
             hasErrors: !result.success,
           }
           await updateResult(resolvedParams.id, resultData)
+
+          // Start background contract fetching after displaying initial results
+          setContractsLoading(true)
+          fetchContractsForTrace(result)
+            .then((contractData) => {
+              // Update trace result with contract data
+              setTraceResult((prevResult) => {
+                if (!prevResult) return prevResult
+                return {
+                  ...prevResult,
+                  fetchedContracts: contractData.fetchedContracts.length > 0 ? contractData.fetchedContracts : undefined,
+                  combinedABI: contractData.combinedABI || undefined,
+                  decodedEvents: contractData.decodedEvents.length > 0 ? contractData.decodedEvents : undefined,
+                }
+              })
+            })
+            .catch()
+            .finally(() => {
+              setContractsLoading(false)
+            })
         } else {
           // Single simulation
           setRequestType('simulation')
@@ -484,6 +507,14 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 hasCallHierarchy: traceResult.hasCallHierarchy,
                 hasAccessList: false,
                 hasGasComparison: false,
+                hasStateChanges: traceResult.hasStateChanges,
+                hasAssetChanges: !!(
+                  traceResult.assetChanges &&
+                  traceResult.assetChanges.length > 0
+                ),
+                getStateChangesCount: () =>
+                  getStateChangesCount(traceResult.traceData?.prestateTracer),
+
                 isSuccess: () => traceResult.success,
                 isFailed: () => !traceResult.success,
                 getTotalGasUsed: () => traceResult.gasUsed,
@@ -494,7 +525,23 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                   ) || (() => []),
                 getLogCount: () =>
                   traceResult.traceData.getAllLogs?.()?.length || 0,
-                getAssetChangesSummary: () => [],
+                getAssetChangesSummary: () => {
+                  if (
+                    !traceResult.assetChanges ||
+                    traceResult.assetChanges.length === 0
+                  ) {
+                    return []
+                  }
+
+                  // Convert trace asset changes to AssetChangeSummary format
+                  return traceResult.assetChanges.map((change: any) => ({
+                    tokenAddress: change.tokenAddress,
+                    symbol: change.symbol,
+                    decimals: change.decimals,
+                    netChange: change.netChange,
+                    type: change.type as 'gain' | 'loss',
+                  }))
+                },
                 // Include receipt data from trace result
                 receipt: traceResult.receipt,
                 blockNumber: traceResult.receipt?.blockNumber
@@ -503,6 +550,8 @@ export default function ResultsViewer({ params }: ResultsViewerProps) {
                 // Include auto-fetched ABI information for enhanced event decoding
                 combinedABI: traceResult.combinedABI,
                 fetchedContracts: traceResult.fetchedContracts,
+                // Add contracts loading state for display
+                contractsLoading,
               } as any
             }
             simulationRequest={undefined}

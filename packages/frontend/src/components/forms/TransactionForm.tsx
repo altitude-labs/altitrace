@@ -3,6 +3,7 @@
 import type {
   Address,
   BlockTag,
+  BlockOverrides,
   HexString as Hex,
   SimulationParams,
   SimulationRequest,
@@ -49,6 +50,8 @@ import {
   validateValue,
 } from '@/utils/validation'
 import { StateOverrideForm } from './StateOverrideForm'
+import { BlockOverrideForm } from './BlockOverrideForm'
+import { useBlockOverrides } from '@/hooks/useBlockOverrides'
 
 interface TransactionFormProps {
   onSubmit: (request: SimulationRequest) => void
@@ -75,6 +78,7 @@ interface FormData {
   blockNumber: string
   validation: boolean
   stateOverrides: StateOverride[]
+  blockOverrides?: BlockOverrides | null
 }
 
 const initialFormData: FormData = {
@@ -87,6 +91,7 @@ const initialFormData: FormData = {
   blockNumber: '',
   validation: true,
   stateOverrides: [],
+  blockOverrides: null,
 }
 
 export function TransactionForm({
@@ -111,6 +116,13 @@ export function TransactionForm({
   const [txHash, setTxHash] = useState('')
   const [loadingTx, setLoadingTx] = useState(false)
   const [txLoadError, setTxLoadError] = useState<string | null>(null)
+
+  // Block overrides
+  const {
+    blockOverrides,
+    setBlockOverrides,
+    getCleanOverrides: getCleanBlockOverrides,
+  } = useBlockOverrides(initialData?.blockOverrides)
   const [tracingTx, setTracingTx] = useState(false)
 
   // Update data field when function data is generated
@@ -151,10 +163,16 @@ export function TransactionForm({
                 ? hexToDecimal(override.balance)
                 : override.balance,
           })) || prev.stateOverrides,
+        blockOverrides: initialData.blockOverrides || prev.blockOverrides,
       }))
       setUseBlockNumber(!!initialData.blockNumber)
+
+      // Set block overrides if provided
+      if (initialData.blockOverrides) {
+        setBlockOverrides(initialData.blockOverrides)
+      }
     }
-  }, [initialData])
+  }, [initialData, setBlockOverrides])
 
   const handleLoadTransaction = async () => {
     if (!isValidTransactionHash(txHash)) {
@@ -358,21 +376,28 @@ export function TransactionForm({
         traceAssetChanges: true,
         traceTransfers: true,
       },
-      // State overrides go in options, not params
-      ...(formData.stateOverrides.length > 0 && {
+      // Add options if we have overrides
+      ...((formData.stateOverrides.length > 0 || getCleanBlockOverrides()) && {
         options: {
-          stateOverrides: formData.stateOverrides
-            .filter((override) => override.address) // Only include overrides with addresses
-            .map((override) => cleanStateOverride(override)) // Clean and normalize each override
-            .filter((override) => {
-              // Only include overrides that actually override something
-              return (
-                override.balance ||
-                (override.nonce !== null && override.nonce !== undefined) ||
-                override.code ||
-                (override.state && override.state.length > 0)
-              )
-            }),
+          // State overrides
+          ...(formData.stateOverrides.length > 0 && {
+            stateOverrides: formData.stateOverrides
+              .filter((override) => override.address) // Only include overrides with addresses
+              .map((override) => cleanStateOverride(override)) // Clean and normalize each override
+              .filter((override) => {
+                // Only include overrides that actually override something
+                return (
+                  override.balance ||
+                  (override.nonce !== null && override.nonce !== undefined) ||
+                  override.code ||
+                  (override.state && override.state.length > 0)
+                )
+              }),
+          }),
+          // Block overrides
+          ...(getCleanBlockOverrides() && {
+            blockOverrides: getCleanBlockOverrides(),
+          }),
         },
       }),
     }
@@ -691,6 +716,15 @@ export function TransactionForm({
                   onChange={(stateOverrides) =>
                     handleInputChange('stateOverrides', stateOverrides)
                   }
+                  compact={compact}
+                />
+              )}
+
+              {/* Block Overrides */}
+              {showAdvanced && (
+                <BlockOverrideForm
+                  blockOverrides={blockOverrides}
+                  onChange={setBlockOverrides}
                   compact={compact}
                 />
               )}

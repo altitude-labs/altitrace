@@ -8,15 +8,13 @@ import {
   FileTextIcon,
   HomeIcon,
   PlusIcon,
-  SettingsIcon,
   ZapIcon,
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui'
-import { useContractStorage } from '@/hooks/useContractStorage'
 
 interface SidebarProps {
   isCollapsed?: boolean
@@ -35,16 +33,6 @@ export function Sidebar({
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['simulator', 'contracts']),
   )
-  const [isClient, setIsClient] = useState(false)
-  const { getStats } = useContractStorage()
-  const contractStats = isClient
-    ? getStats()
-    : { total: 0, today: 0, byStatus: {}, bySource: {} }
-
-  // Handle client-side hydration
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections)
@@ -241,7 +229,6 @@ export function Sidebar({
             href="/contracts"
             icon={FileTextIcon}
             label="Library"
-            badge={contractStats.total > 0 ? contractStats.total : undefined}
             isSubItem
           />
           <NavItem
@@ -251,11 +238,6 @@ export function Sidebar({
             isSubItem
           />
         </SectionHeader>
-
-        {/* Settings */}
-        <div className="pt-4 border-t">
-          <NavItem href="/settings" icon={SettingsIcon} label="Settings" />
-        </div>
       </nav>
 
       {/* Collapse Toggle */}

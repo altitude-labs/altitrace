@@ -136,49 +136,25 @@ export async function requiresStateOverrideAsync(
   const hasBytecode = !!contract.contractData?.bytecode
 
   if (!hasAddress || !hasBytecode) {
-    const reason = !hasAddress ? 'No contract address' : 'No local bytecode'
-    console.log(`   ❌ Cannot override: ${reason}`)
     return { requiresOverride: false }
   }
-
-  // Compare bytecode to see if override is actually needed
-  console.log(
-    `   🔄 Comparing local bytecode with deployed bytecode at block ${blockTag}...`,
-  )
   const comparison = await compareBytecode(
     contract.contractData!.address!, // We already checked these exist above
     contract.contractData!.bytecode!,
     blockTag,
   )
 
-  console.log('   📊 Bytecode Comparison Results:')
-  console.log(`      Local size: ${comparison.localSize} bytes`)
-  console.log(`      Deployed size: ${comparison.deployedSize} bytes`)
-  console.log(`      Identical: ${comparison.isIdentical}`)
-
-  if (comparison.fetchError) {
-    console.log(`      ⚠️ Fetch error: ${comparison.fetchError}`)
-  }
 
   let requiresOverride: boolean
 
   if (comparison.fetchError) {
     // If we can't fetch deployed bytecode, fall back to assuming override is needed
-    console.log(
-      '   🤔 Cannot compare - assuming override needed due to fetch error',
-    )
     requiresOverride = true
   } else if (comparison.isIdentical) {
-    console.log('   ✅ Bytecode identical - no override needed')
     requiresOverride = false
   } else {
-    console.log('   ⚡ Bytecode differs - override required')
     requiresOverride = true
   }
-
-  console.log(
-    `   🎯 Final Decision: ${requiresOverride ? 'OVERRIDE' : 'NO OVERRIDE'}`,
-  )
 
   return { requiresOverride, comparison }
 }
