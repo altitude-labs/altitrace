@@ -333,7 +333,7 @@ function NewSimulationPageContent() {
         },
       },
       {
-        title: `Transaction Trace: ${txHash.slice(0, 10)}...`,
+        title: `Tx: ${txHash}`,
         tags: ['trace', 'recent'],
         description: `Trace for transaction: ${txHash}`,
         traceHash: txHash,
