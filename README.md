@@ -34,17 +34,18 @@ bun run build
 ```typescript
 import { createClient } from '@altitrace/sdk'
 
-const client = createClient.local()
-
-// Simulate a simple transaction
-const result = await client.simulate({
-  from: '0x742d35Cc6634C0532925a3b8D86C4F5e573F7d5B',
-  to: '0xA0b86a33E6441a8F9d6f4c13f8a39c3A7a4e8c',
-  data: '0xa9059cbb...' // ERC-20 transfer
+const client = new AltitraceClient({
+  baseUrl: 'https://api.altitrace.reachaltitude.xyz/v1'
 })
+ 
+const result = await client.simulate().call({
+  from: '0xA79C12BCf11133af01b6B20f16F8AafAECdEBC93',
+  to: '0x3aD2674e162A3bdA4be608C75d52f4B18C729193',
+  value: '0x40000',
+}).atBlock(12026976).execute()
 
-console.log('Gas used:', result.gasUsed)
-console.log('Status:', result.status)
+console.log('Gas used:', result.getTotalGasUsed())
+console.log('Success:', result.isSuccess())
 ```
 
 ## Architecture

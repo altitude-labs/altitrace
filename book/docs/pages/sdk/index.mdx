@@ -14,21 +14,19 @@ bun add @altitrace/sdk
 
 ```typescript [example.ts]
 import { AltitraceClient } from '@altitrace/sdk'
-
+ 
 const client = new AltitraceClient({
-  baseUrl: 'http://localhost:8080/v1'
+  baseUrl: 'https://api.altitrace.reachaltitude.xyz/v1'
 })
-
-// Simulate a transaction
-const result = await client.simulateCall({
-  from: '0x742d35Cc6634C0532925a3b844Bc9e7595f06e8c',
-  to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-  data: '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a',
-  gas: '0xD6D8'
-})
-
+ 
+const result = await client.simulate().call({
+  from: '0xA79C12BCf11133af01b6B20f16F8AafAECdEBC93',
+  to: '0x3aD2674e162A3bdA4be608C75d52f4B18C729193',
+  value: '0x40000',
+}).atBlock(12026976).execute()
+ 
+console.log('Gas used:', result.getTotalGasUsed())
 console.log('Success:', result.isSuccess())
-console.log('Gas Used:', result.getTotalGasUsed())
 ```
 
 ```typescript [config.ts]
@@ -42,7 +40,7 @@ export const localClient = new AltitraceClient({
 
 // Production
 export const productionClient = new AltitraceClient({
-  baseUrl: 'https://altitrace.reachaltitude.xyz/v1',
+  baseUrl: 'https://api.altitrace.reachaltitude.xyz/v1',
   timeout: 60_000,
   maxRetries: 3
 })
