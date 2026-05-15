@@ -12,8 +12,8 @@
     "lint": "biome check . --write --unsafe && biome format . --write"
   },
   "dependencies": {
-    "react": "latest",
-    "react-dom": "latest",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
     "vocs": "latest"
   },
   "devDependencies": {
